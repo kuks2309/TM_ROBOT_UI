@@ -1,6 +1,6 @@
 #include "gripper_hal/command_port.hpp"
 #include "gripper_hal/feedback_port.hpp"
-#include "gripper_hal/magazine_port.hpp"
+#include "gripper_common/magazine_port.hpp"
 #include "gripper_hal/types.hpp"
 #include <cstdio>
 #include <type_traits>

@@ -4,7 +4,7 @@
 #include <functional>
 #include <memory>
 
-#include "gripper_hal/magazine_port.hpp"
+#include "gripper_common/magazine_port.hpp"
 #include "gripper_hal_impl/signal_map.hpp"
 #include "gripper_hal_impl/station_io_client.hpp"
 

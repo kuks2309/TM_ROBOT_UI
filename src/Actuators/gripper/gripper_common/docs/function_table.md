@@ -1,6 +1,6 @@
 # gripper_common 함수표 (모듈 로컬 원본 — coding SOP §2/§6 이중 기록)
 
-갱신: 2026-08-29 (Task 3 — 벤더 무관 공용 타입 신설, ADR-005 D3)
+갱신: 2026-08-29 (Task 4 — `magazine_port.hpp` 를 `gripper_hal` 에서 이관, ADR-005 D3. 직전: Task 3 — 벤더 무관 공용 타입 신설)
 루트 집계 반영은 Task 5 담당(`../../docs/functions-index.md`).
 
 > 전역 변수: **없음** (전 상태는 구조체 소유)
@@ -21,6 +21,8 @@
 | `both_detected` | types.hpp:129-132 | `MagazineSnapshot` | bool | `fresh=false` 는 무조건 false |
 | `any_detected` | types.hpp:134-137 | `MagazineSnapshot` | bool | `fresh=false` 는 무조건 false |
 | `Health` | types.hpp:139-146 | — | struct | `link_up`·`snapshot_age`·`error_count`·`last_seq`·`last_error` |
+| `IMagazineDetectPort::read` | magazine_port.hpp:15 | — | `Result<MagazineSnapshot>` | MGZ 2점 스냅샷(극성 적용) — 로봇측 DI 라 벤더 무관(ADR-005 D3) |
+| `IMagazineDetectPort::health` | magazine_port.hpp:17 | — | `Health` | 링크·에러 카운터 |
 
 ## 검증 자산
 
