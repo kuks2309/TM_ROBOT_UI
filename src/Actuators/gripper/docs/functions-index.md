@@ -1,18 +1,42 @@
 # gripper 스택 함수표 **집계** (coding SOP §2/§6 이중 기록)
 
-갱신: 2026-08-13 (**M1 원격 IO 백엔드** — smc_lecp6/hal/impl 구현·단위 12종·게이트 red 시연. 직전: 2026-08-12 M0)
+갱신: 2026-08-29 (ADR-005 단계①·② 마감 — SMC 스택 `smc_lecp6/{hal,motion,sim}` 재배치 + `gripper_common` 신설·`magazine_port` 이관 반영. 직전: 2026-08-13 M1)
 
 > **본 문서는 집계본이다.** 각 패키지의 **모듈 로컬 원본**이 권위이며, 변경 시 두 곳을 함께 갱신한다
 > (자매 선례: `Actuators/drawer/docs/functions-index.md`, `Sensors/PIO/docs/functions-index.md`).
 >
 > | 패키지 | 모듈 로컬 원본 | 상태 |
 > |---|---|---|
+> | gripper_common | [../gripper_common/docs/function_table.md](../gripper_common/docs/function_table.md) | 단계② 신설 — 공용 타입·MGZ 포트 |
 > | gripper_hal | [../smc_lecp6/hal/docs/functions.md](../smc_lecp6/hal/docs/functions.md) | M0 계약 + **M1 impl 구현** |
 > | gripper_motion | (M2 예정) | 비어 있음 |
 > | gripper_ros | (M4 예정 — 단 `GripperCommand.action`·config 스키마는 M0) | 계약만 |
 > | gripper_sim | (M3 예정) | 비어 있음 |
 >
 > 전역 변수: **없음** (전 상태는 클래스/구조체 소유 — conventions 전역 규율)
+
+## gripper_common (공용 계약)
+
+갱신: 2026-08-29 (ADR-005 단계②-1·②-2 — 벤더 무관 공용 타입 신설 + `magazine_port` 이관, 소비자 include 실측 4파일 치환)
+
+요약(원본 [../gripper_common/docs/function_table.md](../gripper_common/docs/function_table.md) 의 "공개 표면" 표를 그대로 집계 — 앵커·행 내용 추정 없음):
+
+| 함수/타입 | 위치(파일:줄) | 입력 | 출력 | 비고 |
+|---|---|---|---|---|
+| `TimePoint` | types.hpp:13 | — | `using` (steady_clock::time_point) | 시각 별칭 |
+| `Duration` | types.hpp:14 | — | `using` (milliseconds) | 기간 별칭 |
+| `HalError` | types.hpp:18-29 | — | enum class | HAL 공통 오류 등급 9종(`kIndeterminate` 포함) |
+| `Result<T>` | types.hpp:33-78 | `T` 또는 `HalError` | `Result<T>` | 접근자 가드형 결과(`[[nodiscard]]`), `err(kNone)` 은 `kProtocol` 로 승격 |
+| `Result<void>` | types.hpp:81-111 | `HalError` | `Result<void>` | 값 없는 연산용 특수화, 승격 규약 동일 |
+| `SignalState` | types.hpp:113-118 | — | enum class | `kUnknown`/`kInactive`/`kActive` — stale 을 정상/이상으로 만들지 않는 3상태 |
+| `MagazineSnapshot` | types.hpp:120-127 | — | struct | `detected_1`·`detected_2`·`fresh`·`seq`·`stamp` |
+| `both_detected` | types.hpp:129-132 | `MagazineSnapshot` | bool | `fresh=false` 는 무조건 false |
+| `any_detected` | types.hpp:134-137 | `MagazineSnapshot` | bool | `fresh=false` 는 무조건 false |
+| `Health` | types.hpp:139-146 | — | struct | `link_up`·`snapshot_age`·`error_count`·`last_seq`·`last_error` |
+| `IMagazineDetectPort::read` | magazine_port.hpp:15 | — | `Result<MagazineSnapshot>` | MGZ 2점 스냅샷(극성 적용) — 로봇측 DI 라 벤더 무관(ADR-005 D3). gripper_hal 에서 이관(2026-08-29) |
+| `IMagazineDetectPort::health` | magazine_port.hpp:17 | — | `Health` | 링크·에러 카운터 |
+
+상세(검증 자산·소유 경계)는 모듈 로컬 원본 참조.
 
 ## gripper_hal (계약)
 
@@ -22,7 +46,7 @@
 | `IGripperCommandPort::write_line` | command_port.hpp | ControlLine, bool | Result<void> | SETUP/HOLD/DRIVE/RESET/SVON/LOCK_RELEASE |
 | `IGripperCommandPort::clear_step_and_drive` | command_port.hpp | — | Result<void> | legacy `initGripperInNum` 파리티 |
 | `IGripperFeedbackPort::read` | feedback_port.hpp | — | Result<FeedbackSnapshot> | 13신호 원자 스냅샷, stale 은 fresh=false |
-| `IMagazineDetectPort::read` | magazine_port.hpp | — | Result<MagazineSnapshot> | MGZ 2점(극성 적용) |
+| `IMagazineDetectPort::read` | magazine_port.hpp | — | Result<MagazineSnapshot> | gripper_common 으로 이관(2026-08-29) |
 | `alarm_state` / `emergency_stop_state` | types.hpp | FeedbackSnapshot | SignalState | **negative-true 극성** 적용 + stale 은 `kUnknown` |
 | `is_ready_for_drive` / `is_ready_for_origin` | types.hpp | FeedbackSnapshot | bool | 착수 조건 판정(DRIVE 는 SETON 요구, SETUP 은 미요구) |
 | `Result<T>` / `HalError` / `ControlLine` / `FeedbackSignal` | types.hpp | — | — | 계약 커널 |
