@@ -21,7 +21,10 @@ SRC_GLOBS=(--include='*.cpp' --include='*.hpp' --include='*.h' --include='*.hh' 
 BUILD_GLOBS=(--include='CMakeLists.txt' --include='*.cmake' --include='package.xml')
 BANNED_BUILD='(remote_io_hal|modbus_tcp|modbus_rtu)'
 
-hits=$(grep -riEn "${SRC_GLOBS[@]}" "$BANNED_IO" "$STACK_DIR" 2>/dev/null)
+# ADR-005 D4 (2026-08-29): 본 게이트의 보호 대상은 Crevis 스테이션(Modbus TCP)의 단일 쓰기
+# 마스터다. RS485 RTU 벤더 그리퍼(HITBOT 등)는 별개 버스이며 그 유일 마스터는 해당 그리퍼
+# 노드다 — 벤더 진단 도구(tools/)는 스캔에서 제외한다. 회사별 hal/ 허용은 단계④에서 갱신.
+hits=$(grep -riEn --exclude-dir=tools "${SRC_GLOBS[@]}" "$BANNED_IO" "$STACK_DIR" 2>/dev/null)
 if [ -n "$hits" ]; then
   echo "❌ gripper-io-single-master: 스테이션 직접 접근 심볼 발견"
   echo "$hits"
