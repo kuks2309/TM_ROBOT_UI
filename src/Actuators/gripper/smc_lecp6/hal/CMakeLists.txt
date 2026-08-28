@@ -50,7 +50,7 @@ if(GRIPPER_HAL_REGISTER_TESTS)
 
   # ⟦CI:gripper-io-single-master⟧ 를 ctest 로도 돌린다 — 스크립트를 따로 호출하지 않는 CI 에서도 걸리게.
   add_test(NAME gripper_io_single_master
-           COMMAND ${CMAKE_COMMAND} -E env bash "${CMAKE_CURRENT_SOURCE_DIR}/../checks/gripper-io-single-master.sh")
+           COMMAND ${CMAKE_COMMAND} -E env bash "${CMAKE_CURRENT_SOURCE_DIR}/../../checks/gripper-io-single-master.sh")
 endif()
 
 install(DIRECTORY include/ DESTINATION include)

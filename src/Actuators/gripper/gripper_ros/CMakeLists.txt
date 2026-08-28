@@ -15,7 +15,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
 # ROS-free 코어. 이 경계가 «로봇 없이 도는 회귀» 의 범위를 정한다(ADR-001 D3).
 if(NOT TARGET gripper_motion)
-  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../gripper_motion" "${CMAKE_CURRENT_BINARY_DIR}/gripper_motion")
+  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../smc_lecp6/motion" "${CMAKE_CURRENT_BINARY_DIR}/gripper_motion")
 endif()
 
 add_library(gripper_ros_core STATIC
@@ -37,7 +37,7 @@ target_link_libraries(gripper_node "${cpp_typesupport}")
 
 # SIL 스테이션 — 로봇 없이 폐루프를 돌리기 위한 시험 장비(실기 배포 대상 아님).
 if(NOT TARGET gripper_sim)
-  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../gripper_sim" "${CMAKE_CURRENT_BINARY_DIR}/gripper_sim")
+  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../smc_lecp6/sim" "${CMAKE_CURRENT_BINARY_DIR}/gripper_sim")
 endif()
 add_executable(sim_station_node src/sim_station_node.cpp)
 target_link_libraries(sim_station_node gripper_ros_core gripper_sim)

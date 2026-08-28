@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 project(gripper_motion VERSION 0.1.0 LANGUAGES CXX)
 
 if(NOT TARGET gripper_hal_kernel)
-  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../gripper_hal" "${CMAKE_CURRENT_BINARY_DIR}/gripper_hal")
+  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../hal" "${CMAKE_CURRENT_BINARY_DIR}/gripper_hal")
 endif()
 
 add_library(gripper_motion STATIC
