@@ -81,3 +81,6 @@ src/Vision/ROS2/tm_camera_calibration/calibration_data/**/*.jpg
 # AI Tools
 .serena/
 src/AI/engine/hailo/hailo_model_zoo_v2.6/
+
+# superpowers SDD 실행 스크래치 (레저·브리프·리뷰 패키지 — git 기록 아님)
+.superpowers/

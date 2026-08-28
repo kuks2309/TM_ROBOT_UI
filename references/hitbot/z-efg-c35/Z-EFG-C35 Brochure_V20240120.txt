@@ -1,0 +1,718 @@
+ Z-EFG-C35
+ Product Manual
+ Industrial Robot / Collaborative Robot / Electric Gripper/
+ Intelligent Actuator / Automation Solution
+
+
+
+
+Huiling-tech Robotic Co.,Ltd.
+                                                                                                                     Z-EFG-C35
+
+
+
+Electric Gripper Z-EFG-C35
+Promoting a revolution in the replacement of pneumatic grippers by electric grippers
+First electric gripper with integrated servo system in China
+
+
+
+
+                                                        Product Features
+                                                            Power-oﬀ self-locking, clamping drop detection, and area output functions
+
+                                                            Force, position, and speed can be precisely controlled through Modbus
+
+                                                            Long lifespan: tens of millions of cycles, surpassing pneumatic grippers
+
+                                                            Built-in controller: small footprint, easy integration
+
+                                                            Control modes: 485 (Modbus RTU), I/O
+
+
+
+
+Highly Integrated
+
+
+
+
+·Perfect replacement for air compressor + ﬁlter + solenoid valve + throttle valve + pneumatic gripper
+·Multiple cycles long life span, consistent with the traditional Japanese actuator
+
+
+
+
+1
+                                                                                                                                    Z-EFG-C35
+
+
+Applications
+
+
+
+
+    Fragile scene (e.g. test tube)                          Fragile scene (e.g. eggs)                  Sorting out things that
+                                                                                                       are arranged in a mass
+
+
+
+
+Gripping in narrow scene             Deformable scene (e.g. rings)           Gripping fragile items             Industry Applications
+                                                                               at high frequency            (e.g. medical, new-retail, 3C )
+
+
+
+
+Speciﬁcation
+
+                                                                                                                             Fz
+  Item                                        Speciﬁcation
+                                                                                                                        Mz
+                                                                                                            My
+  Total stroke                                35mm（Adjustable）
+
+  Clamping force                              15～50N（Adjustable）
+                                                                                                            Mx
+  Repeat positioning accuracy                 ±0.03mm
+
+  Recommended clamping weight                 ≤1kg
+
+  Transmission method                         Gear rack + ball guide rail
+
+  Motion component grease supply              Every six months or one million cycles/move
+
+  Shortest time for unidirectional motion     0.5s
+
+  Motion method                               Two-ﬁnger parallel motion
+
+  Weight                                      0.5kg
+
+  Dimension                                   63*63*92mm
+
+  Operating voltage                           DC24V±10%
+
+  Rated current                               0.3A
+                                                                                                      Permissible static load in the vertical direction
+  Peak current                                1A
+                                                                                                      Fz:                                150 N
+  Power                                       8W
+
+  Protection level                            IP54
+                                                                                                      Load allowable torque
+  Motor type                                  Servo motor
+                                                                                                      Mx:                                2.5 N·m
+  Operating temperature range                 5~55℃                                                   My:                                2 N·m
+
+  Operating humidity range                    35~80% RH (non-condensing)                              Mz:                                3 N·m
+
+
+
+
+                                                                                                                                                          2
+                                                                                                              Z-EFG-C35
+
+
+Dimensional installation diagram
+                                56                                                               44
+                                                                                                 20
+
+                                                       4 x M4      5
+                   2
+                                                Two on each side,
+                                                front and back
+                                                        Lead-out position
+          92
+
+
+
+
+                                                                                                               14.5
+                                                       19
+               12
+
+
+
+
+                                16
+          2
+
+
+
+
+                                    63              16.5                                                      Indicator
+                                                                                                              lights
+
+
+
+
+                          53（Open）
+                          18（Close）
+                   6 0.02       5.5
+                     5.5                       2 x M3         6
+                     9.25
+                                                    2x 3 +0.02
+                                                          0    3.5
+
+
+
+
+                                                                                                              25
+    2x 3 0          3.5
+           +0.02
+
+
+
+                                            9.25
+           2 x M3         6
+                                          5.5                                                    6 0          4.2
+                                                                                                      +0.02
+
+
+                              5.5        6 0.02
+                                                                                    1
+
+
+
+
+                                          3 0          4.5
+                                            +0.02
+
+                                     A                            63
+                                                                                                 A-A
+       6.6 Penetrating        50
+     12.5x90°
+                          1
+
+
+
+
+                                                              45°
+                                                                                             3
+                                                                            31.5 - 0.02
+
+                                                                                    25 +0.03
+                                                                                     +0.08
+                                                                             0
+         53 +0.02
+          +0.06
+
+
+
+
+                                                                  58
+
+
+
+
+                                                              45°
+
+                                                                                                      5
+                     1
+
+
+
+
+                                           3
+                                               +0.02
+                                                0       4.5                                  2                 18
+                                     A
+
+
+
+
+3
+                                                                                                                   Z-EFG-C35
+
+
+Wire Sequence Explanation
+
+                                               Red                             24V+
+
+                                              Black                            GND
+
+                                              Yellow                           485+
+
+                                           Yellow-white                        485-
+
+                                              Brown                             IN1
+
+                                           Brown-white                          IN2
+
+                                               Blue                           OUT1
+
+                                               Gray                           OUT2
+
+
+Note:
+1. Please make sure to conﬁrm the correct polarity of the power supply line and the correct connection of 485 communication
+line and I/O line during wiring. Damage caused by wiring errors is not covered by the normal warranty.
+2. The 485 and 24V jaws are not internally isolated. If isolation is needed, customers should use other devices for isolation.
+3. The ground wire of the gripper must be connected to the 485 ground of the user-side controller!!
+4. During the power-on process, do not touch the 24V power supply and IO input cables of the IO output cables!!
+
+
+
+
+RS485 Communication
+The RS485 communication of Z-EFG-C35 uses the Modbus RTU protocol, supporting function codes: 0x03, 0x06, 0x10. The
+default communication parameters are as follows:
+
+
+
+                                            Baud rate                         115200
+
+                                                ID                               1
+
+                                             Data bits                           8
+                                             Stop bits                           1
+                                              Parity                           None
+
+
+
+
+                                                                                                                                 4
+                                                                                                                                                      Z-EFG-C35
+
+
+Communication Protocol
+
+    Function                                       Read/    Default value
+     group         Address    Function                                                                      Explanation
+                                                   Write     (Data type)
+
+
+                    0x0000     Initialization       R/W           0（int）              1, unidirectional calibration, (calibration direction can be set)
+
+
+
+                    0x0001       Reserved           R/W           0（int）
+
+
+                                Clamping                      Maximum value
+                    0x0002       position           R/W         （ﬂoat）                                 Unit mm，Value range：0~35
+
+      Control
+                                Clamping                      Maximum value
+                    0x0004        speed             R/W         （ﬂoat）                                Unit mm/s，Value range：1~100
+
+
+                                Clamping
+                    0x0006        current           R/W         0.5（ﬂoat）                              Unit A，Value range：0.1~0.5
+
+
+                                Clamping                                                Clamping position mode control parameters, select the
+                    0x0017                          R/W           0（int）                 position triggered by communication, value range: 1-4
+                                 position
+
+
+                               Initialization                                                        0: Not initialized, 5: Initialization
+                    0X0040                           R            0（int）
+                              status feedback                                                         completed, Others: Initializing
+
+
+                                Clamping
+                    0X0041                           R            0（int）                     0: In place, 1: Moving, 2: Clamping, 3: Dropping
+                              status feedback
+
+
+      Status                    Clamping                      Maximum value
+     feedback       0X0042                           R                                                            Unit mm
+                             position feedback                  （ﬂoat）
+
+
+                                Clamping
+                    0X0044                           R          （ﬂoat）                                           Unit mm/s
+                              speed feedback
+
+
+                                Clamping
+                    0X0046                           R           0（ﬂoat）                                            Unit A
+                             current feedback
+
+
+
+                    0x0080           ID             R/W           1（int）          Value range [1~247], eﬀective after saving parameters and restarting
+
+
+                                                                4（115200）                        0~6：9600，19200，38400，57600，115200，
+                    0x0081      Baud rate           R/W          （int）              153600，256000，Eﬀective after saving parameters and restarting
+
+
+                               Initialization
+                    0x0082       direction          R/W           0（int）          Set the calibration direction. 0: Open calibration, 1: Close calibration
+
+
+                                Automatic
+     Parameter                                                                          Set calibration mode. 0: Power-on automatic calibration,
+                    0x0083     initialization       R/W
+    conﬁguration                                                  0（int）      1: Manual control calibration. Eﬀective after saving parameters and restarting
+                                  setting
+                                                                                       Write 1 to save parameters. Note: Do not use this command
+                    0x0084         Save             R/W           0（int）         during real-time control,only conﬁgure parameters before actual use.
+
+                                parameters                                                  After successful setting, this value becomes zero.
+
+                              Restore default                                                  Write 1 to restore default parameters. After
+                    0x0085                          R/W           0（int）                       successful setting, this value becomes zero
+                                parameters
+
+
+                                I/O mode
+                    0x0090                          R/W           0（int）                        0: Turn oﬀ I/O mode, 1: Turn on I/O mode
+                                  switch
+
+
+
+
+Indicator Meaning
+
+                                                  Red light steady                Not initialized
+                                                                                   Initialization
+                                                 Green light steady
+                                                                                successful/In place
+                                                 Green light blinking                    Moving
+                                                  Blue light steady               Clamping object
+                                                 Blue light blinking              Object dropped
+
+
+
+
+5
+                                                                                                                 Z-EFG-C35
+
+
+Modbus Instruction Description
+
+Manual Initialization
+The gripper will automatically initialize when powered on. After the gripper opens outward, the initialization process is
+completed. The gripper can be manually initialized again through the 485 command after power-on.
+
+Manual Initialization
+
+                                                        Register Starting
+     Device Address             Function Code                                       Register Content       CRC Check Code
+                                                            Address
+
+
+            01                    06（HEX）                     00 00             00 01 (Initialization)           48 0A
+
+
+
+Reply：01 06 00 00 00 01 48 0A
+
+(06 Function Code Reply Data Parsing: 01: Device Address, 06: Function Code, 0000 Register Starting Address, 0001: Register
+Content, 480A: CRC Check Code)
+
+Note:Ensure that there are no objects blocking the ﬁngers during initialization to prevent errors in recognizing the zero point
+position. The automatic initialization on power-up can be set using 0x0083.
+
+
+
+Basic Control Parameters
+At this point, diﬀerent speeds and current control for gripping can be set using the 485 command.
+
+
+Close the gripper (set the clamping position to 0mm)
+
+    Device        Function       Register Starting                          Number            Register
+                                                       Register length                                     CRC Check Code
+    Address         Code             Address                                of bytes          Content
+
+                                                                                             00 00 00 00
+       01         10（HEX）              00 02               00 02               04                                72 76
+                                                                                             （0（ﬂoat））
+
+
+Reply：01 10 00 02 00 02 E0 08
+
+(10 Function Code Reply Data Parsing: 01: Device Address, 10: Function Code, 0002: Register Starting Address, 0002: Number of
+Registers Modiﬁed, E008: CRC Check Code)
+
+
+
+
+Set the clamping speed to 50
+
+    Device        Function       Register Starting                          Number            Register
+                                                       Register length                                     CRC Check Code
+    Address         Code             Address                                of bytes          Content
+
+                                                                                             42 48 00 00
+       01         10（HEX）              00 04               00 02               04                                66 32
+                                                                                            （50（ﬂoat））
+
+
+Reply：01 10 00 04 00 02 00 09
+
+
+
+
+                                                                                                                                  6
+                                                                                                                  Z-EFG-C35
+
+
+Set the clamping current to 0.3:
+
+    Device           Function      Register Starting                       Number             Register
+                                                       Register length                                        CRC Check Code
+    Address            Code            Address                             of bytes           Content
+
+                                                                                          3E 99 99 9A
+       01         10（HEX）                00 06              00 02             04                                  44 79
+                                                                                          （0.3（ﬂoat）
+
+
+Reply：01 10 00 06 00 02 A1 C9
+
+
+
+
+Read clamping feedback data
+
+Read clamping status feedback
+
+                                                       Register Starting
+    Device Address              Function Code                                    Register length              CRC Check Code
+                                                           Address
+
+
+            01                    03（HEX）                    00 41                    00 01                       D4 1E
+
+
+
+Reply: 01 03 02 00 00 B8 44 (Register Content 00 00 indicates in place, 0001: Moving, 0002: Clamping, 0003:
+Dropping) (03 Function Code Reply Data Parsing: 01: Device Address, 03: Function Code, 02: Number of
+Bytes in Returned Data, 0000: Read Register Value, B844: CRC Check Code)
+
+
+
+
+Read clamping position feedback
+
+                                                       Register Starting
+    Device Address              Function Code                                    Register length              CRC Check Code
+                                                           Address
+
+
+            01                    03（HEX）                    00 42                    00 02                       64 1F
+
+
+
+Reply：01 03 04 XX XX XX XX CRC1 CRC2
+
+
+
+
+Read clamping current feedback
+
+                                                       Register Starting
+    Device Address              Function Code                                    Register length              CRC Check Code
+                                                           Address
+
+
+            01                    03（HEX）                    00 46                    00 02                       25 DE
+
+
+
+Reply：01 03 04 XX XX XX XX CRC1 CRC2
+
+
+
+
+7
+                                                                                                                      Z-EFG-C35
+
+
+ID Setting
+The ID number can be set in the range of 1-247, and it is eﬀective after saving parameters and restarting.
+
+
+Set the slave ID to 1:
+
+                                                       Register Starting
+    Device Address            Function Code                                        Register Content            CRC Check Code
+                                                           Address
+
+
+             01                 06（HEX）                      00 80                       00 01                       49 E2
+
+
+
+Reply：01 06 00 80 00 01 49 E2
+
+
+
+Baud Rate Setting
+Write values 0 to 6 correspond to baud9600, baud19200, baud38400, baud57600, baud115200, baud153600, baud256000. It is
+eﬀective after saving parameters and restarting.
+
+Set the baud rate to 115200
+
+                                                       Register Starting
+    Device Address            Function Code                                        Register Content            CRC Check Code
+                                                           Address
+
+
+             01                 06（HEX）                      00 81                       00 04                       D8 21
+
+
+
+Reply：01 06 00 81 00 04 D8 21
+
+
+
+
+Clamping Initialization Direction Setting
+Set the clamping direction during initialization calibration, write 0 for open calibration, write 1 for close calibration.
+
+
+Set open calibration (eﬀective after saving parameters and restarting)
+
+                                                       Register Starting
+    Device Address            Function Code                                        Register Content            CRC Check Code
+                                                           Address
+
+
+             01                 06（HEX）                      00 80                       00 00                       29 E2
+
+
+
+Reply：01 06 00 80 00 01 49 E2
+
+
+
+
+Auto/Manual Initialization SettingC
+Set the automatic/manual initialization on power-up, write 0 for automatic initialization, write 1 for manual initialization.
+
+
+Set manual initialization on power-up (eﬀective after saving parameters and restarting)
+
+                                                       Register Starting
+    Device Address            Function Code                                        Register Content            CRC Check Code
+                                                           Address
+
+
+             01                 06（HEX）                      00 83                       00 01                       B9 E2
+
+
+
+Reply：01 06 00 83 00 01 B9 E2
+
+
+
+
+                                                                                                                                8
+                                                                                                                    Z-EFG-C35
+
+
+Save Parameters
+
+Write 1 to the save parameters register. The data will not revert to default values after power-oﬀ and restart.
+
+Set save parameters:
+
+                                                       Register Starting
+    Device Address           Function Code                                         Register Content            CRC Check Code
+                                                           Address
+
+
+           01                   06（HEX）                      00 84                       00 01                      08 23
+
+
+
+Reply：01 06 00 84 00 01 08 23
+
+
+
+Restore Default Parameters
+
+Write 1 to the restore default parameters register. The data will revert to default values. It is still eﬀective after power-oﬀ and
+restart.
+
+Set save parameters
+
+                                                       Register Starting
+    Device Address           Function Code                                         Register Content            CRC Check Code
+                                                           Address
+
+
+           01                   06（HEX）                      00 85                       00 01                      59 E3
+
+
+
+Reply：01 06 00 85 00 01 59 E3
+
+
+
+
+IO Mode
+
+Open IO ModeC
+
+                                                       Register Starting
+    Device Address           Function Code                                         Register Content            CRC Check Code
+                                                           Address
+
+
+           01                   06（HEX）                      00 90                       00 01                       48 27
+
+
+
+Reply：01 06 00 90 00 01 48 27
+
+
+
+
+9
+                                                                                             Z-EFG-C35
+
+
+I/O Functionality
+IO Input Pin Description
+
+NPN type eﬀective at 0V, PNP type eﬀective at 24V
+
+
+                              IN1                      IN2       Control clamping position
+
+                           Ineﬀective               Ineﬀective              1
+
+                           Eﬀective                 Ineﬀective              2
+                           Ineﬀective               Eﬀective                3
+                           Eﬀective                 Eﬀective                4
+
+
+
+
+IO Output lead Angle description
+
+NPN type eﬀective at 0V, PNP type eﬀective at 24V
+
+
+                             OUT1                     OUT2       Control clamping position
+
+                           Ineﬀective               Ineﬀective           In placeC
+
+                           Eﬀective                 Ineﬀective            Moving
+                           Ineﬀective               Eﬀective         Clamping object
+                           Eﬀective                 Eﬀective         Object dropped
+
+
+
+
+            10
+                     Making Automation Easier
+
+
+
+
+Huiling-tech Robotic Co.,Ltd.
+Tel: 0755-36382405
+Hotline: 0086-15220259858
+Email: Marketing@hitbot.cc
+Website: hitbotrobot.com
+Address: 2nd Floor, Building E, Huafeng International Robot Industrial Park,
+Hangcheng Ave, Xixiang St, Baoan District, Shenzhen City, Guangdong Province, China
+
