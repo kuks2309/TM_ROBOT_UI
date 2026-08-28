@@ -9,8 +9,6 @@ from .. import paths
 class IOControlTab(BaseTab):
     LED_ON_STYLE = "background-color: #00ff00; border-radius: 8px; min-width: 16px; min-height: 16px;"
     LED_OFF_STYLE = "background-color: #404040; border-radius: 8px; min-width: 16px; min-height: 16px;"
-    # 매거진 재고 표시. stale 은 «비었다» 와 반드시 달라 보여야 한다 —
-    # 둘을 같은 색으로 두면 통신이 끊긴 것을 «다 비었네» 로 읽는다.
     MGZ_PRESENT_STYLE = "background-color: #00b050; color: white; border-radius: 4px; padding: 4px;"
     MGZ_EMPTY_STYLE = "background-color: #404040; color: #b0b0b0; border-radius: 4px; padding: 4px;"
     MGZ_STALE_STYLE = "background-color: #7f6000; color: #ffd966; border-radius: 4px; padding: 4px;"
@@ -78,16 +76,8 @@ class IOControlTab(BaseTab):
             led.setStyleSheet(self.LED_OFF_STYLE)
 
     def _build_magazine_group(self, layout: QVBoxLayout):
-        """버퍼 매거진 6자리 표시를 코드로 만들어 IO 탭 아래에 붙인다.
-
-        io_control_tab.ui 를 고치지 않는 이유 — Designer 파일에 손을 대면 기존 IO 위젯
-        좌표가 함께 흔들린다. 표시 전용 그룹이므로 코드 생성으로 충분하다.
-        """
         service = getattr(self.mw, 'magazine_state_service', None)
         if service is None or not getattr(service, 'available', False):
-            # 규칙: 못 하면 «알리고 실행하지 않는다». 조용히 빈 화면을 두면 작업자는
-            # «매거진이 다 비었다» 와 «못 읽고 있다» 를 구별하지 못한다 — 그 둘은
-            # 인터록 판단이 정반대로 갈리는 상태다.
             notice = QGroupBox('버퍼 매거진 (사용 불가)')
             inner = QGridLayout(notice)
             label = QLabel('magazine_detect 가 이 기계에 없습니다 — 재고를 읽지 않습니다.\n'
@@ -100,8 +90,6 @@ class IOControlTab(BaseTab):
 
         box = QGroupBox('버퍼 매거진 (팔레트 0~5)')
         grid = QGridLayout(box)
-        # 화면 배치를 실제 자리와 같게 둔다 — 윗줄 앞, 아랫줄 뒤.
-        # 슬롯 번호는 앞/뒤 교차라 0,2,4 가 앞줄이고 1,3,5 가 뒷줄이다.
         for col, slot in enumerate((0, 2, 4)):
             grid.addWidget(self._make_magazine_label(slot), 0, col)
         for col, slot in enumerate((1, 3, 5)):
@@ -112,7 +100,6 @@ class IOControlTab(BaseTab):
         service = self.mw.magazine_state_service
         label = QLabel(f'{slot} {service.slot_name(slot)}\n미수신')
         label.setStyleSheet(self.MGZ_STALE_STYLE)
-        # 슬롯 번호로 되찾을 수 있게 색인해 둔다(생성 순서가 슬롯 순서가 아니다).
         while len(self._mgz_labels) <= slot:
             self._mgz_labels.append(None)
         self._mgz_labels[slot] = label
@@ -127,7 +114,6 @@ class IOControlTab(BaseTab):
                 continue
             name = service.slot_name(slot)
             if not valid:
-                # 마지막 확정값을 지우지 않고 «확인 불가» 로만 표시한다(노드 규약과 같다).
                 label.setText(f'{slot} {name}\n확인 불가')
                 label.setStyleSheet(self.MGZ_STALE_STYLE)
             elif present[slot]:

@@ -7,7 +7,6 @@ namespace gripper::ros
 namespace
 {
 
-// 액션 정의가 정본이다 — ROS-free 사본이 어긋나면 여기서 빌드가 깨진다.
 using ActionResult = gripper_ros::action::GripperCommand::Result;
 using ActionGoal = gripper_ros::action::GripperCommand::Goal;
 using ActionFeedback = gripper_ros::action::GripperCommand::Feedback;
@@ -31,7 +30,7 @@ static_assert(kResultAbortFailed == ActionResult::RESULT_ABORT_FAILED, "RESULT_A
 static_assert(kAlarmGroupE == ActionResult::ALARM_GROUP_E, "ALARM_GROUP_E 사본 불일치");
 static_assert(kPhaseAborting == ActionFeedback::PHASE_ABORTING, "PHASE_ABORTING 사본 불일치");
 
-} // namespace
+}
 
 GripperNode::GripperNode(const rclcpp::NodeOptions &options) : rclcpp_lifecycle::LifecycleNode("gripper_node", options)
 {
@@ -55,7 +54,6 @@ GripperNode::CallbackReturn GripperNode::on_configure(const rclcpp_lifecycle::St
         return CallbackReturn::FAILURE;
     }
 
-    // io_service 동기 호출이 타이머·구독을 굶기지 않도록 콜백 그룹을 분리한다.
     service_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
     station_ = std::make_shared<RosStationIoClient>(
         shared_from_this(), get_parameter("io.service_name").as_string(),
@@ -90,9 +88,6 @@ GripperNode::CallbackReturn GripperNode::on_activate(const rclcpp_lifecycle::Sta
 
 GripperNode::CallbackReturn GripperNode::on_deactivate(const rclcpp_lifecycle::State &)
 {
-    // 비활성화는 «지금 멈춘다» 는 뜻이다 — 진행 중 시퀀스의 출력을 남겨 두지 않는다.
-    // 정지 확인(BUSY 하강)에는 시간이 필요한데 여기서 기다리면 lifecycle 전이가 막힌다.
-    // 한 tick 만 기회를 주고, 확인하지 못하면 «정지 미보장» 으로 마감한다 — 확인한 척하지 않는다.
     if (fsm_)
     {
         fsm_->abort();
@@ -131,7 +126,6 @@ rclcpp_action::GoalResponse GripperNode::handleGoal(const rclcpp_action::GoalUUI
     }
     if (active_goal_)
     {
-        // 큐잉하지 않는다 — 언제 움직일지 모르는 명령을 만들지 않기 위해(ADR-001 D4).
         RCLCPP_WARN(get_logger(), "진행 중 — 목표 거절");
         return rclcpp_action::GoalResponse::REJECT;
     }
@@ -167,8 +161,6 @@ rclcpp_action::GoalResponse GripperNode::handleGoal(const rclcpp_action::GoalUUI
         profile = motion::Profile::kHome;
         break;
     case ActionGoal::COMMAND_STEP:
-        // 키스위치 입력이 신호맵에 없어 MANUAL 조건을 확인할 수단이 없다(ADR-001 D5).
-        // 확인할 수 없는 조건을 충족으로 가정하지 않는다.
         RCLCPP_WARN(get_logger(), "COMMAND_STEP 은 키스위치 입력이 없어 수락하지 않는다");
         return rclcpp_action::GoalResponse::REJECT;
     default:
@@ -186,7 +178,6 @@ rclcpp_action::GoalResponse GripperNode::handleGoal(const rclcpp_action::GoalUUI
 
 rclcpp_action::CancelResponse GripperNode::handleCancel(const std::shared_ptr<GoalHandle>)
 {
-    // 수락만 하고 실제 정지는 tick 이 abort() 로 한다 — 출력 복귀를 한 경로에서 처리한다.
     cancel_requested_ = true;
     return rclcpp_action::CancelResponse::ACCEPT;
 }
@@ -234,7 +225,6 @@ void GripperNode::finishGoal(const motion::MotionTick &t)
     fillDiagnostics(*result, t.result);
     result->failed_phase = toPhase(t.state);
 
-    // 복귀 실패는 «장치 정지 미보장» 이라 다른 실패와 등급이 다르다 — 사유와 별도로 승격한다.
     if (t.restore_failed)
     {
         result->result_code = kResultAbortFailed;
@@ -242,7 +232,6 @@ void GripperNode::finishGoal(const motion::MotionTick &t)
 
     if (t.result != motion::MotionResult::kOk)
     {
-        // 실패는 로그에 남긴다 — 결과 메시지는 호출자에게만 가므로 사후 진단에 쓸 수 없다.
         RCLCPP_WARN(get_logger(), "시퀀스 실패: %s (단계 %s · 복귀실패 %d · 경과 %ldms)",
                     resultName(t.result), phaseName(result->failed_phase), t.restore_failed ? 1 : 0,
                     static_cast<long>(t.elapsed.count()));
@@ -301,11 +290,10 @@ void GripperNode::fillDiagnostics(Action::Result &out, motion::MotionResult resu
 
     const bool alarm_active = hal::alarm_state(fb) == hal::SignalState::kActive;
     out.alarm_group = alarmGroupOf(out_bits, alarm_active);
-    // 알람이 아닐 때 OUT0~5 는 실행 스텝 반향이다.
     out.final_step = alarm_active ? 0 : out_bits;
 }
 
-} // namespace gripper::ros
+}
 
 int main(int argc, char **argv)
 {

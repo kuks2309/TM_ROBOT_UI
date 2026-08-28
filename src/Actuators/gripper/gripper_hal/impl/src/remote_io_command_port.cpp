@@ -7,7 +7,6 @@ namespace gripper::hal::impl
 namespace
 {
 
-// 요청과 응답 echo 가 순서·값까지 같은지 본다.
 bool echo_matches(const std::vector<BitCommand> &commands, const WriteAck &ack)
 {
     if (ack.echo_indices.size() != commands.size() || ack.echo_states.size() != commands.size())
@@ -24,7 +23,7 @@ bool echo_matches(const std::vector<BitCommand> &commands, const WriteAck &ack)
     return true;
 }
 
-} // namespace
+}
 
 Result<void> RemoteIoCommandPort::fail(HalError error)
 {
@@ -118,8 +117,6 @@ Result<void> RemoteIoCommandPort::commit(const std::vector<BitCommand> &commands
     {
         return fail(HalError::kIndeterminate);
     }
-    // 미확정이 프로토콜 위반보다 우선한다 — 둘이 겹칠 때 kProtocol 로 답하면 호출자가
-    // 상태 재확인 없이 재시도할 수 있다.
     if (!ack.received)
     {
         return fail(HalError::kIndeterminate);
@@ -140,10 +137,9 @@ Health RemoteIoCommandPort::health() const
     h.last_error = last_error_;
     const StationImage image = client_ ? client_->image() : StationImage{};
     h.last_seq = image.valid ? image.seq : 0;
-    // 이미지가 없으면 "나이 0ms" 로 보이지 않게 stale 한계를 넘겨 둔다(피드백·매거진 포트와 같은 규약).
     h.snapshot_age = image.valid ? std::chrono::duration_cast<Duration>(clock_() - image.stamp)
                                  : map_.feedback_stale_limit + Duration{1};
     return h;
 }
 
-} // namespace gripper::hal::impl
+}

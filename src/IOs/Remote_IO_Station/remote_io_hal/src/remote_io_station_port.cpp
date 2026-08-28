@@ -1,4 +1,3 @@
-// RemoteIoStationPort 구현 (M1) — pio_hal ModbusSignalPort(HIL 검증 2026-07-24) 이식 + ADR-001(remote_io) 계약.
 #include "remote_io_hal/remote_io_station_port.hpp"
 
 #include <algorithm>
@@ -8,7 +7,6 @@ namespace remote_io::hal {
 
 namespace {
 
-// TcpError → RemoteIoError 1:1 매핑(이름 기반 — 열거값 static_cast 금지, modbus_tcp ADR-000 §3 관례).
 RemoteIoError mapTcpError(::comm::modbus_tcp::TcpError e) {
   using TcpError = ::comm::modbus_tcp::TcpError;
   switch (e) {
@@ -27,23 +25,21 @@ RemoteIoError mapTcpError(::comm::modbus_tcp::TcpError e) {
     case TcpError::kBusy:
       return RemoteIoError::kBusy;
   }
-  return RemoteIoError::kProtocol;  // 도달 불가(-Werror=switch 전수) — 방어 기본값
+  return RemoteIoError::kProtocol;
 }
 
 Result<void> toRemoteIoResult(const ::comm::modbus_tcp::Result<void>& r) {
   return r ? Result<void>::ok() : Result<void>::err(mapTcpError(r.error()));
 }
 
-}  // namespace
+}
 
 RemoteIoStationPort::RemoteIoStationPort(Config config)
     : config_(std::move(config)), client_(config_.client) {
-  // 안전 상태 0 미러 — clearAllOutputs 와 동일 의미(레이아웃 미검증 상태도 빈 미러로 무해).
   last_do_words_.assign(config_.layout.do_word_count, uint16_t{0});
 }
 
 Result<StationSnapshot> RemoteIoStationPort::read() {
-  // 암묵 기본값 기동 금지(types.hpp StationLayout 규율) — word_count 0 이면 송신 없이 거부.
   if (config_.layout.di_word_count == 0 || config_.layout.do_word_count == 0) {
     ++error_count_;
     return Result<StationSnapshot>::err(RemoteIoError::kOutOfRange);
@@ -61,14 +57,10 @@ Result<StationSnapshot> RemoteIoStationPort::read() {
     return Result<StationSnapshot>::err(mapTcpError(do_r.error()));
   }
 
-  // WD-1: watchdog 발동 감시(구성한 경우에만) — 0x1119 ERR_WATCHDOG 는 비트마스크 판정(V-13),
-  // 0x1022 counter 세대 비교로 같은 발동 반복 재기록 1회 제한(WDV-2). 상태 판독은 best-effort —
-  // 방금 성공한 DI/DO 스냅샷을 뒤집지 않는다. (pio modbus_signal_port.cpp:131-158 이식)
   bool watchdog_fired = false;
   if (pending_watchdog_) {
     auto st = readAdapterStatus();
     if (st && (st.value().modbus_status & kModbusStatusErrWatchdog) != 0) {
-      // TODO(debt-013): 0x80 물리 클리어 조건 미확정 — 소프트웨어 반복 제한만 수행(HIL 실측 대기).
       auto wc = client_.readHoldingRegisters(kRegWatchdogErrorCounter, 1);
       if (wc) {
         watchdog_fired = (wc.value()[0] != last_handled_watchdog_counter_);
@@ -92,7 +84,6 @@ Result<void> RemoteIoStationPort::writeDoWordVerified(uint16_t word_index, uint1
   if (!w) {
     return toRemoteIoResult(w);
   }
-  // legacy 파리티(io_manager_node.cpp:470-483): FC6 후 FC3 read-back 값 대조 — 불일치 kProtocol.
   auto rb = client_.readHoldingRegisters(addr, 1);
   if (!rb) {
     return Result<void>::err(mapTcpError(rb.error()));
@@ -105,13 +96,11 @@ Result<void> RemoteIoStationPort::writeDoWordVerified(uint16_t word_index, uint1
 }
 
 Result<void> RemoteIoStationPort::writeBits(const std::vector<BitCommand>& commands) {
-  // 같은 워드의 비트들은 1회 RMW 로 병합(계약). RMW 원본 = 로컬 미러(유일 writer 전제) —
-  // legacy 의 사전 FC3 read 와 read→unlock→write 비원자 구간(§6-4) 제거.
   std::vector<std::optional<uint16_t>> pending(config_.layout.do_word_count);
   for (const BitCommand& cmd : commands) {
     const uint16_t word_index = static_cast<uint16_t>(cmd.bit_index / 16);
     const uint16_t bit_in_word = static_cast<uint16_t>(cmd.bit_index % 16);
-    if (word_index >= config_.layout.do_word_count) {  // §6-7 off-by-one 수정: 상한 = count-1
+    if (word_index >= config_.layout.do_word_count) {
       ++error_count_;
       return Result<void>::err(RemoteIoError::kOutOfRange);
     }
@@ -160,12 +149,12 @@ Result<void> RemoteIoStationPort::clearAllOutputs() {
 void RemoteIoStationPort::reapplyIfNeeded(bool watchdog_fired) {
   const bool up_now = client_.isLinkUp();
   if (!up_now) {
-    watchdog_armed_ = false;  // WD-2: 링크 down 이면 보호 소실
+    watchdog_armed_ = false;
     prev_link_up_ = false;
     return;
   }
   if (!pending_watchdog_) {
-    prev_link_up_ = true;  // watchdog 미구성 — 재기록할 안전 상태 없음(초기 0-write 버스트 방지)
+    prev_link_up_ = true;
     return;
   }
   const bool edge = !prev_link_up_;
@@ -180,7 +169,6 @@ void RemoteIoStationPort::reapplyIfNeeded(bool watchdog_fired) {
     pending_reapply_ = false;
     prev_link_up_ = true;
   } else {
-    // PIO-T-01: 실패를 armed=false·pending=true 로 보존, prev 를 false 로 남겨 다음 호출에 재시도.
     watchdog_armed_ = false;
     pending_reapply_ = true;
     prev_link_up_ = false;
@@ -192,7 +180,7 @@ void RemoteIoStationPort::noteFailure() {
   if (!up_now) {
     watchdog_armed_ = false;
   } else if (pending_watchdog_) {
-    pending_reapply_ = true;  // WD-1: 링크 up 요청 실패 = 발동 후보 — 다음 성공 경로에 재무장
+    pending_reapply_ = true;
   }
   prev_link_up_ = up_now;
 }
@@ -214,9 +202,8 @@ Result<void> RemoteIoStationPort::reapplyAfterReconnect() {
 }
 
 Result<void> RemoteIoStationPort::configureWatchdog(const WatchdogConfig& cfg) {
-  // pio modbus_signal_port.cpp:236-297 이식 — WD-5(0 절삭 금지, ceil)·WDV-8(부호·상한 사전 검증).
   const int64_t ms = cfg.timeout.count();
-  constexpr int64_t kMaxWatchdogMs = 65535LL * 100;  // §8.3.2(txt:1458) 65535 × 100ms
+  constexpr int64_t kMaxWatchdogMs = 65535LL * 100;
   if (ms < 0 || ms > kMaxWatchdogMs) {
     ++error_count_;
     return Result<void>::err(RemoteIoError::kOutOfRange);
@@ -246,13 +233,11 @@ Result<void> RemoteIoStationPort::configureWatchdog(const WatchdogConfig& cfg) {
     ++error_count_;
     return Result<void>::err(rb2 ? RemoteIoError::kProtocol : mapTcpError(rb2.error()));
   }
-  // ⚠ 0x1100 신규값은 매뉴얼상 어댑터 리셋 후 발효(§8.3.4 말미) — read-back 성공은 기록 성공만
-  // 보증(debt-013, pio 와 공동 HIL 실측 대기).
   pending_watchdog_ = cfg;
   watchdog_armed_ = true;
   pending_reapply_ = false;
   prev_link_up_ = client_.isLinkUp();
-  last_handled_watchdog_counter_ = 0;  // WDV-2: 0x1020 기록으로 장치 counter 0 리셋(txt:1467-1474)
+  last_handled_watchdog_counter_ = 0;
   return Result<void>::ok();
 }
 
@@ -288,4 +273,4 @@ Health RemoteIoStationPort::health() const {
   return h;
 }
 
-}  // namespace remote_io::hal
+}

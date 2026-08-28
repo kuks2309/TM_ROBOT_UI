@@ -200,7 +200,6 @@ class TestBoundaryJudge:
 
 
 class FakeRobot:
-    """표본을 미리 정해 두고 정지 호출을 세는 가짜 로봇."""
 
     def __init__(self, samples):
         self._samples = list(samples)

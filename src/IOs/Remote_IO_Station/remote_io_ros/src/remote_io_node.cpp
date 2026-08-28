@@ -1,13 +1,3 @@
-// remote_io_node — Remote IO Station 의 ROS 조립층 (remote_io M4)
-//
-// 역할은 **얇은 조립**뿐이다. Modbus 접근·RMW·read-back·watchdog 은 전부 remote_io_hal 소유이고,
-// 본 노드는 (a) 20ms 주기 구동 (b) legacy tc_io 공개 계약(io_resp/io_service/io_alarms) 변환
-// (c) 기동 초기값 1회 적용 만 한다.
-//
-// 계약 파리티 근거: M0 인벤토리 §3·§4. 개선 이탈(DL)은 README 에 등재한다 — 요약하면
-//  - legacy 의 read→unlock→write 비원자 구간이 없다(포트가 로컬 미러로 RMW, 단일 writer).
-//  - legacy 의 while(true) 재연결 스레드가 없다(유계 백오프 + 노드 수명 소유).
-//  - 읽기 실패 시 **발행하지 않는다** — legacy 는 실패해도 직전 값을 계속 내보냈다(§6-5).
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
@@ -35,10 +25,6 @@ using namespace std::chrono_literals;
 namespace rio = remote_io::hal;
 namespace rc = remote_io::ros_assembly;
 
-// 스테이션 쓰기 마스터 단일성을 **프로세스 수준에서** 강제한다(ADR-003 Proposed).
-// 토픽 수신 기반 판정은 소유권의 대리 지표일 뿐이다 — 스테이션 미도달이면 살아 있는 마스터도
-// 발행이 0이라 "없음" 으로 오판되어 인스턴스가 누적된다. 추상 유닉스 소켓은 커널이 이름의
-// 유일성을 보장하고 프로세스 종료 시 자동 해제되므로 잔여 lockfile 문제가 없다.
 int acquireSingleInstanceLock(const std::string &name)
 {
     const int fd = ::socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0);
@@ -46,14 +32,13 @@ int acquireSingleInstanceLock(const std::string &name)
         return -1;
     sockaddr_un addr{};
     addr.sun_family = AF_UNIX;
-    // sun_path[0] = '\0' → 추상 네임스페이스(파일시스템 흔적 없음)
     const size_t n = std::min(name.size(), sizeof(addr.sun_path) - 2);
     std::memcpy(addr.sun_path + 1, name.data(), n);
     const socklen_t len = static_cast<socklen_t>(offsetof(sockaddr_un, sun_path) + 1 + n);
     if (::bind(fd, reinterpret_cast<sockaddr *>(&addr), len) < 0)
     {
         ::close(fd);
-        return -1; // 이미 다른 인스턴스가 잡고 있다
+        return -1;
     }
     return fd;
 }
@@ -63,7 +48,6 @@ class RemoteIoNode : public rclcpp::Node
   public:
     RemoteIoNode() : rclcpp::Node("remote_io_node")
     {
-        // ── 파라미터 (io.info 실측값을 기본값으로, 하드코딩 상수 없음) ──
         const auto ip = declare_parameter<std::string>("station.ip", "192.168.192.14");
         const int port = static_cast<int>(declare_parameter<int>("station.port", 502));
         di_word_count_ = static_cast<uint16_t>(declare_parameter<int>("layout.di_word_count", 5));
@@ -73,15 +57,9 @@ class RemoteIoNode : public rclcpp::Node
         period_ms_ = declare_parameter<int>("publish_period_ms", 20);
         write_retries_ = declare_parameter<int>("write.retries", 3);
         write_backoff_ms_ = declare_parameter<int>("write.backoff_ms", 100);
-        // 기동 초기 ON 비트 — **목록은 config 소유**. 기본값은 legacy 실측 8비트(인벤토리 §4).
         initial_on_bits_ = declare_parameter<std::vector<int64_t>>(
             "initial_on_bits", std::vector<int64_t>{1, 3, 5, 9, 11, 13, 90, 94});
-        // 초기 이미지 적용 여부 — **기본 false(읽기 전용 기동)**.
-        // DO 는 실제 장치를 구동하므로, 링크가 붙었다는 이유만으로 출력을 바꾸면 안 된다.
-        // 전환 절차(cutover S1)는 쓰기 0 상태로 발행 파리티부터 확인한다. 운용 전환(S4)에서만 true.
         apply_initial_image_ = declare_parameter<bool>("apply_initial_image", false);
-        // 워치독 — 마스터 두절 시 커플러가 출력을 안전 상태로 떨어뜨리는 장치 보호.
-        // **기본 0 = 비활성**(현행 동작 유지). 값 자체는 현장 안전 정책이라 사용자 소유다.
         watchdog_timeout_ms_ = declare_parameter<int>("watchdog.timeout_ms", 0);
         watchdog_fault_action_ = declare_parameter<bool>("watchdog.master_fault_action", false);
 
@@ -113,7 +91,6 @@ class RemoteIoNode : public rclcpp::Node
     }
 
   private:
-    // ── 20ms 틱 ──
     void tick()
     {
         auto snap = port_->read();
@@ -129,12 +106,11 @@ class RemoteIoNode : public rclcpp::Node
         in.watchdog_configured = watchdog_configured_;
         in.current_error = error_code_;
 
-        const auto plan = rc::planTick(in);   // 결정은 순수 함수가 소유한다(단위시험 대상)
+        const auto plan = rc::planTick(in);
         error_code_ = plan.error_code;
 
         if (!plan.publish_io)
         {
-            // 읽기 실패 — 직전 값을 다시 내보내지 않는다(legacy §6-5 차단).
             was_connected_ = false;
             publishAlarmIfNeeded(false);
             return;
@@ -143,9 +119,6 @@ class RemoteIoNode : public rclcpp::Node
 
         if (plan.seed_mirror)
         {
-            // 미러 기본값은 0 이라, 시드 없이 비트 하나만 써도 나머지 출력이 전부 0 으로 덮인다.
-            // read() 의 do_words 는 포트 재기록 **이전** 관측값이라 재연결마다 시드하면
-            // 재기록 결과를 덮는다 — 그래서 최초 1회만이다.
             if (auto sr = port_->seedOutputMirror(snap.value().do_words); !sr)
                 RCLCPP_ERROR(get_logger(), "출력 미러 시드 실패(err=%d) — 쓰기 금지 상태",
                              static_cast<int>(sr.error()));
@@ -188,7 +161,6 @@ class RemoteIoNode : public rclcpp::Node
         reportHealth();
     }
 
-    // 워치독은 링크 확립 후 1회 구성한다. 구성 성공분은 포트가 재연결 시 자동 재무장한다.
     void configureWatchdogOnce()
     {
         rio::WatchdogConfig cfg;
@@ -215,7 +187,6 @@ class RemoteIoNode : public rclcpp::Node
         watchdog_notice_done_ = true;
     }
 
-    // 보호 상태를 주기적으로 드러낸다 — 'armed=false' 가 어디에도 안 보이면 없는 것과 같다.
     void reportHealth()
     {
         const auto h = port_->health();
@@ -248,7 +219,6 @@ class RemoteIoNode : public rclcpp::Node
             RCLCPP_INFO(get_logger(), "초기 출력 이미지 적용 — ON %zu비트", initial_on_bits_.size());
     }
 
-    // ── io_service 쓰기 ──
     void handleWrite(const tc_msgs::srv::Io::Request &req, tc_msgs::srv::Io::Response &res)
     {
         res.indices_resp = req.indices;
@@ -259,7 +229,7 @@ class RemoteIoNode : public rclcpp::Node
         if (!chk.ok)
         {
             RCLCPP_WARN(get_logger(), "io_service 요청 거부 — %s", chk.reason);
-            return; // 요청 결함은 알람 대상이 아니다(장비 이상이 아니라 호출자 오류)
+            return;
         }
 
         std::vector<rio::BitCommand> bits;
@@ -268,23 +238,12 @@ class RemoteIoNode : public rclcpp::Node
             bits.push_back(
                 rio::BitCommand{static_cast<uint16_t>(req.indices[i]), req.states[i] != 0});
 
-        // legacy 파리티: 최대 3회, 시도 간 100ms(인벤토리 §4).
-        // **미연결이면 재시도하지 않고 즉시 실패한다** — legacy 도 그렇다(io_manager_node.cpp:296-300).
-        // 재시도해봐야 링크가 그 사이 살아날 리 없고, 슬립만큼 틱을 막는다.
-        //
-        // ⚠ 이 콜백은 타이머와 **같은 실행자**에서 직렬화된다(기본 SingleThreadedExecutor +
-        // MutuallyExclusive 콜백 그룹). 슬립 총량은 (retries-1)×backoff = 200ms 이고
-        // 여기에 writeBits 의 Modbus 왕복(워드당 FC6+FC3, 최악 request_timeout×요청수)이 더해진다.
-        // 실행자를 분리하면 포트의 "변이 호출은 단일 소유 스레드" 계약이 깨지므로,
-        // 직렬화 게이트 없이 분리하지 말 것 — 근본 해법은 쓰기 큐(ADR-002 Proposed).
         for (int attempt = 0; attempt < write_retries_; ++attempt)
         {
             auto r = port_->writeBits(bits);
             if (r)
             {
                 res.received = true;
-                // 쓰기 성공은 **쓰기 실패 알람만** 해제한다 — 읽기 실패·미연결까지 지우면
-                // 쓰기 결과가 읽기 상태를 대변하게 된다.
                 error_code_ = rc::clearOnWriteSuccess(error_code_);
                 return;
             }
@@ -308,7 +267,7 @@ class RemoteIoNode : public rclcpp::Node
             return;
         tc_msgs::msg::AmrAlarm a;
         a.code = static_cast<int32_t>(d.code);
-        a.state = false; // legacy 도 세트하지 않는다(인벤토리 §3) — 소비자 파리티 유지
+        a.state = false;
         alarm_pub_->publish(a);
     }
 
@@ -340,11 +299,10 @@ class RemoteIoNode : public rclcpp::Node
     bool was_connected_ = false;
 };
 
-} // namespace
+}
 
 int main(int argc, char **argv)
 {
-    // 쓰기 마스터 단일성 강제(ADR-003 Proposed) — 중복 기동은 스스로 종료한다.
     const int lock = acquireSingleInstanceLock("remote_io_node.station.write-master");
     if (lock < 0)
     {

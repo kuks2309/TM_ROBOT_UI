@@ -38,7 +38,6 @@ def sent_positions(node):
     return [call.args[1] for call in node._call_set_positions.call_args_list]
 
 
-
 class TestBuildPoseKeepSegments:
     TCP = [100.0, 200.0, 300.0, 0.0, 90.0, 0.0]
     VEL = 10.0
@@ -88,7 +87,6 @@ class TestBuildPoseKeepSegments:
 
         assert len(segs) == 1
         assert segs[0][0] == 'XY 이동'
-
 
 
 class TestDescentDamping:
@@ -148,7 +146,6 @@ class TestDescentDamping:
         assert calls[1].kwargs['velocity'] == 10.0
         assert calls[1].args[1][2] == pytest.approx(0.100)
         assert calls[0].args[1][2] == pytest.approx(0.140)
-
 
 
 class TestPoseKeepMoveExecution:
@@ -225,7 +222,6 @@ class TestPoseKeepMoveExecution:
         assert sum('[자세검증]' in log for log in executor.logs) == 2
 
 
-
 class TestPoseKeepMoveRejection:
     def test_reject_non_robotbase_frame(self, executor, node):
         node.current_base_name = 'UserBase1'
@@ -256,11 +252,6 @@ class TestPoseKeepMoveRejection:
 
 
 class TestStraightPath:
-    """straight=True — 현재점→목표점 한 직선 (법선따라 하강/상승).
-
-    평면 좌표계에서 접근점과 파지점은 X/Y 오프셋이 같으므로 그 사이 직선이 곧 법선이다.
-    기본값(False)은 L 자를 유지해야 한다 — 장거리 이동이 대각선이 되면 장애물에 부딪힌다.
-    """
 
     TCP = [100.0, 200.0, 300.0, 0.0, 90.0, 0.0]
 
@@ -281,7 +272,6 @@ class TestStraightPath:
         assert segs == [('직선 상승', 102.8, 200.0, 400.0, 20.0)]
 
     def test_decel_split_stays_on_the_same_line(self, executor):
-        """감속 분할이 경로를 꺾으면 안 된다 — 내분점이 직선 위에 있어야 한다."""
         segs = executor._build_pose_keep_segments(
             self.TCP, 110.0, 200.0, 200.0, 25.0,
             decel_zone_mm=40.0, decel_velocity=10.0, straight=True
@@ -291,11 +281,9 @@ class TestStraightPath:
         assert segs[0][0] == '직선 하강'
         assert segs[1] == ('직선 하강(감속 진입)', 110.0, 200.0, 200.0, 10.0)
 
-        # 100mm 중 60mm 지점 → x 는 10mm 중 6mm 진행
         assert segs[0][1] == pytest.approx(106.0)
         assert segs[0][3] == pytest.approx(240.0)
 
-        # 두 구간의 방향이 같은가(= 꺾이지 않았는가)
         def unit(ax, ay, az, bx, by, bz):
             d = (bx - ax, by - ay, bz - az)
             n = math.sqrt(sum(c * c for c in d))
@@ -323,7 +311,6 @@ class TestStraightPath:
         assert segs == []
 
     def test_diagonal_distance_counts_not_just_z(self, executor):
-        """Z 차이는 문턱 미만이어도 수평으로 움직이면 이동해야 한다."""
         segs = executor._build_pose_keep_segments(
             self.TCP, 105.0, 200.0, 300.0, 10.0, straight=True
         )
@@ -331,7 +318,6 @@ class TestStraightPath:
         assert segs == [('직선 상승', 105.0, 200.0, 300.0, 10.0)]
 
     def test_default_is_still_L_shaped(self, executor):
-        """기본값은 절대 바뀌면 안 된다 — 장거리 이동이 대각선이 되면 장애물에 박는다."""
         segs = executor._build_pose_keep_segments(
             self.TCP, 500.0, 700.0, 200.0, 25.0,
             decel_zone_mm=40.0, decel_velocity=10.0
@@ -342,7 +328,6 @@ class TestStraightPath:
 
 
 class TestPlanePoseStraightParam:
-    """잡 파라미터 straight_path 가 엔진까지 배선됐는가."""
 
     PLATE = {'x': 817.652, 'y': 215.032, 'z': -325.950,
              'rx': 0.261, 'ry': -0.074, 'rz': 89.574}

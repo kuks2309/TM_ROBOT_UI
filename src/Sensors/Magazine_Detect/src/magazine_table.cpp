@@ -28,7 +28,6 @@ std::optional<std::string> validate(const Config & cfg, std::size_t di_bit_count
       return "슬롯 " + std::to_string(i) + " 의 di_bit 가 범위 밖이다 (" +
              std::to_string(b) + ", 허용 0.." + std::to_string(di_bit_count - 1) + ")";
     }
-    // 중복은 조용히 두면 두 자리가 같은 센서를 보게 되어 한 자리가 영영 안 바뀐다.
     for (std::size_t j = i + 1; j < kSlotCount; ++j) {
       if (cfg.di_bit[j] == b) {
         return "슬롯 " + std::to_string(i) + " 과 " + std::to_string(j) +
@@ -75,4 +74,4 @@ void MagazineTable::markStale()
   state_.pending.fill(0);
 }
 
-}  // namespace magazine_detect
+}

@@ -98,13 +98,6 @@ class RecipeConverter:
             return None
 
     def load_landmark_pose(self) -> Optional[Dict[str, float]]:
-        """save_landmark_pose Job 이 남긴 파일에서 기준 Landmark 좌표를 읽는다.
-
-        마스터의 reference.tm_jig_landmark 가 없을 때 쓰는 기준점 소스다.
-        그 블록은 GUI 저장 시에만 갱신되고 스캔이 비면 옛 값으로 조용히
-        폴백하는 반면, 이 파일은 레시피 실행 중 스캔 직후에 기록되므로
-        측정과 기준점이 같은 실행에서 나온 것임이 보장된다.
-        """
         if not self.landmark_pose_file:
             return None
 
@@ -379,10 +372,6 @@ def find_latest_jig_plate_file() -> Optional[str]:
 
 
 def find_latest_landmark_pose_file() -> Optional[str]:
-    """save_landmark_pose 산출물 중 가장 최근 것 (mtime 기준).
-
-    find_latest_jig_plate_file 과 같은 규약 — 폴더가 없거나 비면 None.
-    """
     landmark_dir = Path(__file__).parent.parent / "data" / "landmark_pose"
 
     if not landmark_dir.exists():

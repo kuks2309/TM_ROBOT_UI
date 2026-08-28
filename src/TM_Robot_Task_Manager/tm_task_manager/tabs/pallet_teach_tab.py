@@ -1,23 +1,3 @@
-"""팔레트 티칭 마법사 탭 — 버튼만 눌러 팔레트를 등록한다.
-
-한 탭에서 «측정 → 접근 → 조그 티칭 → 레시피 발행» 을 순서대로 밟는다. 계산·이동·
-파일 발행은 전부 `macros/pallet_teach.py` 가 하고 이 파일은 **버튼과 표시**만 한다
-(UI/로직 분리 — CLAUDE.md §2).
-
-## 기존 탭과 다른 점 (의도된 것)
-
-다른 탭은 `ui/*.ui` 를 `uic.loadUi` 로 읽어 `main_window.ui` 의 placeholder 에 붙는다.
-이 탭은 **코드로 UI 를 만들고 `tabWidget_main.addTab()` 으로 추가**한다 —
-`main_window.ui` 는 Qt Designer 가 생성한 큰 XML 이라 손으로 패치하면 다른 탭까지
-깨질 위험이 있고, 마법사는 위젯이 단순해 코드로 충분하다.
-근거: docs/adr/2026-08-24-pallet-teach-wizard.md
-
-## 칠판을 탭이 소유하는 이유
-
-`JobExecutor.macro_blackboard` 를 쓰면 사용자가 마법사 도중 다른 레시피를 돌리는
-순간 `run_from()` 이 칠판을 비워 측정 결과가 사라진다. 마법사는 자기 칠판을 들고
-`MacroContext(executor, blackboard)` 로 주입한다.
-"""
 import os
 import threading
 from typing import Any, Callable, Dict, List, Optional
@@ -38,26 +18,20 @@ from ..macros.pallet_teach import (
 
 TAB_TITLE = '팔레트 티칭'
 
-# 탭을 끼울 자리. main_window.ui 의 탭이 15개라 끝에 붙이면 탭바 스크롤 뒤로 숨는다.
-# 1 = 첫 탭(Task 편집) 바로 뒤 — 첫 화면에서 바로 보인다. 자리를 바꾸려면 이 값만 고친다.
 TAB_INSERT_INDEX = 1
 
-# 마법사가 밟는 매크로 순서. 기동 시 validate_sequence 로 검증한다 — 순서가
-# 어긋나면 로봇을 움직이기 전에 로그로 드러난다.
 FIXED_SEQUENCE = ['pallet_scan_4corners', 'pallet_center_approach',
                   'pallet_capture_teach', 'pallet_emit_recipes']
 FLOATING_SEQUENCE = ['pallet_capture_marker'] + FIXED_SEQUENCE
 
 
 class PalletTeachTab(BaseTab):
-    """팔레트 티칭 마법사. 버튼 → 매크로 1개 실행 → 칠판 갱신 → 다음 버튼 활성화."""
 
     def __init__(self, main_window):
         super().__init__(main_window)
         self.mw = main_window
 
         self.ui_widget: Optional[QWidget] = None
-        # 마법사 전용 칠판 — 매크로들이 여기에 측정·티칭 결과를 쌓는다.
         self.blackboard: Dict[str, Any] = {}
 
         self._busy = False
@@ -66,7 +40,6 @@ class PalletTeachTab(BaseTab):
         self._poll_timer: Optional[QTimer] = None
         self._widgets: Dict[str, Any] = {}
 
-    # --------------------------------------------------------------- UI 구성
 
     def init_ui(self):
         ok, problems = validate_sequence(FLOATING_SEQUENCE)
@@ -99,10 +72,6 @@ class PalletTeachTab(BaseTab):
             print('[PalletTeachTab] ERROR: tabWidget_main 이 없습니다 — 탭을 추가하지 못했습니다')
             return
 
-        # ⚠️ addTab 으로 **끝에 붙이면 보이지 않는다.** main_window.ui 에 이미 탭이
-        #    15개 있어 탭바가 넘치고, 16번째는 스크롤 화살표 뒤로 숨는다
-        #    (2026-08-24 실측 — "탭이 생성 안 된 것 같다"의 원인이 이것이었다).
-        #    앞쪽에 끼워 첫 화면에서 바로 보이게 한다.
         tab_widget.insertTab(TAB_INSERT_INDEX, page, TAB_TITLE)
         self.ui_widget = page
         self._refresh_enabled()
@@ -200,11 +169,6 @@ class PalletTeachTab(BaseTab):
         return box
 
     def _build_step3_alt(self) -> QGroupBox:
-        """3의 대안 — 이미 재 둔 측정 파일로 평면을 만든다 (로봇 무동작).
-
-        같은 팔레트를 여러 번 측정해 뒀다면 다시 6분을 쓸 이유가 없다. 파일을 골라
-        outlier 제거 후 평균내면 3·4단계를 건너뛰고 바로 중심 접근으로 간다.
-        """
         box = QGroupBox('3-대안. 이미 측정한 값으로 대체 (로봇 무동작)')
         layout = QVBoxLayout(box)
 
@@ -213,9 +177,6 @@ class PalletTeachTab(BaseTab):
         note.setWordWrap(True)
         layout.addWidget(note)
 
-        # 파일 고르기는 **네이티브 파일 창**으로 한다 — 드래그·Shift·Ctrl 다중 선택이
-        # 공짜로 따라오고, 사용자가 이미 아는 조작이다. 폴더 경로 칸은 그 창이 어디서
-        # 열릴지 정하는 시작점일 뿐이라 손으로 안 쳐도 된다.
         picker = QHBoxLayout()
         pick_files = QPushButton('파일 선택… (여러 개 가능)')
         pick_files.clicked.connect(self._on_pick_files)
@@ -298,7 +259,6 @@ class PalletTeachTab(BaseTab):
         self._widgets['standoff'] = standoff
 
         align = QComboBox()
-        # 표시 문구 ↔ 매크로 값. 기본(첫 항목)이 팔레트 정렬이다.
         align.addItem('팔레트에 정렬 (기울기 + 긴 변 회전)', 'plane')
         align.addItem('기울기만 맞추고 현재 공구 회전 유지', 'keep')
         align.setToolTip('공구 면은 두 경우 모두 평면과 평행해집니다 — 다른 것은 '
@@ -351,9 +311,6 @@ class PalletTeachTab(BaseTab):
         self._widgets['name'] = name
         self._widgets['operator'] = operator
 
-        # 그리퍼 기종 — 감지 결과를 기본으로 두되 사용자가 덮어쓸 수 있게 한다.
-        # 로봇을 움직이는 레시피라 조용한 자동 선택만으로는 오선택을 잡지 못하고,
-        # 수동 전용이면 오선택이 그대로 나간다. 둘을 겹친다.
         gripper_row = QHBoxLayout()
         gripper_row.addWidget(QLabel('그리퍼'))
         gripper_group = QButtonGroup(box)
@@ -376,10 +333,6 @@ class PalletTeachTab(BaseTab):
         layout.addWidget(gripper_state)
         self._widgets['gripper_state'] = gripper_state
 
-        # 최종 하강/상승 직선을 무엇으로 낼 것인가. 둘 다 실기에서 도는 방식이라
-        # 어느 한쪽을 강제하지 않는다 — 상황(평면 기울기·공구 자세)에 따라 고른다.
-        #   법선 직선 : 평면 법선을 따라 내려간다 (move_to_plane_pose + straight_path)
-        #   공구축 직선: 공구 축을 따라 내려간다 (move_linear) — *_tcplinear.yaml 계열
         descent_row = QHBoxLayout()
         descent_row.addWidget(QLabel('최종 하강/상승'))
         descent_group = QButtonGroup(box)
@@ -407,16 +360,13 @@ class PalletTeachTab(BaseTab):
         self._widgets['emit_status'] = status
         return box
 
-    # --------------------------------------------------------------- 그리퍼
 
     def _selected_gripper(self) -> str:
-        """라디오에서 고른 기종 id. '자동 감지'면 빈 문자열 — 매크로가 감지한다."""
         group = self._widgets.get('gripper_group')
         button = group.checkedButton() if group is not None else None
         return str(button.property('gripper_id') or '') if button is not None else ''
 
     def _selected_descent(self) -> str:
-        """고른 최종 하강/상승 방식. 기본은 법선 직선 — 기존 발행물과 같은 경로다."""
         group = self._widgets.get('descent_group')
         button = group.checkedButton() if group is not None else None
         if button is None:
@@ -424,11 +374,6 @@ class PalletTeachTab(BaseTab):
         return str(button.property('descent_id') or 'plane_normal')
 
     def _on_probe_gripper(self):
-        """지금 붙어 있는 그리퍼를 확인해 적고, LIVE 인 것이 있으면 그걸로 맞춘다.
-
-        BUILT(패키지는 있으나 노드 미기동)는 **고르지 않는다** — 그 상태로 레시피를
-        내면 실행 시점에 실패한다. 상태는 그대로 보여주어 원인을 알 수 있게 한다.
-        """
         from ..hardware.gripper import LIVE, survey
         node = getattr(self.mw, 'ros_node', None)
         rows = survey(node)
@@ -454,7 +399,6 @@ class PalletTeachTab(BaseTab):
         self._widgets['log'] = view
         return box
 
-    # ------------------------------------------------------------- 상태 반영
 
     def _is_floating(self) -> bool:
         return bool(self._widgets['mount_floating'].isChecked())
@@ -474,7 +418,6 @@ class PalletTeachTab(BaseTab):
         self._widgets['step2'].setEnabled(floating)
         self._widgets['marker_button'].setEnabled(idle and floating)
         self._widgets['scan_button'].setEnabled(idle and (has_marker or not floating))
-        # 저장된 측정값 경로는 로봇을 움직이지 않으므로 위치 마커 없이도 쓸 수 있다.
         for key in ('src_pick_files', 'src_pick_folder', 'src_clear',
                     'src_remove', 'src_apply'):
             self._widgets[key].setEnabled(idle)
@@ -492,15 +435,9 @@ class PalletTeachTab(BaseTab):
             view.appendPlainText(message)
         self._log(f'[팔레트 티칭] {message}')
 
-    # ------------------------------------------------------------- 매크로 실행
 
     def _run(self, macro_name: str, params: Dict[str, Any],
              on_done: Callable[[Any], None]):
-        """매크로를 작업 스레드에서 돌리고 QTimer 로 완료를 회수한다.
-
-        스캔·이동은 수 분이 걸리므로 UI 스레드에서 돌리면 화면이 얼어 [정지]도 못 누른다.
-        기존 `main_window._on_find_robot_ip` 의 스레드+타이머 패턴을 그대로 따른다.
-        """
         if self._busy:
             return
         executor = self.job_executor
@@ -515,14 +452,12 @@ class PalletTeachTab(BaseTab):
         self._append_log(f'{macro_name} 실행…')
 
         context = MacroContext(executor, self.blackboard)
-        # 이전 [정지]가 남긴 플래그를 지운다 — 안 지우면 매크로가 진입 즉시
-        # «정지 요청으로 …중단» 으로 끝난다(2026-08-24 실기).
         context.clear_stop_request()
 
         def worker():
             try:
                 self._result = run_macro(macro_name, context, params)
-            except Exception as exc:                      # noqa: BLE001 — 스레드 경계
+            except Exception as exc:
                 self._result = exc
             finally:
                 self._done = True
@@ -554,7 +489,6 @@ class PalletTeachTab(BaseTab):
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         return answer == QMessageBox.Yes
 
-    # ------------------------------------------------------------- 버튼 핸들러
 
     def _on_capture_marker(self):
         def done(result):
@@ -565,10 +499,8 @@ class PalletTeachTab(BaseTab):
                     f"Z{marker.get('z', 0):.2f} · Rz {marker.get('rz', 0):.2f}°")
         self._run('pallet_capture_marker', {}, done)
 
-    # ------------------------------------------------- 측정 파일 고르기
 
     def _start_dir(self) -> str:
-        """파일 창이 열릴 폴더. 상대경로는 패키지 루트 기준으로 푼다."""
         resolved = resolve_measurement_dir(self._widgets['src_path'].text().strip())
         return resolved if os.path.isdir(resolved) else str(package_root())
 
@@ -589,13 +521,11 @@ class PalletTeachTab(BaseTab):
             else '선택된 파일 없음 — 비워 두면 기본 폴더에서 최신 N개를 씁니다')
 
     def _on_pick_files(self):
-        """네이티브 파일 창. 드래그·Shift·Ctrl 다중 선택이 그대로 된다."""
         paths, _ = QFileDialog.getOpenFileNames(
             self.mw, '측정 파일 선택 (여러 개 가능)', self._start_dir(),
             '측정 YAML (*.yaml *.yml);;모든 파일 (*)')
         if not paths:
             return
-        # 이미 고른 것에 **더한다** — 여러 폴더(팔레트별)에서 모아 담을 수 있다.
         merged = self._listed_paths()
         merged += [p for p in paths if p not in merged]
         self._set_listed_paths(merged)

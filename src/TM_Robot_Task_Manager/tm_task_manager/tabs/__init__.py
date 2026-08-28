@@ -1,3 +1,4 @@
+"""탭 패키지 공개 인터페이스 — 13개 탭 클래스를 re-export 한다 (전 모듈 eager import: 어느 탭의 import 실패도 앱 기동 실패로 이어짐)."""
 from .base_tab import BaseTab
 from .task_edit_tab import TaskEditTab
 from .vision_tab import VisionTab

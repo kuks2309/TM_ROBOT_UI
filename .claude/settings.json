@@ -128,26 +128,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-edit-guard.py\"",
-            "timeout": 5
-          }
-        ],
-        "matcher": "Write|Edit|MultiEdit|NotebookEdit"
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-scope-gate.py\"",
-            "timeout": 5
-          }
-        ],
-        "matcher": "Bash"
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-write-guard.py\"",
             "timeout": 5
           }
@@ -159,6 +139,26 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-state-guard.py\"",
+            "timeout": 5
+          }
+        ],
+        "matcher": "Bash"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-edit-guard.py\"",
+            "timeout": 5
+          }
+        ],
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-scope-gate.py\"",
             "timeout": 5
           }
         ],
@@ -200,26 +200,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-track.py\"",
-            "timeout": 5
-          }
-        ],
-        "matcher": "Read|Write|Edit|MultiEdit|NotebookEdit"
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-hash-sweep.py\"",
-            "timeout": 10
-          }
-        ],
-        "matcher": "Bash"
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-track.py\"",
             "timeout": 5
           }
@@ -235,6 +215,26 @@
           }
         ],
         "matcher": "Write|Edit|MultiEdit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-track.py\"",
+            "timeout": 5
+          }
+        ],
+        "matcher": "Read|Write|Edit|MultiEdit|NotebookEdit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-hash-sweep.py\"",
+            "timeout": 10
+          }
+        ],
+        "matcher": "Bash"
       }
     ],
     "Stop": [
@@ -262,8 +262,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-version-report.py\"",
-            "timeout": 5
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-start.py\"",
+            "timeout": 10
           }
         ]
       },
@@ -271,8 +271,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-start.py\"",
-            "timeout": 10
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-version-report.py\"",
+            "timeout": 5
           }
         ]
       }

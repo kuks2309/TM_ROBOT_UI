@@ -80,4 +80,4 @@ hal::Health SimMagazinePort::health() const
     return h;
 }
 
-} // namespace gripper::sim
+}

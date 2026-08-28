@@ -397,15 +397,6 @@ class TaskEditTab(BaseTab):
             self.mw.label_tmLandmarkResult.setText("")
 
     def _exec_button_label(self, job) -> str:
-        """전용 분기가 없는 Task 의 수동 실행 버튼 라벨.
-
-        버튼 글자는 «버튼이 할 일» 이어야 한다. 이동 파라미터가 있는 Task 만 실제로
-        이동하므로 그때만 "이 위치로 이동" 이고, 나머지는 JOB_TYPES 에 등록된 이름을
-        그대로 보여준다 — 그리퍼·IO·검사 Task 가 «이동» 으로 보이던 것이 오해의 원인이었다.
-
-        판단 기준을 _move_to_params 의 폴백과 **같은 조건**(motion_type 유무)으로 맞춘다.
-        어긋나면 라벨이 거짓말을 한다.
-        """
         if 'motion_type' in self.param_widgets:
             return "이 위치로 이동"
         spec = self.recipe_manager.JOB_TYPES.get(job.type) if self.recipe_manager else None
@@ -457,11 +448,9 @@ class TaskEditTab(BaseTab):
 
         self.param_widgets = {}
         self.param_labels = {}
-        # 위젯이 deleteLater 로 사라지므로 참조를 남기면 삭제된 객체를 만지게 된다.
         self._offset_preset_combo = None
 
     def _on_browse_dirpath(self, path_edit):
-        """dirpath 파라미터의 '폴더 선택...' 버튼 — 디렉터리 대화상자로 경로를 채운다."""
         current = path_edit.text().strip()
         if current:
             start_dir = current if os.path.isabs(current) else str(paths.PACKAGE_ROOT / current)
@@ -476,9 +465,6 @@ class TaskEditTab(BaseTab):
         if not self.param_widgets:
             return
 
-        # offset_x/y/z 위젯은 두 종류다: dict 타입 'offset' 파라미터가 펼쳐진 것과,
-        # align_to_plane_normal·move_to_plane_pose 처럼 float 로 직접 선언된 것.
-        # 이름만 보고 건너뛰면 후자가 저장되지 않으므로 선언 타입으로 가른다.
         param_defs = self.recipe_manager.JOB_TYPES.get(job.type, {}).get('params', {})
         has_offset_dict = param_defs.get('offset', {}).get('type') == 'dict'
 
@@ -599,11 +585,6 @@ class TaskEditTab(BaseTab):
             self._log("입력 가능한 위치 파라미터가 없습니다")
 
     def _on_move_to_params(self):
-        """수동 실행 버튼. 실행 중 들어온 클릭은 게이트가 버린다.
-
-        모션 대기는 GUI 스레드를 블로킹하지만 로그 출력이 processEvents() 를 부르므로
-        그 사이 쌓인 클릭이 재진입 실행된다 — 그래서 진입점 한 곳에서 막는다.
-        """
         gate = getattr(self.mw, 'command_gate', None)
         if gate is not None and not gate.acquire("Task 수동 실행"):
             return
@@ -707,10 +688,6 @@ class TaskEditTab(BaseTab):
             self._exec_motion_move()
             return
 
-        # 전용 분기가 없는 Task 는 job_executor 에 그대로 위임한다.
-        # 예전에는 로그만 남기고 아무것도 하지 않아, 그리퍼(smc_*/schunk_*)·IO·검사
-        # Task 가 버튼을 눌러도 반응이 없었다. _exec_selected_job 은 레시피 실행과
-        # 같은 _execute_job 경로를 타므로 두 경로가 갈라지지 않는다.
         label = self._exec_button_label(current_job)
         if current_job.type not in self.recipe_manager.JOB_TYPES:
             self._log(f"등록되지 않은 Task 타입입니다: {current_job.type}")
@@ -968,11 +945,6 @@ class TaskEditTab(BaseTab):
             self._log("자세유지 포인트 이동 실패")
 
     def _exec_selected_job(self, label: str):
-        """선택된 Task 를 UI 파라미터 그대로 1회 실행한다 ('이 위치로 이동').
-
-        job_executor 의 분기를 그대로 타므로 레시피 실행과 같은 계산을 쓴다 —
-        여기서만 따로 계산하면 두 경로가 갈라진다.
-        """
         current_row = self.mw.listWidget_taskSequence.currentRow()
         recipe = self.recipe_manager.current_recipe
         if not recipe or current_row < 0 or current_row >= len(recipe.jobs):
@@ -1006,10 +978,6 @@ class TaskEditTab(BaseTab):
     OFFSET_PRESET_KEYS = ('x', 'y', 'rx', 'ry', 'rz')
 
     def _add_offset_preset_row(self, layout):
-        """오차 preset 콤보 + 적용/저장/삭제 버튼을 파라미터 폼에 붙인다.
-
-        파일 입출력은 OffsetPresetService 가 맡고 본 탭은 위젯 값만 오간다.
-        """
         service = getattr(self.mw, 'offset_preset_service', None)
         if service is None:
             return
@@ -1045,11 +1013,9 @@ class TaskEditTab(BaseTab):
         label.setToolTip("그리퍼 오차 묶음 저장/불러오기")
         layout.addRow(label, container)
 
-        # param_widgets 에 넣으면 Task 파라미터로 저장돼 버리므로 따로 보관한다.
         self._offset_preset_combo = combo
 
     def _read_offset_widgets(self):
-        """오차 입력칸 값을 dict 로 읽는다. 칸이 없으면 None."""
         if not all(f'offset_{k}' in self.param_widgets for k in self.OFFSET_PRESET_KEYS):
             return None
         return {
@@ -1127,15 +1093,6 @@ class TaskEditTab(BaseTab):
     LANDMARK_FRAME_OFFSET_KEYS = ('x', 'y', 'z', 'rx', 'ry', 'rz')
 
     def _teach_landmark_frame_offset(self, job):
-        """'현재위치 입력' — 그리퍼 오차를 역산해 tool_offset_* 칸에 채운다.
-
-        align_to_plane_normal 과 같은 의미로 맞춘다 — 손으로 맞춰 둔 자세와
-        계산된 목표의 차이가 곧 그리퍼 오차다. 목표 위치(offset_*)는 건드리지
-        않는다. 한 번 정한 목표를 티칭이 덮어쓰면 값의 출처를 알 수 없게 된다.
-
-        목표 자체를 조그로 다시 잡으려면 offset_* 칸에 직접 넣거나,
-        job_executor.estimate_landmark_frame_target 을 쓰는 별도 경로가 필요하다.
-        """
         self._save_params_from_ui(job)
 
         offset, message = self.job_executor.estimate_landmark_frame_tool_offset(job.params)
@@ -1155,7 +1112,6 @@ class TaskEditTab(BaseTab):
         self._log("추산된 그리퍼 오차를 입력칸에 채웠습니다 — '파라미터 적용' 을 눌러야 Task 에 저장됩니다")
 
     def _teach_plane_align_offset(self, job):
-        """'현재위치 입력' — 지금 TCP 자세를 정답으로 보고 그리퍼 오차를 역산해 채운다."""
         self._save_params_from_ui(job)
 
         offset, message = self.job_executor.estimate_plane_align_tool_offset(job.params)

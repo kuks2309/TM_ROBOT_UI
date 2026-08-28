@@ -1,19 +1,3 @@
-"""모션 명령 사전 검사 — 로봇이 움직이기 전에 목표·경로를 판정해 경고하고 차단한다.
-
-ROS2 에 의존하지 않는다. 현재 TCP 자세는 호출자가 넘긴다.
-
-## 판정 정책
-
-| 종류 | 판정 | 근거 |
-| --- | --- | --- |
-| `LINE` / `LINE_RELATIVE` | 현재 TCP → 목표 **선분 전체** | 실경로가 직선으로 보장된다 |
-| `PTP_TCP` / `PTP_JOINT` | 구역 활성 시 **거부** | 실경로가 직선이 아니라 판정이 근사다 (사용자 결정) |
-| `VISION_JOB` | **통과하되 미검사로 기록** | 목표가 TMflow 잡 내부라 좌표가 명령에 없다 (사용자 결정) |
-| 해석 불가 | 거부 | 조용히 새는 경로를 만들지 않는다 |
-
-`VISION_JOB` 은 좌표를 알 수 없어 검사할 수 없다. 막지 않는 대신 `checked=False` 로
-남겨, 어떤 이동이 좌표 검사 없이 나갔는지 나중에 감사할 수 있게 한다.
-"""
 import math
 from dataclasses import dataclass, field
 from typing import Callable, List, Optional, Sequence
@@ -34,7 +18,6 @@ MAX_RECORDS = 200
 
 @dataclass
 class GuardDecision:
-    """가드 판정 1건. 기록으로 남길 수 있도록 판정 근거를 모두 담는다."""
 
     allowed: bool
     kind: str
@@ -54,11 +37,6 @@ class GuardDecision:
 
 
 def rotation_matrix_deg(rx_deg: float, ry_deg: float, rz_deg: float) -> List[List[float]]:
-    """RPY(도) → 회전행렬 R = Rz·Ry·Rx.
-
-    RobotMotionService._quaternion_to_euler_deg 가 만드는 각과 같은 규약이라,
-    그 각을 그대로 넣으면 툴 좌표계 → 베이스 좌표계 변환이 된다.
-    """
     rx, ry, rz = math.radians(rx_deg), math.radians(ry_deg), math.radians(rz_deg)
     cx, sx = math.cos(rx), math.sin(rx)
     cy, sy = math.cos(ry), math.sin(ry)
@@ -72,11 +50,6 @@ def rotation_matrix_deg(rx_deg: float, ry_deg: float, rz_deg: float) -> List[Lis
 
 def tool_offset_to_base(tcp_pose: Sequence[float],
                         dx: float, dy: float, dz: float) -> List[float]:
-    """툴 좌표계 상대 오프셋(mm) → 베이스 좌표계 절대 목표(mm).
-
-    Move_Line("TPP", …) 은 툴 기준 상대 이동이라, 현재 자세의 회전을 곱해야
-    베이스 좌표계에서의 목표점이 나온다.
-    """
     R = rotation_matrix_deg(tcp_pose[3], tcp_pose[4], tcp_pose[5])
     offset = (float(dx), float(dy), float(dz))
     return [
@@ -86,7 +59,6 @@ def tool_offset_to_base(tcp_pose: Sequence[float],
 
 
 class MotionGuard:
-    """안전 구역 정의를 들고 모션 명령을 판정한다. 판정 기록을 누적한다."""
 
     def __init__(self, area: Optional[dict] = None,
                  log_callback: Optional[Callable[[str], None]] = None):
@@ -103,7 +75,6 @@ class MotionGuard:
         return sa.is_enabled(self._area)
 
     def reload(self, path: Optional[str] = None) -> dict:
-        """설정 파일을 다시 읽는다. 웹·GUI 에서 구역을 바꾼 뒤 호출한다."""
         self._area = sa.load_area(path)
         return self._area
 
@@ -114,7 +85,6 @@ class MotionGuard:
         return list(self._records)
 
     def unchecked_records(self) -> List[GuardDecision]:
-        """좌표 검사 없이 통과한 이동만. 감사·리뷰용."""
         return [r for r in self._records if r.allowed and not r.checked]
 
     def clear_records(self) -> None:
@@ -136,11 +106,6 @@ class MotionGuard:
               target_mm: Optional[Sequence[float]] = None,
               offset_mm: Optional[Sequence[float]] = None,
               label: str = '') -> GuardDecision:
-        """모션 명령 1건을 판정한다.
-
-        kind 가 LINE 이면 target_mm 을, LINE_RELATIVE 면 offset_mm 을 준다.
-        tcp_pose 는 [x, y, z, rx, ry, rz] (mm, 도) 로 현재 자세다.
-        """
         if not self.enabled:
             return self._record(GuardDecision(
                 allowed=True, kind=kind, label=label, checked=False,

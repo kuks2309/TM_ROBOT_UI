@@ -18,7 +18,6 @@ RAW_ECHO_LIMIT = 200
 
 
 def _echo(value: str) -> str:
-    """실패 메시지에 붙일 원문. 사유만으로는 TM Flow 쪽 원인을 짚을 수 없다."""
     text = str(value)
     if len(text) > RAW_ECHO_LIMIT:
         text = text[:RAW_ECHO_LIMIT] + '…'

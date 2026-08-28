@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-"""매거진 재고 서비스·check_magazine 잡 단위 테스트.
-
-판정 로직(비트 매핑·극성·디바운스)은 magazine_detect C++ 코어 소유이고 거기서 시험된다.
-여기서 지키는 것은 **파이썬 쪽 계약** 두 가지다:
-  · 판정 불가(미수신·stale)를 «비어 있음» 과 섞지 않는다 — 섞으면 없는 박스를 집으러 간다
-  · 기대와 다르면 잡이 실패해 레시피가 선다
-"""
 import sys
 from pathlib import Path
 
@@ -25,7 +18,6 @@ class _FakeLogger:
 
 
 class _FakeNode:
-    """구독만 받아 두는 최소 노드. 실제 ROS 없이 서비스 계약을 시험한다."""
 
     def __init__(self):
         self.subscription = None
@@ -39,7 +31,6 @@ class _FakeNode:
 
 
 class _FakeState:
-    """MagazineState 대역 — present/raw/valid 만 있으면 서비스 계약은 성립한다."""
 
     def __init__(self, present, valid=True, raw=None):
         self.present = list(present)
@@ -62,7 +53,6 @@ def _feed(svc, state):
     svc._on_state(state)
 
 
-# ── 서비스 계약 ──────────────────────────────────────────────
 def test_미수신은_판정불가():
     svc = _service()
     assert svc.is_valid() is False
@@ -81,7 +71,6 @@ def test_stale는_비었다와_다르다():
     svc = _service()
     _feed(svc, _FakeState(SLOT1_ONLY))
     _feed(svc, _FakeState(SLOT1_ONLY, valid=False))
-    # 마지막 확정값은 남아 있지만 조회는 판정 불가여야 한다
     assert svc.present_list() == SLOT1_ONLY
     assert svc.slot_present(1) is None, 'stale 인데 재고를 확정해서 답했다'
 
@@ -108,13 +97,6 @@ def test_구독_토픽():
 
 
 def test_구독_QoS가_RELIABLE_VOLATILE(monkeypatch):
-    """QoS 는 발행자와 맞아야 한다 — BEST_EFFORT 구독자는 RELIABLE 발행자와 호환이지만
-    재고는 놓치면 안 되는 값이라 RELIABLE 로 고정한다. VOLATILE 은 발행자와 동일해야 한다
-    (VOLATILE 발행 ↔ TRANSIENT_LOCAL 구독은 비호환 — CLAUDE.md §5).
-
-    conftest 가 rclpy 를 대역으로 갈아끼우므로 실제 enum 을 못 쓴다.
-    대신 rclpy.qos 대역을 심어 «무엇을 골랐는지» 를 직접 확인한다.
-    """
     import sys
     import types
 
@@ -151,7 +133,6 @@ def test_구독_QoS가_RELIABLE_VOLATILE(monkeypatch):
     assert captured['depth'] == 10
 
 
-# ── 잡 계약 ─────────────────────────────────────────────────
 class _Job:
     def __init__(self, **params):
         self.params = params
@@ -183,7 +164,6 @@ def test_잡_기대불일치면_실패():
 
 
 def test_잡_판정불가는_실패다():
-    # 모르는 것을 «비었다» 로 읽으면 없는 박스를 집으러 간다.
     svc = _service()
     ex = _executor(svc)
     assert ex._exec_check_magazine(_Job(slot=1, expect='empty', timeout=0.1)) is False
@@ -204,7 +184,6 @@ def test_잡_slot이_숫자가_아니면_실패():
     assert ex._exec_check_magazine(_Job(slot='뒤왼', expect='empty')) is False
 
 
-# ── 불일치 처리: stop / skip / ignore ────────────────────────
 class _FakeRecipe:
     def __init__(self, count):
         self.jobs = [object()] * count
@@ -219,7 +198,6 @@ def _executor_in_recipe(svc, job_count=40, index=0):
 
 
 def test_기본은_stop이다():
-    """on_mismatch 를 안 적으면 기존 동작(정지)이어야 한다 — 기존 레시피 무영향."""
     svc = _service()
     _feed(svc, _FakeState(SLOT1_ONLY))
     ex = _executor_in_recipe(svc, index=5)
@@ -251,7 +229,6 @@ def test_skip은_skip_count만큼_전진한다():
     ex = _executor_in_recipe(svc, index=2)
     assert ex._exec_check_magazine(
         _Job(slot=0, expect='present', on_mismatch='skip', skip_count=11)) is True
-    # 실행 루프가 +1 을 더 하므로 다음 실행은 index 14 가 된다
     assert ex.current_job_index == 13
 
 
@@ -300,7 +277,6 @@ def test_skip_count가_숫자가_아니면_정지():
 
 
 def test_역순실행중_skip은_정지():
-    """역순으로 돌면서 앞으로 건너뛰면 의도와 반대로 간다 — 조용히 틀리느니 선다."""
     svc = _service()
     _feed(svc, _FakeState(SLOT1_ONLY))
     ex = _executor_in_recipe(svc, index=5)
@@ -319,8 +295,7 @@ def test_알수없는_on_mismatch는_stop():
 
 
 def test_판정불가는_on_mismatch와_무관하게_정지():
-    """모름은 «기대와 다름» 이 아니다. ignore 를 걸어도 진행하면 안 된다."""
-    svc = _service()  # 아무것도 안 먹임 → 판정 불가
+    svc = _service()
     ex = _executor_in_recipe(svc, index=5)
     for mode in ('stop', 'skip', 'ignore'):
         assert ex._exec_check_magazine(

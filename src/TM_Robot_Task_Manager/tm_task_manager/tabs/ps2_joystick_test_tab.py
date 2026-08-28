@@ -1,3 +1,4 @@
+"""PS2 조이스틱 테스트 탭 — 축/버튼/모드/연결 상태를 표시만 하는 순수 view."""
 from PyQt5.QtWidgets import QVBoxLayout
 from PyQt5 import uic
 
@@ -6,6 +7,8 @@ from .. import paths
 
 
 class PS2JoystickTestTab(BaseTab):
+    """joystick_service 상태 시그널을 받아 축 진행바 8개·버튼 LED 12개·모드 표시를 갱신하는 탭."""
+
     def __init__(self, main_window):
         super().__init__(main_window)
         self.mw = main_window
@@ -14,6 +17,7 @@ class PS2JoystickTestTab(BaseTab):
         self._axis_values = [0.0] * 8
 
     def connect_signals(self):
+        """no-op — 시그널 연결은 .ui 로드가 끝나는 init_ui 내부에서 수행한다."""
         pass
 
     def init_ui(self):
@@ -37,6 +41,7 @@ class PS2JoystickTestTab(BaseTab):
         js.status_changed.connect(self._on_status_changed)
 
     def _connect_worker_signals(self):
+        # 워커는 조이스틱 연결 후에야 생성되므로 None 가드 필요 — 재연결 시 _on_connection_changed 가 재호출한다.
         js = self.mw.joystick_service
         if js._worker:
             js._worker.axis_changed.connect(self._on_axis_changed)
@@ -63,7 +68,7 @@ class PS2JoystickTestTab(BaseTab):
         for i in range(8):
             progress_bar = getattr(ui, f'progressBar_axis{i}', None)
             if progress_bar:
-                progress_bar.setValue(50)
+                progress_bar.setValue(50)  # 50 = 축 중립(값 0.0)
             value_label = getattr(ui, f'label_axisValue{i}', None)
             if value_label:
                 value_label.setText("+0.00")
@@ -112,6 +117,7 @@ class PS2JoystickTestTab(BaseTab):
 
     def _update_axis_display(self, axis_id: int, value: float):
         ui = self.joystick_ui
+        # 축 값 범위 [-1.0, +1.0] 을 진행바 범위 0~100 으로 환산 (중립 50)
         progress_value = int((value + 1.0) * 50)
         progress_value = max(0, min(100, progress_value))
         

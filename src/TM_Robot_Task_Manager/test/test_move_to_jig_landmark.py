@@ -1,5 +1,3 @@
-"""[프로토타입] move_to_jig_landmark job 단위 테스트."""
-
 import pytest
 from unittest.mock import MagicMock
 
@@ -146,7 +144,6 @@ def test_job_type_registered_as_prototype():
 
 
 def test_other_job_types_untouched():
-    """프로토타입 추가가 기존 task 정의에 영향 0 인지 확인."""
     assert RecipeManager.JOB_TYPES['scan_tm_landmark_jig']['params']['jig_number']['max'] == 4
     assert RecipeManager.JOB_TYPES['align_to_plane_normal']['params']['standoff_mm']['default'] == 150.0
     assert {'operator', 'save_path'} <= set(RecipeManager.JOB_TYPES['calculate_plate_pose']['params'])

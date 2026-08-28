@@ -345,12 +345,6 @@ class TestDecomposedExecution:
 
 
 class TestRealRobotScenarios:
-    """2026-08-10 실기(169.254.122.16, 10%) 에서 관측된 케이스를 실측 좌표로 고정한다.
-
-    로봇이 보고하는 자세는 ±180 경계에서 -179.9998 ↔ 179.9994 로 오가므로,
-    정규화 없는 각도 비교는 여기서 359.99° 로 오판해 무의미한 회전 단계를 만든다.
-    아래 기대값은 실기 로그에서 그대로 옮긴 것이다.
-    """
 
     def build(self, executor, current, target):
         return executor._build_decomposed_tcp_waypoints(list(current), list(target))

@@ -57,8 +57,6 @@ class SettingsTab(BaseTab):
         self.mw.pushButton_jogRzMinus.clicked.connect(lambda: self._on_jog('rz', -1))
         self.mw.pushButton_jogRzPlus.clicked.connect(lambda: self._on_jog('rz', 1))
 
-        # 이동 거리·속도는 JogService 가 단일 보유한다. 위젯끼리 엮지 않고 서비스를
-        # 거쳐야 Vision 탭 등 다른 진입점과 값이 어긋나지 않는다.
         self.mw.spinBox_jogStep.valueChanged.connect(
             lambda v: self.mw.jog_service.set_params(step_mm=v))
         self.mw.spinBox_jogVelocity.valueChanged.connect(

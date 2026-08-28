@@ -4,7 +4,6 @@ import yaml
 from tm_task_manager.recipe_manager import Job, Recipe, RecipeManager
 
 
-
 class TestJob:
     def test_job_init_with_defaults(self):
         job = Job(job_id=1, job_type='go_home')
@@ -78,7 +77,6 @@ class TestJob:
         assert job.name == 'unknown'
         assert job.params == {}
         assert job.caption == ''
-
 
 
 class TestRecipe:
@@ -221,7 +219,6 @@ class TestRecipe:
         assert len(recipe.jobs) == 2
         assert recipe.jobs[0].type == 'go_home'
         assert recipe.jobs[1].type == 'wait'
-
 
 
 class TestRecipeManager:

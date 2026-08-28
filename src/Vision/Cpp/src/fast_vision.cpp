@@ -1,4 +1,3 @@
-
 #include "fast_vision.hpp"
 
 namespace fast_vision {

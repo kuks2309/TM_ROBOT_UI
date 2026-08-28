@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""PlatePoseDataset 단위 테스트.
-
-실측 fixture 는 tc(로봇 실기) 의 data/plate_pose_calc 에서 그대로 옮겼다.
-정규화 규칙은 실측 66쌍(raw ↔ corrected, pallet0~5) 전량에 대해 검증됐다:
-corrected 에는 무연산이고, raw 에서 corrected 의 jig 순서를 정확히 재현한다.
-"""
 import sys
 from pathlib import Path
 
@@ -21,7 +15,6 @@ from tm_task_manager.services.plate_pose_dataset import (
     normalize_jig_order,
 )
 
-# pallet0 20260819_111117 실측값 (raw = 측정 순서, corrected = 정규화 후 기대 순서)
 RAW_PALLET0 = [
     {'x': 491.311, 'y': 152.674, 'z': -295.904, 'rx': 179.548, 'ry': -0.300, 'rz': 90.039},
     {'x': 295.205, 'y': 153.258, 'z': -294.544, 'rx': -179.884, 'ry': -0.361, 'rz': 90.052},
@@ -29,10 +22,10 @@ RAW_PALLET0 = [
     {'x': 294.083, 'y': 290.424, 'z': -298.264, 'rx': -179.494, 'ry': -0.311, 'rz': 90.117},
 ]
 EXPECTED_XY_ORDER = [
-    (490.627, 290.182),   # jig1 = 단축 상단 · 장축 큰 쪽
-    (491.311, 152.674),   # jig2 = 단축 하단 · 장축 큰 쪽
-    (294.083, 290.424),   # jig3 = 단축 상단 · 장축 작은 쪽
-    (295.205, 153.258),   # jig4 = 단축 하단 · 장축 작은 쪽
+    (490.627, 290.182),
+    (491.311, 152.674),
+    (294.083, 290.424),
+    (295.205, 153.258),
 ]
 
 
@@ -62,7 +55,6 @@ def _write_yaml(directory: Path, name: str, marks, saved_at='2026-08-19 11:11:17
 
 @pytest.fixture
 def dataset_root(tmp_path):
-    """pallet0(raw 2개 + corrected 2개) · pallet1(raw 1개) 구조를 만든다."""
     root = tmp_path / 'plate_pose_calc'
     pallet0 = root / 'pallet0'
 
@@ -87,7 +79,6 @@ class TestNormalizeJigOrder:
         assert _xy(normalize_jig_order(once)) == _xy(once)
 
     def test_long_side_lands_on_index_0_2(self):
-        """검사기 관례: (0,2)/(1,3) 이 장변, (0,1)/(2,3) 이 단변."""
         m = normalize_jig_order(RAW_PALLET0)
         long_side = abs(m[0]['x'] - m[2]['x'])
         short_side = abs(m[0]['y'] - m[1]['y'])
@@ -117,7 +108,6 @@ class TestLoad:
         assert '2개 로드' in message
 
     def test_corrected_glob_excludes_raw_files(self, dataset_root):
-        """corrected 선택 시 상위 폴더의 raw 파일이 섞이면 안 된다."""
         ds = PlatePoseDataset()
         ds.set_root(dataset_root)
         ds.load('pallet0', VARIANT_CORRECTED)
@@ -130,7 +120,6 @@ class TestLoad:
         assert all(not r.file_name.endswith('.corrected.yaml') for r in ds.records)
 
     def test_raw_and_corrected_agree_after_normalization(self, dataset_root):
-        """같은 측정이면 variant 와 무관하게 jig 순서가 같아야 한다."""
         ds_raw, ds_corr = PlatePoseDataset(), PlatePoseDataset()
         ds_raw.set_root(dataset_root)
         ds_corr.set_root(dataset_root)
@@ -173,7 +162,7 @@ class TestStatistics:
         ds.set_root(dataset_root)
         ds.load('pallet0', VARIANT_RAW)
         rows = ds.all_statistics()
-        assert len(rows) == 24          # jig 4개 × 축 6개
+        assert len(rows) == 24
         assert {r.target for r in rows} == set(JIG_KEYS)
 
     def test_sigma3_is_three_times_std(self, dataset_root):
@@ -192,7 +181,6 @@ class TestStatistics:
 
 
 class TestCircularAxes:
-    """Rx 가 ±180 을 넘나드는 실측 조건 — 산술 평균은 여기서 무너진다."""
 
     WRAPPED = [179.9, -179.9, 179.8, -179.8]
 
@@ -211,7 +199,6 @@ class TestCircularAxes:
         return next(r for r in ds.jig_statistics(0) if r.axis == axis)
 
     def test_rotation_mean_uses_circular_statistics(self, wrapped_root):
-        """산술평균이면 약 0 이 나온다 — 실제 방향과 180도 어긋난 값."""
         row = self._stats(wrapped_root, 'rx')
         assert abs(abs(row.mean) - 180.0) < 0.2
 
@@ -254,7 +241,7 @@ class TestDeviationSeries:
         ds.set_root(root)
         ds.load('pallet0', VARIANT_RAW)
         deviations = ds.jig_deviation_series(0)['rx']
-        assert max(abs(d) for d in deviations) < 0.2   # 359.8 이 아니라 0.1
+        assert max(abs(d) for d in deviations) < 0.2
 
 
 class TestGeometry:
@@ -268,7 +255,6 @@ class TestGeometry:
         assert means[0]['x'] == pytest.approx(expected)
 
     def test_geometry_report_matches_known_pallet0_deviation(self, dataset_root):
-        """pallet0 실측: 대각선 차 약 1.95mm 로 허용(1.0mm)을 넘는다."""
         ds = PlatePoseDataset()
         ds.set_root(dataset_root)
         ds.load('pallet0', VARIANT_RAW)

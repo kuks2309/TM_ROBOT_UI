@@ -1,4 +1,3 @@
-// IMagazineDetectPort 의 원격 IO 백엔드 — 감지 2점에 극성을 적용해 넘긴다.
 #ifndef GRIPPER_HAL_IMPL_REMOTE_IO_MAGAZINE_PORT_HPP_
 #define GRIPPER_HAL_IMPL_REMOTE_IO_MAGAZINE_PORT_HPP_
 
@@ -17,7 +16,6 @@ class RemoteIoMagazinePort : public IMagazineDetectPort
   public:
     using Clock = std::function<TimePoint()>;
 
-    // 피드백 포트와 같은 이미지·같은 시계를 쓰면 seq 가 일치해 same_image 판정이 선다.
     RemoteIoMagazinePort(std::shared_ptr<IStationIoClient> client, const SignalMap &map, Clock clock = nullptr);
 
     Result<MagazineSnapshot> read() override;
@@ -40,6 +38,6 @@ class RemoteIoMagazinePort : public IMagazineDetectPort
     Duration last_age_{0};
 };
 
-} // namespace gripper::hal::impl
+}
 
-#endif // GRIPPER_HAL_IMPL_REMOTE_IO_MAGAZINE_PORT_HPP_
+#endif

@@ -72,16 +72,10 @@ def sanitize_jog(axis: str, direction: int, step: float, velocity: float):
     return True, "ok", axis, direction, clamped_step, clamped_vel
 
 
-
-# --------------------------------------------------------------- 웹 GUI 정적 서빙
-# 인터넷 없는 공장에 설치하므로 프런트를 미리 빌드한 dist 를 브리지가 직접 낸다.
-# 이렇게 하면 설치 현장에 node·npm·CDN 이 전혀 필요 없고, 프런트가 보는
-# `window.location.hostname:8000` 이 브리지 자신이 되어 호스트 설정도 사라진다.
 WEBGUI_ENV = 'TM_WEBGUI_DIST'
 
 
 def find_webgui_dist():
-    """빌드된 프런트(dist) 디렉터리. 없으면 None — API 는 그대로 뜬다."""
     explicit = (os.environ.get(WEBGUI_ENV) or '').strip()
     if explicit:
         return explicit if os.path.isdir(explicit) else None
@@ -89,7 +83,6 @@ def find_webgui_dist():
     candidates = []
     try:
         from tm_task_manager import paths as tm_paths
-        # paths.SRC_ROOT = <ws>/src 이므로 그 부모가 워크스페이스 루트다.
         workspace = os.path.dirname(str(tm_paths.SRC_ROOT))
         candidates.append(os.path.join(workspace, 'webgui', 'dist'))
     except Exception:
@@ -108,7 +101,6 @@ def find_webgui_dist():
 
 
 def mount_webgui(app):
-    """dist 를 / 에 붙인다. API 라우트가 먼저 등록돼 있어야 가려지지 않는다."""
     dist = find_webgui_dist()
     if not dist:
         print('[tm_web_bridge] 웹 GUI dist 를 찾지 못했습니다 — API 만 제공합니다. '
@@ -238,11 +230,9 @@ def create_app(node):
         success, message = node.set_digital_output(req.module, req.pin, req.state)
         return {"success": success, "message": message}
 
-    # 팔레트 티칭 마법사 · 그리퍼 감지 · 로봇 프로필 — PyQt 탭과 같은 기능.
     from .wizard_api import register as register_wizard
     register_wizard(app, node)
 
-    # 정적 서빙은 **맨 마지막**에 붙인다. '/' 마운트가 먼저면 위 API 를 다 가린다.
     mount_webgui(app)
 
     return app

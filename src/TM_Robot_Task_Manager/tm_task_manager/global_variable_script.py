@@ -1,3 +1,4 @@
+"""TM Flow 전역 변수(g_*, Base_Name 등) 게이트웨이 — 쓰기는 send_script, 읽기는 ask_item 서비스."""
 import rclpy
 from rclpy.node import Node
 from tm_msgs.msg import SctResponse
@@ -7,6 +8,8 @@ import time
 
 
 class GlobalVariableScript:
+    """TM Flow 전역 변수를 서비스 호출로 읽고 쓰는 게이트웨이."""
+
     def __init__(self, node: Node):
         self.node = node
         self.last_response = None
@@ -32,11 +35,21 @@ class GlobalVariableScript:
         self.node.get_logger().info('Global Variable Script initialized (Write: Script, Read: Service)')
 
     def _sct_response_callback(self, msg: SctResponse):
+        """마지막 스크립트 응답을 캐시한다 — 읽기 경로는 이 캐시가 아닌 서비스 응답을 사용."""
         self.node.get_logger().debug(f'Received SctResponse: id={msg.id}, script={msg.script}')
         self.last_response = msg.script
         self.response_received = True
 
     def read_variable(self, variable_name: str, timeout_sec: float = 5.0) -> Tuple[bool, str]:
+        """ask_item 서비스로 TM Flow 전역 변수 값을 읽는다.
+
+        Args:
+            variable_name: 전역 변수 이름 (예: g_robot_command).
+            timeout_sec: 서비스 대기·응답 타임아웃 (s).
+
+        Returns:
+            (성공 여부, 값 문자열) — 실패 시 두 번째 요소에 오류 메시지가 담긴다.
+        """
         if not self.ask_item_client.wait_for_service(timeout_sec=timeout_sec):
             error_msg = "ask_item 서비스를 찾을 수 없습니다. TM Driver가 실행 중인지 확인하세요."
             self.node.get_logger().error(error_msg)
@@ -55,6 +68,7 @@ class GlobalVariableScript:
                 response = future.result()
                 if response.ok and response.value:
                     value = response.value
+                    # 응답이 "이름=값" 형식으로 오므로 값 부분만 취한다.
                     if '=' in value:
                         value = value.split('=', 1)[1]
                     self.node.get_logger().info(f'변수 읽기 성공: {value}')
@@ -74,6 +88,11 @@ class GlobalVariableScript:
             return False, error_msg
 
     def write_variable(self, variable_name: str, value: any, timeout_sec: float = 5.0) -> Tuple[bool, str]:
+        """send_script 로 `변수=값` 스크립트를 전송해 전역 변수를 쓴다.
+
+        Returns:
+            (성공 여부, 메시지).
+        """
         if not self.send_script_client.wait_for_service(timeout_sec=timeout_sec):
             error_msg = "send_script 서비스를 찾을 수 없습니다. TM Driver가 실행 중인지 확인하세요."
             self.node.get_logger().error(error_msg)
@@ -112,6 +131,11 @@ class GlobalVariableScript:
             return False, error_msg
 
     def send_script(self, script: str, timeout_sec: float = 5.0) -> Tuple[bool, str]:
+        """임의의 TM 스크립트를 send_script 서비스로 전송한다.
+
+        Returns:
+            (성공 여부, 메시지).
+        """
         if not self.send_script_client.wait_for_service(timeout_sec=timeout_sec):
             error_msg = "send_script 서비스를 찾을 수 없습니다. TM Driver가 실행 중인지 확인하세요."
             self.node.get_logger().error(error_msg)
@@ -146,6 +170,11 @@ class GlobalVariableScript:
             return False, error_msg
 
     def read_multiple_variables(self, variable_names: list, timeout_sec: float = 5.0) -> Tuple[bool, dict]:
+        """여러 전역 변수를 순차로 읽는다 — 실패한 변수 값은 None.
+
+        Returns:
+            (전부 성공 여부, {변수명: 값}).
+        """
         results = {}
         all_success = True
 
@@ -160,6 +189,7 @@ class GlobalVariableScript:
         return all_success, results
 
     def send_script_exit(self, script_id='test', timeout_sec=5.0) -> bool:
+        """ScriptExit() 를 전송해 TM Flow Listen Node 를 종료시킨다."""
         if not self.send_script_client.wait_for_service(timeout_sec=1.0):
             self.node.get_logger().error("SendScript 서비스를 사용할 수 없습니다")
             return False
@@ -183,6 +213,7 @@ class GlobalVariableScript:
             return False
 
     def read_base_name(self, timeout_sec: float = 1.0) -> Optional[str]:
+        """Base_Name 전역 변수를 읽어 따옴표를 벗긴 좌표계 이름을 반환한다 (실패 시 None)."""
         success, value = self.read_variable("Base_Name", timeout_sec)
         if success and value:
             return value.strip('"').strip("'")

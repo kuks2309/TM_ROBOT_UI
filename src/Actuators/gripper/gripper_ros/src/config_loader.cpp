@@ -12,7 +12,6 @@ using hal::Duration;
 using hal::FeedbackSignal;
 using motion::InterlockPolicy;
 
-// 키가 없으면 «누락» 이다 — 0 으로 대신 채우면 암묵 기본값으로 구동된다.
 bool intOf(const ParamBag &p, const std::string &key, int64_t &out)
 {
     const auto it = p.ints.find(key);
@@ -76,14 +75,13 @@ bool policyOf(const ParamBag &p, const std::string &key, InterlockPolicy &out, s
     return true;
 }
 
-} // namespace
+}
 
 LoadResult loadMotionConfig(const ParamBag &params, MotionConfig &out)
 {
     MotionConfig c;
     std::string missing;
 
-    // 어느 키가 빠졌는지 사유에 담는다 — 뭉뚱그리면 호출자가 yaml 에서 그 줄을 못 찾는다.
     int64_t steps[3] = {0, 0, 0};
     const char *profile_keys[3] = {"profiles.grip", "profiles.release", "profiles.home"};
     for (int i = 0; i < 3; ++i)
@@ -154,7 +152,6 @@ LoadResult loadMotionConfig(const ParamBag &params, MotionConfig &out)
     }
     c.reject_on_stale = (stale->second == "reject");
 
-    // 코어의 검증을 여기서 다시 만들지 않는다 — 규칙의 정본은 validate() 하나다.
     const auto check = motion::validate(c);
     if (!check.ok)
     {
@@ -262,4 +259,4 @@ bool profileFromName(const std::string &name, Profile &out)
     return false;
 }
 
-} // namespace gripper::ros
+}

@@ -1,8 +1,3 @@
-"""scan_landmark_averaged 의 실패 로그가 원인별로 갈리는지 검증.
-
-한 줄("결과 읽기 실패 또는 미검출")로 뭉쳐 있으면 변수 읽기 실패와
-detect=false 를 구분할 수 없어 현장 진단이 막힌다.
-"""
 import pytest
 from unittest.mock import MagicMock
 
@@ -32,7 +27,6 @@ def _logs(executor):
 
 
 def test_detect_false_is_distinguished_and_shows_coords(executor):
-    """읽기는 됐는데 detect 만 false — 좌표까지 찍어 원인을 좁힌다."""
     executor.vision_manager.execute_tm_landmark_read.return_value = (True, _pose(False))
 
     pose, analysis = executor.scan_landmark_averaged(2, 'none', 0.0)

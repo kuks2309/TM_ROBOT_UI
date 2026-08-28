@@ -4,8 +4,6 @@ from PyQt5.QtCore import QObject, QThread, pyqtSignal
 import numpy as np
 
 
-# 현재 로봇 프로젝트의 이미지 캡처 트리거 — 전역변수 명령 방식.
-# job_executor.py 의 AI 캡처 경로(`g_robot_command=3` + `ScriptExit()`)와 동일한 규약.
 VISION_CAPTURE_COMMAND_VAR = "g_robot_command"
 VISION_CAPTURE_COMMAND = 3
 
@@ -61,9 +59,6 @@ class ImageCaptureWorker(QThread):
             if self._should_stop:
                 return
 
-            # 이번 요청(baseline) **뒤에** 도착한 프레임만 받는다.
-            # 예전에는 공용 플래그 하나만 보고 빠져나와, 다른 소비자가 받은
-            # 이미지나 이전 캡처의 늦은 프레임을 이번 것으로 쓰는 일이 있었다.
             msg, err = self._ros_node.wait_techman_image(
                 baseline, self._timeout_sec,
                 should_stop=lambda: self._should_stop)

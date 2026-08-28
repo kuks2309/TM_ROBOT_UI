@@ -1,7 +1,10 @@
+"""모든 탭의 공통 베이스 — main_window 참조 하나로 서비스·매니저 접근을 위임한다."""
 from typing import Callable, Optional
 
 
 class BaseTab:
+    """탭 공통 베이스. 서비스 접근 property 위임·로그 위임과 탭 수명주기 훅(connect_signals/init_ui)을 제공한다."""
+
     def __init__(self, main_window):
         self.main_window = main_window
 
@@ -30,19 +33,15 @@ class BaseTab:
         return self.main_window.config_manager
 
     def _log(self, message: str, kind=None):
-        """로그 위임. kind 는 «줄 때만» 넘긴다.
-
-        _log(message) 한 개만 받는 구현(테스트 스텁·다른 창)이 있어서, 항상
-        두 인자로 부르면 그쪽이 TypeError 로 죽는다. 판정을 명시할 때만
-        확장 시그니처를 쓰고 평소에는 기존 호출 형태를 유지한다.
-        """
         if kind is None:
             self.main_window._log(message)
         else:
             self.main_window._log(message, kind)
 
     def connect_signals(self):
+        """탭별 시그널/슬롯 연결 지점 — 파생 탭이 반드시 구현한다."""
         raise NotImplementedError
 
     def init_ui(self):
+        """탭별 UI 초기화 지점 — 기본은 no-op(초기화가 필요 없는 탭용)."""
         pass

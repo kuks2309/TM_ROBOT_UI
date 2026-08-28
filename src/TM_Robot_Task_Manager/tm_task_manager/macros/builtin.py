@@ -1,9 +1,3 @@
-"""기본 제공 매크로.
-
-각 매크로는 재사용 가능한 함수이며, 여러 Job 이 조합해 쓸 수 있다.
-새 매크로는 이 파일 또는 별도 모듈에 @register 로 추가하고
-tm_task_manager/macros/__init__.py 에서 import 하면 레지스트리에 올라간다.
-"""
 import time
 
 from .base import MacroContext, MacroResult, register

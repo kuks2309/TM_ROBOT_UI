@@ -14,8 +14,6 @@ sys.modules['geometry_msgs.msg'] = MagicMock()
 sys.modules['tm_msgs'] = MagicMock()
 sys.modules['tm_msgs.srv'] = MagicMock()
 sys.modules['tm_msgs.msg'] = MagicMock()
-# cv_bridge 는 numpy 1.x ABI 로 빌드된 확장 모듈이라 numpy 2.x 환경에서 import 가 죽는다.
-# 테스트는 이미지 변환을 쓰지 않으므로 다른 ROS 의존과 같은 방식으로 차단한다.
 sys.modules['cv_bridge'] = MagicMock()
 
 import pytest

@@ -52,12 +52,6 @@ def launch_setup(context):
     if not check_node_running('/tm_camera_bridge'):
         print(f"[tm_task_manager] TM Camera Bridge가 실행되지 않음. 자동으로 실행합니다...")
 
-        # ⚠️ run 이 launch 전체를 PYTHONNOUSERSITE=1 로 띄운다. 그 변수는
-        #    ~/.local/lib/pythonX/site-packages 를 **무시**시키므로,
-        #    `pip install --user flask` 로 깔아도 이 프로세스에서는 안 보인다.
-        #    (2026-08-27 팹: flask 를 깔았는데도 ModuleNotFoundError 가 났다.)
-        #    워크스페이스 안 vendor/pylibs 를 PYTHONPATH 로 직접 얹어 해결한다.
-        #    PYTHONUNBUFFERED=1 은 진단용 — print/로그가 파이프에서 묶이지 않게.
         _ws_root = os.path.dirname(os.path.dirname(os.path.dirname(
             os.path.dirname(os.path.abspath(__file__)))))
         _vendor = os.path.join(_ws_root, 'vendor', 'pylibs')
@@ -82,9 +76,6 @@ def launch_setup(context):
 
     if not check_node_running('/camera_calibration_node'):
         print(f"[tm_task_manager] Camera Calibration Node 실행...")
-        # ⚠️ 예전에는 params 파일을 넘기지 않아 config/calibration_params.yaml 의
-        #    보드 크기·사각 크기 설정이 **적용조차 되지 않았다**(2026-08-27 확인).
-        #    파일이 없으면 노드 기본값으로 뜨도록 방어적으로 감싼다.
         calib_params = []
         try:
             from ament_index_python.packages import get_package_share_directory
@@ -122,19 +113,7 @@ def launch_setup(context):
     return nodes_to_launch
 
 
-
 def _profile_robot_ip(fallback):
-    """MK2·MK4 의 robot_ip 를 **둘 다 두드려** 응답하는 쪽을 쓴다.
-
-    둘 중 하나에는 붙는다는 전제(사용자 확인 2026-08-27)라, 어느 기계 앞이든
-    같은 명령으로 뜨게 한다. 5890(SCT, 명령 채널)에 TCP 가 열리는지로 판정한다.
-
-    순서: 확정된 프로필의 IP 를 먼저 두드린다 — 두 로봇이 같은 망에 있을 때
-    순서가 뒤바뀌면 엉뚱한 기계에 명령이 간다.
-
-    아무 응답이 없으면 프로필 값 → fallback 순으로 떨어진다. launch 는 설치 순서에
-    따라 패키지 import 가 실패할 수 있어 전체를 방어적으로 감싼다.
-    """
     try:
         from tm_task_manager import robot_profile
 

@@ -25,7 +25,6 @@ Result<FeedbackSnapshot> RemoteIoFeedbackPort::read()
 
     if (!image.valid)
     {
-        // 수신 이력 없음을 "나이 0ms" 로 보이게 두면 감시 소비자가 정상으로 오독한다.
         last_age_ = map_.feedback_stale_limit + Duration{1};
         last_error_ = HalError::kNone;
         return Result<FeedbackSnapshot>::ok(snapshot);
@@ -51,7 +50,6 @@ Result<FeedbackSnapshot> RemoteIoFeedbackPort::read()
     snapshot.bits = bits;
     snapshot.seq = image.seq;
     snapshot.stamp = image.stamp;
-    // 링크가 끊기면 이미지가 갱신될 수 없으므로 현재 상태를 대표하지 않는다(types.hpp:155).
     const bool link = client_ && client_->link_up();
     snapshot.fresh = link && age >= Duration{0} && age <= map_.feedback_stale_limit;
 
@@ -72,4 +70,4 @@ Health RemoteIoFeedbackPort::health() const
     return h;
 }
 
-} // namespace gripper::hal::impl
+}

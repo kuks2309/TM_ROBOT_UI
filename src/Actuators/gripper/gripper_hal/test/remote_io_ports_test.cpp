@@ -1,4 +1,3 @@
-// 원격 IO 백엔드 단위 시험 — 스텝 전개·범위 거부·오류 등급·극성·stale·seq 일치를 확인한다.
 #include "gripper_hal_impl/remote_io_command_port.hpp"
 #include "gripper_hal_impl/remote_io_feedback_port.hpp"
 #include "gripper_hal_impl/remote_io_magazine_port.hpp"
@@ -24,7 +23,6 @@ static int fails = 0;
 namespace
 {
 
-// 요청을 기록하고 응답을 조작하는 시험용 클라이언트.
 class FakeStationIoClient : public IStationIoClient
 {
   public:
@@ -75,7 +73,6 @@ class FakeStationIoClient : public IStationIoClient
     StationImage image_;
 };
 
-// gripper_stack.yaml signal_map 운영값과 같은 배치.
 SignalMap operationalMap()
 {
     SignalMap m;
@@ -96,8 +93,8 @@ SignalMap operationalMap()
     m.magazine_1 = 24;
     m.magazine_2 = 25;
     m.magazine_detected_level = 0;
-    m.do_bit_count = 96; // DO 6워드 (io.info 운영값)
-    m.di_bit_count = 80; // DI 5워드
+    m.do_bit_count = 96;
+    m.di_bit_count = 80;
     m.feedback_stale_limit = Duration{300};
     return m;
 }
@@ -113,14 +110,13 @@ StationImage imageWith(size_t bit_count, uint32_t seq, TimePoint stamp)
     return img;
 }
 
-} // namespace
+}
 
 int main()
 {
     const SignalMap map = operationalMap();
     CHECK(validate(map).ok);
 
-    // 신호맵 검증: 이미지 크기 미설정·범위 밖 인덱스 거부
     {
         SignalMap no_size = map;
         no_size.do_bit_count = 0;
@@ -131,14 +127,13 @@ int main()
         CHECK(!validate(out_of_image).ok);
 
         SignalMap di_out = map;
-        di_out.magazine_2 = 80; // DI 80비트 → 인덱스 80 은 범위 밖
+        di_out.magazine_2 = 80;
         CHECK(!validate(di_out).ok);
     }
 
-    // 미검증 맵으로 만든 포트는 한 번도 송신하지 않는다(원자성·범위 보장 부재)
     {
         SignalMap split = map;
-        split.step[5] = 96; // 워드 6 — 단일 RMW 불가
+        split.step[5] = 96;
         CHECK(!validate(split).ok);
 
         auto client = std::make_shared<FakeStationIoClient>();
@@ -161,7 +156,6 @@ int main()
         CHECK(!m && m.error() == HalError::kNotReady);
     }
 
-    // 신호맵 검증: 중복·미매핑·비양수 stale 은 거부
     {
         SignalMap dup = map;
         dup.control[static_cast<size_t>(ControlLine::kDrive)] = 80;
@@ -176,7 +170,6 @@ int main()
         CHECK(!validate(zero_stale).ok);
     }
 
-    // 스텝 3 = IN0·IN1 ON, 나머지 OFF — 6비트가 한 요청으로 나간다
     {
         auto client = std::make_shared<FakeStationIoClient>();
         RemoteIoCommandPort port(client, map);
@@ -188,7 +181,6 @@ int main()
         CHECK(!client->last_request[2].level && !client->last_request[5].level);
     }
 
-    // 범위 밖 스텝은 송신 없이 kOutOfRange
     {
         auto client = std::make_shared<FakeStationIoClient>();
         RemoteIoCommandPort port(client, map);
@@ -199,7 +191,6 @@ int main()
         CHECK(client->calls == 0);
     }
 
-    // 제어 라인 구동과 kCount 거부
     {
         auto client = std::make_shared<FakeStationIoClient>();
         RemoteIoCommandPort port(client, map);
@@ -211,7 +202,6 @@ int main()
         CHECK(client->calls == 1);
     }
 
-    // 복귀는 IN0~IN5 + DRIVE 를 한 요청에 0 으로
     {
         auto client = std::make_shared<FakeStationIoClient>();
         RemoteIoCommandPort port(client, map);
@@ -227,7 +217,6 @@ int main()
         CHECK(client->last_request[6].index == 88);
     }
 
-    // 오류 등급: 링크 down · 미응답 · 미확정 · echo 불일치
     {
         auto client = std::make_shared<FakeStationIoClient>();
         RemoteIoCommandPort port(client, map);
@@ -252,7 +241,6 @@ int main()
         auto mismatched = port.write_line(ControlLine::kServoOn, true);
         CHECK(!mismatched && mismatched.error() == HalError::kProtocol);
 
-        // 레벨 왜곡도 프로토콜 오류다 — DRIVE=0 요청에 1 을 되돌려주는 응답을 통과시키면 안 된다
         client->echo_index_shift = 0;
         client->echo_flip_level = true;
         auto flipped = port.write_line(ControlLine::kDrive, false);
@@ -263,25 +251,23 @@ int main()
         CHECK(port.health().last_error == HalError::kProtocol);
     }
 
-    // 피드백: 수신 이력 없으면 오류가 아니라 fresh=false
     {
         auto client = std::make_shared<FakeStationIoClient>();
         RemoteIoFeedbackPort port(client, map, [] { return TimePoint{} + Duration{1000}; });
         auto r = port.read();
         CHECK(r);
         CHECK(!r.value().fresh && r.value().seq == 0);
-        CHECK(port.health().snapshot_age > map.feedback_stale_limit); // "나이 0ms" 로 보이면 오독된다
+        CHECK(port.health().snapshot_age > map.feedback_stale_limit);
     }
 
-    // 피드백: 정상 신호 전개 + 극성 판정
     {
         auto client = std::make_shared<FakeStationIoClient>();
         const TimePoint now = TimePoint{} + Duration{1000};
         auto img = imageWith(96, 7, now);
-        img.di[74] = 1; // servo_ready
-        img.di[72] = 1; // set_on
-        img.di[75] = 1; // emergency_stop (negative-true: 1 = 정상)
-        img.di[76] = 1; // alarm (negative-true: 1 = 정상)
+        img.di[74] = 1;
+        img.di[72] = 1;
+        img.di[75] = 1;
+        img.di[76] = 1;
         client->set_image(img);
 
         RemoteIoFeedbackPort port(client, map, [now] { return now + Duration{100}; });
@@ -296,7 +282,6 @@ int main()
         CHECK(port.health().last_seq == 7);
     }
 
-    // 피드백: stale 한계를 넘으면 fresh=false 이고 판정은 kUnknown
     {
         auto client = std::make_shared<FakeStationIoClient>();
         const TimePoint now = TimePoint{} + Duration{1000};
@@ -312,7 +297,6 @@ int main()
         CHECK(!is_ready_for_drive(r.value()));
     }
 
-    // 피드백: 이미지가 신호 인덱스를 못 담으면 kProtocol
     {
         auto client = std::make_shared<FakeStationIoClient>();
         client->set_image(imageWith(70, 9, TimePoint{}));
@@ -322,13 +306,12 @@ int main()
         CHECK(port.health().error_count == 1);
     }
 
-    // 매거진: 원시 0 = 감지(NC), 같은 이미지면 피드백과 seq 가 일치
     {
         auto client = std::make_shared<FakeStationIoClient>();
         const TimePoint now = TimePoint{} + Duration{1000};
         auto img = imageWith(96, 11, now);
-        img.di[24] = 0; // 감지
-        img.di[25] = 1; // 미감지
+        img.di[24] = 0;
+        img.di[25] = 1;
         img.di[76] = 1;
         img.di[75] = 1;
         client->set_image(img);
@@ -345,7 +328,6 @@ int main()
         CHECK(same_image(f.value(), m.value()));
     }
 
-    // 매거진: 극성이 뒤집힌 변형에서는 1 이 감지
     {
         auto client = std::make_shared<FakeStationIoClient>();
         const TimePoint now = TimePoint{} + Duration{1000};
@@ -356,14 +338,13 @@ int main()
 
         SignalMap inverted = map;
         inverted.magazine_detected_level = 1;
-        img.di[24] = 0xFF; // 0/1 이 아닌 원시값도 "참"으로 정규화되어야 한다
+        img.di[24] = 0xFF;
         client->set_image(img);
         RemoteIoMagazinePort mgz(client, inverted, [now] { return now; });
         auto m = mgz.read();
         CHECK(m && both_detected(m.value()));
     }
 
-    // 링크가 끊기면 캐시 이미지가 아무리 최신이어도 fresh 가 아니다
     {
         auto client = std::make_shared<FakeStationIoClient>();
         const TimePoint now = TimePoint{} + Duration{1000};
@@ -391,10 +372,9 @@ int main()
         CHECK(m_down && !m_down.value().fresh && !both_detected(m_down.value()));
     }
 
-    // 신호맵 검증: 한 요청으로 나가는 비트가 워드를 넘으면 거부(단일 RMW 불가)
     {
         SignalMap split = map;
-        split.step[5] = 96; // 워드 6 — IN0~IN4 는 워드 5
+        split.step[5] = 96;
         CHECK(!validate(split).ok);
 
         SignalMap drive_elsewhere = map;
@@ -402,7 +382,6 @@ int main()
         CHECK(!validate(drive_elsewhere).ok);
     }
 
-    // 미확정이 프로토콜 위반보다 우선한다
     {
         auto client = std::make_shared<FakeStationIoClient>();
         RemoteIoCommandPort port(client, map);
@@ -412,7 +391,6 @@ int main()
         CHECK(!r && r.error() == HalError::kIndeterminate);
     }
 
-    // 클라이언트가 비어 있으면 송신 없이 kNotReady
     {
         RemoteIoCommandPort port(nullptr, map);
         auto r = port.write_step(1);

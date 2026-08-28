@@ -12,7 +12,6 @@ using magazine_detect::validate;
 namespace
 {
 
-// 4호기 실측 매핑. 앞/뒤 교차라 도면 배선 순서와 다르다.
 Config makeConfig(int debounce = 1)
 {
   Config c;
@@ -22,13 +21,12 @@ Config makeConfig(int debounce = 1)
   return c;
 }
 
-// 전부 비어 있는(원시 1) 80비트 프레임.
 std::vector<int32_t> emptyFrame()
 {
   return std::vector<int32_t>(80, 1);
 }
 
-}  // namespace
+}
 
 TEST(Validate, 정상설정통과)
 {
@@ -38,13 +36,12 @@ TEST(Validate, 정상설정통과)
 TEST(Validate, 비트범위밖거부)
 {
   Config c = makeConfig();
-  c.di_bit[3] = 80;  // 0..79 밖
+  c.di_bit[3] = 80;
   EXPECT_TRUE(validate(c, 80).has_value());
 }
 
 TEST(Validate, 중복비트거부)
 {
-  // 중복을 통과시키면 두 자리가 같은 센서를 보고 한 자리가 영영 안 바뀐다.
   Config c = makeConfig();
   c.di_bit[4] = c.di_bit[0];
   EXPECT_TRUE(validate(c, 80).has_value());
@@ -60,7 +57,7 @@ TEST(Update, 극성_원시0이적재)
 {
   MagazineTable t(makeConfig(1));
   auto f = emptyFrame();
-  f[29] = 0;  // 슬롯 1 = 뒤 왼
+  f[29] = 0;
   ASSERT_TRUE(t.update(f));
   EXPECT_TRUE(t.state().present[1]);
   for (std::size_t i = 0; i < kSlotCount; ++i) {
@@ -70,7 +67,6 @@ TEST(Update, 극성_원시0이적재)
 
 TEST(Update, 슬롯매핑이앞뒤교차)
 {
-  // 비트 27 은 «앞 중» = 슬롯 2 다. 도면 배선 순서로 읽으면 슬롯 1 이 되어 틀린다.
   MagazineTable t(makeConfig(1));
   auto f = emptyFrame();
   f[27] = 0;
@@ -87,7 +83,7 @@ TEST(Update, 짧은프레임은상태를바꾸지않는다)
   ASSERT_TRUE(t.update(f));
   ASSERT_TRUE(t.state().present[5]);
 
-  std::vector<int32_t> shortFrame(20, 0);  // 매핑 최대 비트(31)를 못 담는다
+  std::vector<int32_t> shortFrame(20, 0);
   EXPECT_FALSE(t.update(shortFrame));
   EXPECT_TRUE(t.state().present[5]) << "짧은 프레임이 상태를 덮었다";
 }
@@ -112,7 +108,7 @@ TEST(Debounce, 중간에되돌아오면누적이초기화된다)
   auto off = emptyFrame();
   t.update(on);
   t.update(on);
-  t.update(off);   // 채터링 — 누적이 0 으로
+  t.update(off);
   t.update(on);
   t.update(on);
   EXPECT_FALSE(t.state().present[0]) << "채터링인데 확정됐다";
@@ -130,7 +126,6 @@ TEST(Update, raw는디바운스와무관하게즉시반영)
 
 TEST(Stale, 확정값을지우지않는다)
 {
-  // stale 에 present 를 지우면 「전부 비었다」가 되어 그것도 사실이 아니다.
   MagazineTable t(makeConfig(1));
   auto f = emptyFrame();
   f[29] = 0;

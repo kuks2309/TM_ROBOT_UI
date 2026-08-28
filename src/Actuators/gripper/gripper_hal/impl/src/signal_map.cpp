@@ -7,7 +7,6 @@ namespace gripper::hal::impl
 namespace
 {
 
-// 같은 영역(DO 명령 / DI 피드백+매거진) 안에서 인덱스가 겹치는지 본다.
 bool has_duplicate(const std::vector<int32_t> &indices)
 {
     for (size_t i = 0; i < indices.size(); ++i)
@@ -23,7 +22,7 @@ bool has_duplicate(const std::vector<int32_t> &indices)
     return false;
 }
 
-} // namespace
+}
 
 MapCheck validate(const SignalMap &map)
 {
@@ -93,9 +92,6 @@ MapCheck validate(const SignalMap &map)
         return MapCheck{false, "입력 인덱스 중복"};
     }
 
-    // 원자성 요건: 한 호출이 여러 비트를 쓰는 경로(write_step · clear_step_and_drive)의 대상은
-    // 모두 같은 워드여야 한다. 스테이션은 같은 워드에 대해서만 단일 RMW 를 보장하므로,
-    // 워드가 갈리면 한 요청이 여러 쓰기로 쪼개져 부분 적용이 생긴다.
     const int32_t step_word = map.step_index(0) / 16;
     for (uint8_t b = 1; b < kStepBitCount; ++b)
     {
@@ -120,4 +116,4 @@ MapCheck validate(const SignalMap &map)
     return MapCheck{true, ""};
 }
 
-} // namespace gripper::hal::impl
+}

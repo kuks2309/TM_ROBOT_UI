@@ -1,13 +1,7 @@
 #!/usr/bin/env python3
-"""매크로 카탈로그 생성기 — 레지스트리에서 문서를 파생시킨다.
+"""매크로 레지스트리(MACROS)·Job 스펙에서 카탈로그 문서(docs/macros/CATALOG.md·macros.json)를 생성한다.
 
-손으로 쓴 카탈로그는 반드시 낡는다. 매크로를 추가·수정한 뒤 이 스크립트를
-다시 돌리면 CATALOG.md(사람용)와 macros.json(도구용)이 함께 갱신된다.
-
-사용:
-    python3 scripts/generate_macro_catalog.py            # 기본 출력 경로
-    python3 scripts/generate_macro_catalog.py --out DIR  # 출력 폴더 지정
-    python3 scripts/generate_macro_catalog.py --check    # 최신 여부만 검사(생성 안 함)
+실행: python3 scripts/generate_macro_catalog.py [--out 폴더] [--check(생성 없이 최신성만 검사, CI 게이트)]
 """
 import argparse
 import json
@@ -18,17 +12,18 @@ from unittest.mock import MagicMock
 _PKG_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_PKG_ROOT))
 
-# 카탈로그 생성은 로봇·ROS 없이 돌아야 한다 — 레지스트리만 읽으면 되기 때문이다.
+# ROS 미소싱 환경(문서 CI 등)에서도 tm_task_manager 임포트가 가능하도록 ROS 모듈을 스텁한다.
 for _name in ('rclpy', 'rclpy.node', 'rclpy.executors', 'rclpy.time', 'tf2_ros',
               'tf2_py', 'tf2_py._tf2_py', 'geometry_msgs', 'geometry_msgs.msg',
               'tm_msgs', 'tm_msgs.srv', 'tm_msgs.msg', 'cv_bridge'):
     sys.modules.setdefault(_name, MagicMock())
 
-from tm_task_manager.macros import MACROS, EXTERNAL_PREFIX  # noqa: E402
-from tm_task_manager.recipe_manager import RecipeManager  # noqa: E402
+from tm_task_manager.macros import MACROS, EXTERNAL_PREFIX
+from tm_task_manager.recipe_manager import RecipeManager
 
 
 def build_payload() -> dict:
+    """MACROS·JOB_TYPES 를 직렬화 가능한 payload(macros, jobs_using_macros)로 구성한다."""
     macros = {}
     for name, spec in sorted(MACROS.items()):
         macros[name] = {
@@ -69,6 +64,7 @@ def _param_rows(params: dict) -> list:
 
 
 def render_markdown(payload: dict) -> str:
+    """payload 를 CATALOG.md 본문(읽는 법·매크로별 표·Job 매핑표)으로 렌더링한다."""
     lines = [
         '# Macro Catalog',
         '',
@@ -115,6 +111,7 @@ def render_markdown(payload: dict) -> str:
 
 
 def main() -> int:
+    """카탈로그 생성 또는 --check 최신성 검사 후 종료코드(0 최신/성공, 1 stale)를 반환한다."""
     parser = argparse.ArgumentParser(description='매크로 카탈로그 생성')
     parser.add_argument('--out', default=None, help='출력 폴더 (기본: <workspace>/docs/macros)')
     parser.add_argument('--check', action='store_true',

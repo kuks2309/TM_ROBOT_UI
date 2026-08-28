@@ -10,7 +10,7 @@ uint16_t bitOf(FeedbackSignal s)
     return static_cast<uint16_t>(1u << static_cast<uint8_t>(s));
 }
 
-} // namespace
+}
 
 void Lecp6Plant::setLine(ControlLine line, bool level)
 {
@@ -28,7 +28,6 @@ void Lecp6Plant::setLine(ControlLine line, bool level)
         }
         break;
     case ControlLine::kSetup:
-        // 상승 에지에서 원점복귀를 시작한다.
         if (level && !setup_ && servo_ready_ && !alarm_)
         {
             startMotion(0, cfg_.origin_travel, false, true);
@@ -43,7 +42,6 @@ void Lecp6Plant::setLine(ControlLine line, bool level)
         drive_ = level;
         break;
     case ControlLine::kReset:
-        // RESET 상승에서 알람을 지우고 서보를 되살린다(SVON 이 서 있으면).
         if (level && !reset_ && alarm_)
         {
             alarm_ = false;
@@ -91,16 +89,14 @@ void Lecp6Plant::finishMotion()
     }
 
     executed_step_ = selected_step_;
-    // 매거진은 닫힘 위치에 실물이 있을 때만 물린다.
     magazine_held_ = magazine_present_ && position_ <= cfg_.magazine_grip_position;
-    // 푸싱 동작은 반력이 있어야 INP 가 선다 — 무부하면 서지 않는다.
     in_position_ = motion_pushing_ ? magazine_held_ : true;
 }
 
 void Lecp6Plant::advance(int64_t ms)
 {
     now_ms_ += ms;
-    ++image_seq_; // 새 입력 이미지
+    ++image_seq_;
 
     if (alarm_)
     {
@@ -109,14 +105,12 @@ void Lecp6Plant::advance(int64_t ms)
         return;
     }
 
-    // DRIVE 상승 에지 처리 — 등록 스텝인지, 원점이 서 있는지에 따라 갈린다.
     if (drive_edge_ms_ >= 0 && now_ms_ - drive_edge_ms_ >= cfg_.busy_rise_delay.count())
     {
         const int64_t edge = drive_edge_ms_;
         drive_edge_ms_ = -1;
         if (selected_step_ == 0 || selected_step_ > kRegisteredSteps)
         {
-            // 미등록 스텝: BUSY 조차 서지 않고 즉시 알람.
             alarm_ = true;
             alarm_group_ = 2;
             servo_ready_ = false;
@@ -130,7 +124,6 @@ void Lecp6Plant::advance(int64_t ms)
         }
         if (!origin_established_)
         {
-            // 원점 미확립: BUSY 는 서지만 목표에 도달하지 못하고 정해진 시간 뒤 알람.
             busy_ = true;
             motion_active_ = false;
             stall_start_ms_ = edge;
@@ -159,7 +152,6 @@ void Lecp6Plant::advance(int64_t ms)
 uint16_t Lecp6Plant::feedbackBits() const
 {
     uint16_t bits = 0;
-    // ALARM·ESTOP 은 negative-true — 정상일 때 1이다.
     if (!alarm_)
     {
         bits |= bitOf(FeedbackSignal::kAlarm);
@@ -181,7 +173,6 @@ uint16_t Lecp6Plant::feedbackBits() const
     {
         bits |= bitOf(FeedbackSignal::kInPosition);
     }
-    // OUT0~5 는 실행 스텝 반향(알람 시에는 그룹 코드).
     const uint8_t echo = alarm_ ? alarm_group_ : executed_step_;
     for (uint8_t i = 0; i < 6; ++i)
     {
@@ -193,12 +184,9 @@ uint16_t Lecp6Plant::feedbackBits() const
     return bits;
 }
 
-// 2점은 근접센서(OMRON E2E-X9C212)이며 **안착** 을 감지한다 — 파지 성립이 아니다.
-// 근거는 HIL 개폐 시험 기록 §5-5(안착 시 40ms 차로 함께 감지, 제거 시 같은 프레임에 함께 해제).
-// 두 점은 독립이라 같은 값으로 묶으면 require_both 와 any 가 시험에서 갈리지 않는다.
 std::pair<bool, bool> Lecp6Plant::magazineDetected() const
 {
     return {magazine_present_, magazine_present_ && sensor_2_enabled_};
 }
 
-} // namespace gripper::sim
+}

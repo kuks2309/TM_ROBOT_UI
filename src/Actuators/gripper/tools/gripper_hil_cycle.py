@@ -1,12 +1,4 @@
 #!/usr/bin/env python3
-"""그리퍼 개폐 반복 HIL 시험 — remote_io_ros 의 io_service/io_resp 만 사용한다.
-
-스테이션의 유일 쓰기 마스터는 remote_io_ros 노드다(ADR-008 Q7). 본 도구는 그 서비스의
-클라이언트일 뿐이며 스테이션에 직접 접근하지 않는다.
-
-io_resp(20ms)를 구독해 BUSY 상승·하강을 놓치지 않고 잡는다 — 읽기 프로브의 초 단위
-폴링으로는 짧은 동작 구간이 관측되지 않았다.
-"""
 import sys
 import time
 
@@ -15,7 +7,6 @@ from rclpy.node import Node
 from tc_msgs.msg import Io
 from tc_msgs.srv import Io as IoSrv
 
-# gripper_stack.yaml signal_map 운영값 (DO 워드5 / DI 워드4)
 IN_BITS = [80, 81, 82, 83, 84, 85]
 DRIVE = 88
 SVON = 90
@@ -68,7 +59,6 @@ class GripperCycle(Node):
         return True, ""
 
     def wait_bit(self, index, level, timeout_s):
-        """지정 비트가 level 이 될 때까지 대기. (성공여부, 소요초)"""
         start = time.time()
         while time.time() - start < timeout_s:
             rclpy.spin_once(self, timeout_sec=0.005)
@@ -89,7 +79,6 @@ class GripperCycle(Node):
                 f"OUT={self.out_code()}")
 
     def drive_step(self, step, label):
-        """스텝 세팅 → DRIVE 펄스 → 완료 관측 → 복귀. 결과 dict 반환."""
         result = {"label": label, "step": step}
         states = [(step >> i) & 1 for i in range(6)]
         ok, why = self.write(IN_BITS, states)

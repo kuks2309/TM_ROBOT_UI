@@ -9,8 +9,6 @@
 
 #include <opencv2/opencv.hpp>
 
-// ArUco API 는 OpenCV 4.7 에서 contrib(aruco) → objdetect(ArucoDetector 클래스) 로 옮겨졌다.
-// Jetson(4.8) 과 tc PC(Ubuntu 22.04, 4.5.4) 를 동시에 지원하기 위해 버전 분기한다.
 #if CV_VERSION_MAJOR > 4 || (CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR >= 7)
 #define TM_ARUCO_USE_OBJDETECT_API 1
 #include <opencv2/objdetect/aruco_detector.hpp>

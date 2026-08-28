@@ -1,3 +1,4 @@
+"""로봇 Global Variable 읽기/쓰기 탭 — gv_manager 경유로 조회·기록하고 히스토리 테이블을 관리한다."""
 from datetime import datetime
 
 from PyQt5.QtWidgets import QTableWidgetItem, QHeaderView
@@ -6,6 +7,8 @@ from .base_tab import BaseTab
 
 
 class GlobalVariablesTab(BaseTab):
+    """Global Variable 읽기/쓰기와 결과 히스토리(최대 100행) 표시를 담당하는 탭."""
+
     def __init__(self, main_window):
         super().__init__(main_window)
         self.mw = main_window
@@ -35,6 +38,7 @@ class GlobalVariablesTab(BaseTab):
         self.mw.label_variableStatus.setText(f"상태: '{variable_name}' 읽는 중...")
         self._log(f"Global Variable 읽기 (Service): {variable_name}")
 
+        # 동기 서비스 호출 — GUI 스레드에서 실행되므로 응답 지연 시 UI 가 멈춘다.
         success, result = self.gv_manager.read_variable(variable_name)
 
         if success:
@@ -71,6 +75,7 @@ class GlobalVariablesTab(BaseTab):
         if success:
             self._log(f"변수 쓰기 성공: {variable_name}={variable_value}")
 
+            # 쓰기는 스크립트 경유 — ScriptExit 전송까지 성공해야 '쓰기 성공' 으로 확정한다.
             exit_success = self.gv_manager.send_script_exit(script_id='gv')
             if exit_success:
                 self.mw.label_variableStatus.setText(f"상태: 쓰기 성공")
@@ -85,6 +90,7 @@ class GlobalVariablesTab(BaseTab):
 
 
     def _add_variable_history(self, variable_name, value):
+        """최신 항목을 0행에 삽입하고 100행 초과분을 제거해 히스토리 무한 증가를 막는다."""
         timestamp = datetime.now().strftime("%H:%M:%S")
 
         row_count = self.mw.tableWidget_variableHistory.rowCount()

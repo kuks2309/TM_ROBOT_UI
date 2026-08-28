@@ -1,16 +1,4 @@
 #!/usr/bin/env python3
-"""조그로 place 한 시점의 TCP 를 평면(plate) 좌표계 기준 상대 pose 로 기록한다.
-
-마커로 구한 평면 중심·법선을 기준으로 "박스를 어디에 어떤 각도로 내려놓았는지"를
-남겨, 반복 기록 시 상대 파지 위치 산포와 그리퍼 회전 오차를 산출할 수 있게 한다.
-
-기준 plate_pose 는 지정 폴더의 여러 측정본을 평균해서 쓴다(랜드마크를 평균한 뒤
-재계산 — 저장된 pose 값을 그대로 쓰지 않는다).
-
-사용:
-    python3 record_place_pose.py --pallet pallet0 --label "1층 좌상"
-    python3 record_place_pose.py --summary          # 누적 기록 통계만 출력
-"""
 import argparse
 import math
 import sys
@@ -22,7 +10,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from tm_task_manager.tools.jig_plane_calculator import (  # noqa: E402
+from tm_task_manager.tools.jig_plane_calculator import (
     JigPlaneCalculator,
     average_landmarks_from_files,
     plane_normal_from_pose,
@@ -36,11 +24,6 @@ POSE_KEYS = ('x', 'y', 'z', 'rx', 'ry', 'rz')
 
 
 def read_current_tcp(timeout_sec: float = 5.0) -> Optional[Dict[str, float]]:
-    """/tool_pose 한 건을 읽어 mm·deg TCP 로 바꾼다.
-
-    변환 규약은 RobotMotionService.update_tcp_pose 와 동일하게 맞춘다
-    (m→mm, quaternion→ZYX 오일러 deg).
-    """
     import rclpy
     from geometry_msgs.msg import PoseStamped
     from rclpy.node import Node
@@ -82,7 +65,6 @@ def read_current_tcp(timeout_sec: float = 5.0) -> Optional[Dict[str, float]]:
 
 
 def build_reference(plate_dir: Path, prefix: str):
-    """지정 폴더의 <prefix>*.yaml 을 전부 평균해 기준 plate_pose 를 만든다."""
     files = sorted(f for f in plate_dir.glob(f"{prefix}*.yaml") if f.is_file())
     if not files:
         return None, [], []

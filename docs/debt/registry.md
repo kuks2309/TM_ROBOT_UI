@@ -11,4 +11,6 @@
 
 | debt-004 | 기술 | src/Robot/tmrobot_official_packages/custom_package/package.xml (짝: 같은 패키지 CMakeLists.txt:29) | `find_package(tm_msgs REQUIRED)` 를 호출하면서 package.xml 에 `tm_msgs` 의존 미선언 → colcon 이 빌드 환경 prefix 에 tm_msgs 를 넣지 않아 **클린 빌드 불가**(증분 빌드에서만 우연히 통과). 사용자 결정: 벤더(TM 공식) 패키지 무수정, 우회책 사용 | 2026-08-14 | 미해결 | `<depend>tm_msgs</depend>` 1줄 추가 (승인 필요 — 벤더 패키지 수정). 우회책: `source install/setup.bash` 후 `colcon build`. 근거: docs/issues_and_fixes/issues_and_fixes.md 2026-08-14 |
 
+| debt-013 | 이해 | src/IOs/Remote_IO_Station/remote_io_hal/include/remote_io_hal/remote_io_station_port.hpp:14 부근, src/IOs/Remote_IO_Station/remote_io_hal/src/remote_io_station_port.cpp:71 부근 | 0x1100 발효 조건·0x80 물리 클리어의 매뉴얼 문면 미확정 — 소프트웨어 반복 제한만 수행 중(HIL 실측 대기). 원 코드 마커 `TODO(debt-013)` 2건은 2026-08-28 프로젝트 전체 주석 제거 작업(사용자 지시)으로 삭제됨 — 본 registry 행이 유일 추적처 | 2026-08-28 (마커 이관) | 미해결 | remote_io HIL 벤치에서 0x1100 발효 조건·0x80 물리 클리어 실측 후 코드 반영. 이식 전 저장소의 원 등록 내용 확인 필요 |
+
 <!-- 새 부채는 위 표에 행 추가. 유형: 기술 / 이해 / 의도. 상태: 미해결 / 해결(해결일·커밋 병기). -->

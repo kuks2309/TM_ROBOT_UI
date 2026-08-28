@@ -15,7 +15,6 @@ uint8_t toResultCode(MotionResult result)
         return kResultAlarmActive;
     case MotionResult::kServoTimeout:
         return kResultServoNotReady;
-    // 원점복귀 계열 3종은 «원점이 안 섰다» 로 수렴한다 — 어느 단계였는지는 failed_phase 가 남긴다.
     case MotionResult::kOriginTimeout:
     case MotionResult::kOriginVerifyFailed:
     case MotionResult::kNotReadyForDrive:
@@ -28,7 +27,6 @@ uint8_t toResultCode(MotionResult result)
         return kResultInpTimeout;
     case MotionResult::kIoError:
         return kResultIoFailure;
-    // 설정 무효·미등록 프로파일·범위 밖 명령은 전부 «요청이 틀렸다» 이며 재시도로 풀리지 않는다.
     case MotionResult::kProfileUnknown:
     case MotionResult::kConfigInvalid:
         return kResultInvalidRequest;
@@ -38,12 +36,9 @@ uint8_t toResultCode(MotionResult result)
         return kResultCanceled;
     case MotionResult::kEmergencyStop:
         return kResultEstopActive;
-    // 복귀 실패는 «장치 정지 미보장» 이라 다른 실패와 등급이 다르다.
     case MotionResult::kRestoreFailed:
-    // 중단했으나 BUSY 하강을 못 봤다 — 액션 계약의 «장치 정지 미보장» 이 정확히 이 상태다.
     case MotionResult::kStopUnconfirmed:
         return kResultAbortFailed;
-    // 전체 데드라인 초과는 단계 타임아웃이 듣지 않았다는 뜻이라 상태를 단정할 수 없다.
     case MotionResult::kDeadlineExceeded:
         return kResultStateIndeterminate;
     case MotionResult::kNone:
@@ -78,8 +73,6 @@ uint8_t toPhase(MotionState state)
         return kPhaseVerify;
     case MotionState::kAborting:
         return kPhaseAborting;
-    // 출력 복귀는 정상 시퀀스의 마지막 단계다 — ABORTING 으로 보내면 성공한 동작이
-    // 관측자에게 «안전 정지 중» 으로 읽힌다. 그 단계는 실제 중단 경로에만 쓴다.
     case MotionState::kReleasingOutputs:
     case MotionState::kDone:
         return kPhaseDone;
@@ -165,10 +158,6 @@ const char *resultName(MotionResult result)
     return "Unmapped";
 }
 
-// legacy checkAlarmGroup()(amr04 gripper_node.cpp:1115-1141)의 OUT0~OUT3 대응 그대로다:
-//   B = 0,1,0,0(0x2) · C = 0,0,1,0(0x4) · D = 0,0,0,1(0x8) · E = 0,0,0,0(0x0) · 그 외 = 판정 불가.
-// E 가 전 비트 0 이므로 «0 = 알람 없음» 이 성립하지 않는다 — 알람 활성 여부를 함께 받는다.
-// 알람이 아닐 때 OUT 은 실행 스텝 반향이라 그룹으로 읽으면 안 된다.
 uint8_t alarmGroupOf(uint8_t out_bits, bool alarm_active)
 {
     if (!alarm_active)
@@ -184,9 +173,9 @@ uint8_t alarmGroupOf(uint8_t out_bits, bool alarm_active)
     case 0x8:
         return kAlarmGroupD;
     case 0x0:
-        return kAlarmGroupE; // FATAL — 전원 재투입 요구
+        return kAlarmGroupE;
     }
     return kAlarmGroupUnknown;
 }
 
-} // namespace gripper::ros
+}

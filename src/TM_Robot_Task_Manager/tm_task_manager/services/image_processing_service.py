@@ -44,7 +44,6 @@ class ImageProcessingService(QObject):
             return False
 
         try:
-            # imwrite 는 실패해도 예외 없이 False 를 돌려준다 — 반환값을 봐야 한다.
             if not cv2.imwrite(file_path, self.processed_image):
                 self.processing_error.emit(
                     f"이미지 저장 실패 (경로·권한·형식 확인): {file_path}")
@@ -84,7 +83,6 @@ class ImageProcessingService(QObject):
 
         baseline = self.ros_node.start_techman_image_subscription()
 
-        # 이 경로는 자체 실행기가 없어 콜백을 직접 돌려야 한다 → spin=True.
         msg, err = self.ros_node.wait_techman_image(
             baseline, timeout_sec, spin=True)
         if msg is None:

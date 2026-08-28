@@ -38,11 +38,11 @@
 |---|---|---|---|---|---|
 | 1 | `validate` | `Config`·`di_bit_count` | `optional<string>` | 설정 검증 — 비트 범위·**중복**·`debounce_ticks>=1`. 통과 시 `nullopt`, 아니면 사유 | magazine_table.cpp:19 |
 | 2 | `slotName` | `slot` | `const char*` | 자리 이름(앞 왼 …). **로그·진단 전용**, 기계 분기 금지 | magazine_table.cpp:14 |
-| 3 | `MagazineTable.MagazineTable` | `Config` | — | 판독기 생성. **검증하지 않는다** — 호출자가 #1 로 먼저 거른다 | magazine_table.cpp:42 |
-| 4 | `MagazineTable.update` | `vector<int32_t> io_di` | `bool` | 한 프레임 반영 + 디바운스. `io_di` 가 매핑 최대 비트보다 짧으면 **false 이고 상태 불변** — 짧은 프레임을 0 으로 읽으면 「전부 있음」이 된다 | magazine_table.cpp:47 |
-| 5 | `MagazineTable.markStale` | — | — | 입력 끊김 표시. `valid=false`, **`present` 는 마지막 확정값 유지** — 지우면 「전부 비었다」가 되어 그것도 사실이 아니다 | magazine_table.cpp:72 |
-| 6 | `MagazineTable.state` | — | `const SlotState&` | 현재 상태 (헤더 인라인) | magazine_table.hpp:51 |
-| 7 | `MagazineTable.config` | — | `const Config&` | 적용 중인 설정 (헤더 인라인) | magazine_table.hpp:52 |
+| 3 | `MagazineTable.MagazineTable` | `Config` | — | 판독기 생성. **검증하지 않는다** — 호출자가 #1 로 먼저 거른다 | magazine_table.cpp:41 |
+| 4 | `MagazineTable.update` | `vector<int32_t> io_di` | `bool` | 한 프레임 반영 + 디바운스. `io_di` 가 매핑 최대 비트보다 짧으면 **false 이고 상태 불변** — 짧은 프레임을 0 으로 읽으면 「전부 있음」이 된다 | magazine_table.cpp:46 |
+| 5 | `MagazineTable.markStale` | — | — | 입력 끊김 표시. `valid=false`, **`present` 는 마지막 확정값 유지** — 지우면 「전부 비었다」가 되어 그것도 사실이 아니다 | magazine_table.cpp:71 |
+| 6 | `MagazineTable.state` | — | `const SlotState&` | 현재 상태 (헤더 인라인) | magazine_table.hpp:43 |
+| 7 | `MagazineTable.config` | — | `const Config&` | 적용 중인 설정 (헤더 인라인) | magazine_table.hpp:44 |
 
 **디바운스 규약(#4)**: 원시 판정이 확정값과 다른 프레임마다 `pending` 을 올리고
 `debounce_ticks` 도달 시 확정값을 바꾼 뒤 0 으로 되돌린다. 같아지면 즉시 0.
@@ -53,11 +53,11 @@
 | # | 함수 | 입력 | 출력 | 기능 | 위치(file:line) |
 |---|---|---|---|---|---|
 | 8 | `MagazineDetectNode.MagazineDetectNode` | — | — | 파라미터 선언·검증 → 구독·발행·워치독 개설 | magazine_detect_node.cpp:19 |
-| 9 | `MagazineDetectNode.loadConfig` | (파라미터) | `Config` | 파라미터 적재 + #1 호출. **실패 시 throw** — 잘못된 매핑으로 도는 것보다 안 뜨는 편이 낫다(매핑 오류는 조용히 틀린다) | magazine_detect_node.cpp:44 |
-| 10 | `MagazineDetectNode.onIo` | `Io::SharedPtr` | — | #4 호출 → 성공 시 #11. 짧은 프레임은 **throttle 경고**만 | magazine_detect_node.cpp:70 |
-| 11 | `MagazineDetectNode.publish` | — | — | `SlotState` → `MagazineState` 발행 | magazine_detect_node.cpp:83 |
-| 12 | `MagazineDetectNode.onWatchdog` | — | — | 마지막 수신 후 `stale_after_s` 초과면 #5 → #11. `io_resp` 는 읽기 성공 시에만 나오므로 **침묵이 곧 이상**이다 | magazine_detect_node.cpp:97 |
-| 13 | `main` | `argc`·`argv` | `int` | spin. 기동 예외는 `FATAL` 남기고 rc=1 | magazine_detect_node.cpp:123 |
+| 9 | `MagazineDetectNode.loadConfig` | (파라미터) | `Config` | 파라미터 적재 + #1 호출. **실패 시 throw** — 잘못된 매핑으로 도는 것보다 안 뜨는 편이 낫다(매핑 오류는 조용히 틀린다) | magazine_detect_node.cpp:42 |
+| 10 | `MagazineDetectNode.onIo` | `Io::SharedPtr` | — | #4 호출 → 성공 시 #11. 짧은 프레임은 **throttle 경고**만 | magazine_detect_node.cpp:67 |
+| 11 | `MagazineDetectNode.publish` | — | — | `SlotState` → `MagazineState` 발행 | magazine_detect_node.cpp:80 |
+| 12 | `MagazineDetectNode.onWatchdog` | — | — | 마지막 수신 후 `stale_after_s` 초과면 #5 → #11. `io_resp` 는 읽기 성공 시에만 나오므로 **침묵이 곧 이상**이다 | magazine_detect_node.cpp:93 |
+| 13 | `main` | `argc`·`argv` | `int` | spin. 기동 예외는 `FATAL` 남기고 rc=1 | magazine_detect_node.cpp:119 |
 
 ## 3. 전역 변수 / 모듈 상수 표
 
@@ -65,7 +65,7 @@
 
 | # | 변수 | 사용처(함수) | 기능 | 위치(file:line) |
 |---|---|---|---|---|
-| 1 | `kSlotCount` (상수) | 전 함수·`Config`·`SlotState` 배열 크기 | 버퍼 자리 수 6. **배열 크기의 단일 출처** — 흩어지면 한쪽만 고쳐져 범위 밖 접근이 된다 | magazine_table.hpp:14 |
+| 1 | `kSlotCount` (상수) | 전 함수·`Config`·`SlotState` 배열 크기 | 버퍼 자리 수 6. **배열 크기의 단일 출처** — 흩어지면 한쪽만 고쳐져 범위 밖 접근이 된다 | magazine_table.hpp:13 |
 | 2 | `kSlotNames` (상수, 익명 namespace 파일 스코프) | `slotName` | 자리 이름 6개. 로그·진단 전용 | magazine_table.cpp:10 |
 
 **가변 전역 0.** 상태는 `MagazineTable::state_`(멤버)와 노드 멤버에만 있다 —

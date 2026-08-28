@@ -57,7 +57,6 @@ def test_job_type_is_registered():
 
 
 def test_dispatch_reaches_handler(executor, tmp_path):
-    """_execute_job 분기가 실제로 이 Job 을 핸들러로 보내는지."""
     _load_recipe(executor, tmp_path / 'recipes' / 'pallet0_drawer_cali.yaml')
     assert executor._execute_job(_save_job(save_path=str(tmp_path / 'out'))) is True
     assert _only_yaml(tmp_path / 'out')
@@ -81,7 +80,7 @@ def test_saves_all_six_dof_named_by_recipe_caption_and_timestamp(executor, tmp_p
     assert data['saved_at']
     assert set(data['landmark']) == {'x', 'y', 'z', 'rx', 'ry', 'rz'}
     assert data['landmark']['x'] == pytest.approx(199.731)
-    assert data['landmark']['y'] == pytest.approx(567.025)   # 3자리 반올림
+    assert data['landmark']['y'] == pytest.approx(567.025)
     assert data['landmark']['rx'] == pytest.approx(-179.988)
     assert data['landmark']['rz'] == pytest.approx(0.007)
     assert 'detected' not in data['landmark']
@@ -127,7 +126,6 @@ def test_no_recipe_loaded_records_null_recipe(executor, tmp_path):
 
 
 def test_plate_pose_save_is_untouched(executor, tmp_path):
-    """기존 calculate_plate_pose 저장물에 landmark 키가 섞이지 않는다."""
     executor.vision_manager = MagicMock()
     executor.jig_landmark_results = {
         1: {'x': 0.0, 'y': 0.0, 'z': 0.0, 'rx': 0.0, 'ry': 0.0, 'rz': 0.0, 'detected': True},

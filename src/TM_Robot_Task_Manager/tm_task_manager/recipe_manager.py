@@ -746,8 +746,6 @@ class RecipeManager:
                 'delay': {'type': 'float', 'default': 0.5, 'description': '동작 후 대기 시간 (초)'}
             }
         },
-        # SMC 전동 그리퍼(MK4 하드웨어 — 원격 IO 스테이션 + GripperCommand 액션)
-        # 기존 gripper_* (DI/DO) 와 별개의 신규 백엔드. 방어적 import — 없으면 비활성.
         'smc_grip': {
             'name': 'SMC 그리퍼 파지',
             'category': 'Gripper',
@@ -771,8 +769,6 @@ class RecipeManager:
                 'timeout': {'type': 'float', 'default': 30.0, 'description': '동작 완료 대기 최대 시간 (초)'}
             }
         },
-        # SCHUNK 서보 그리퍼(MK2 하드웨어) — tc_msgs/srv/GripperCommand 서비스(/gripper_command, 1=grip/2=release/3=home)
-        # ⚠️ report: command=1(grip)은 tm_driver 없으면 실패 → home 으로 닫는 운용도 있음
         'schunk_grip': {
             'name': 'SCHUNK 그리퍼 파지',
             'category': 'Gripper',
@@ -794,7 +790,6 @@ class RecipeManager:
                 'timeout': {'type': 'float', 'default': 15.0, 'description': '서비스 응답 대기 (초)'}
             }
         },
-        # 거리감지 레이저(MK2 하드웨어) — tc_msgs/srv/DistanceCommand(/distance_command) → 2센서 거리 반환
         'read_distance': {
             'name': '거리 센서 측정',
             'category': 'Vision',
@@ -811,8 +806,6 @@ class RecipeManager:
                 'duration': {'type': 'int', 'default': 1000, 'description': '대기 시간 (ms)'}
             }
         },
-        # 버퍼 매거진 재고 확인 — magazine_detect 노드(/magazine_detect_node/state)의 확정값과 대조.
-        # 슬롯 번호는 레시피의 palletN 과 같다(0~5). 판정 불가는 실패로 다룬다.
         'check_magazine': {
             'name': '매거진 재고 확인',
             'category': 'Control',

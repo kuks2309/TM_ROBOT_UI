@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""calculate_plate_pose 직사각형 가드 단위 테스트.
-
-실측 데이터 기준값(2026-08-14, data/plate_pose_calc):
-  pallet3 = 짧은변 차 3.243mm 로 가드 발동 대상
-  pallet2 = 짧은변 차 0.475mm 로 통과 대상
-"""
 import sys
 from pathlib import Path
 
@@ -16,7 +10,6 @@ from tm_task_manager.tools.jig_plate_validator import JigPlateValidator
 
 
 def _marks(jig1_y, jig2_y, jig3_y, jig4_y, x_left=450.5, x_right=646.9, z=-325.0):
-    """jig1/jig3 = X 큰 쪽, jig2/jig4 = X 작은 쪽 (실측 배치와 동일)."""
     return [
         {'x': x_right, 'y': jig1_y, 'z': z, 'rx': 180.0, 'ry': 0.0, 'rz': 90.0},
         {'x': x_left, 'y': jig2_y, 'z': z, 'rx': 180.0, 'ry': 0.0, 'rz': 90.0},
@@ -25,8 +18,8 @@ def _marks(jig1_y, jig2_y, jig3_y, jig4_y, x_left=450.5, x_right=646.9, z=-325.0
     ]
 
 
-PALLET3 = _marks(-70.795, -68.767, 66.251, 65.044)   # 짧은변 137.05 / 133.81
-GOOD = _marks(-68.5, -68.5, 68.5, 68.5)              # 완전 직사각형
+PALLET3 = _marks(-70.795, -68.767, 66.251, 65.044)
+GOOD = _marks(-68.5, -68.5, 68.5, 68.5)
 
 
 def _validator(marks, side=1.0, diag=1.5, angle=1.0):
@@ -59,7 +52,6 @@ def test_rectangle_passes_for_true_rectangle():
 
 
 def test_pallet3_short_side_triggers_guard():
-    """실측 pallet3 는 짧은변 차 3.24mm 로 반드시 걸려야 한다."""
     results = _validator(PALLET3).check_rectangle()
     failed = [r for r in results if not r.passed]
     assert failed, "pallet3 사다리꼴이 통과하면 가드가 무의미하다"
@@ -70,7 +62,6 @@ def test_pallet3_short_side_triggers_guard():
 
 
 def test_pallet3_diagonal_alone_would_not_catch_it():
-    """기존 대각선 가드(상한 10mm)로는 pallet3 를 못 잡는다 — 변 검사가 필요한 근거."""
     results = _validator(PALLET3, diag=10.0).check_rectangle()
     diag = next(r for r in results if r.name == "대각선 차이")
     assert diag.passed is True
@@ -97,10 +88,7 @@ def test_get_side_lengths_empty_without_marks():
     assert JigPlateValidator().get_side_lengths() == {}
 
 
-# ---- job_executor 가드 분기 ----
-
 class _FakeExecutor:
-    """_confirm_plate_rectangle 만 떼어내 검증하기 위한 최소 스텁."""
 
     def __init__(self, alarm=None):
         self.on_plate_rect_alarm = alarm
@@ -110,7 +98,7 @@ class _FakeExecutor:
     def _log(self, msg):
         self.logs.append(msg)
 
-    _confirm_plate_rectangle = None  # setup 에서 실제 메서드를 바인딩
+    _confirm_plate_rectangle = None
 
 
 @pytest.fixture
@@ -157,7 +145,6 @@ def test_guard_payload_carries_results_and_distances(confirm):
 
 
 def test_guard_aborts_when_no_callback_registered(confirm):
-    """UI 콜백이 없으면 조용히 저장하지 말고 중단해야 한다 (fail-safe)."""
     ex = _FakeExecutor(alarm=None)
     assert confirm(ex, PALLET3, B_STD) is False
 
@@ -171,13 +158,11 @@ def test_guard_can_be_disabled_by_param(confirm):
 
 
 def test_guard_skips_when_landmarks_unloadable(confirm):
-    """검증 불가일 때 정상 측정을 버리지 않는다."""
     ex = _FakeExecutor(alarm=lambda p: False)
     assert confirm(ex, PALLET3[:3], B_STD) is True
 
 
 def test_guard_uses_defaults_when_params_absent(confirm):
-    """파라미터가 비어도 B 표준 기본값으로 동작해야 한다."""
     ex = _FakeExecutor(alarm=lambda payload: False)
     assert confirm(ex, PALLET3, {}) is False
     assert confirm(ex, GOOD, {}) is True

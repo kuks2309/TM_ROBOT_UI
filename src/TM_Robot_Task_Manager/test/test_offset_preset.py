@@ -1,4 +1,3 @@
-"""그리퍼 오차 preset 저장소 테스트."""
 import os
 
 import pytest
@@ -70,7 +69,6 @@ def test_missing_axes_default_to_zero(service):
 
 
 def test_z_axis_is_not_stored(service):
-    """수직 정렬은 법선 거리를 standoff_mm 이 정하므로 z 오차 축이 없다."""
     service.save('그리퍼A', dict(OFFSET, z=99.0))
     assert 'z' not in service.get('그리퍼A')
 

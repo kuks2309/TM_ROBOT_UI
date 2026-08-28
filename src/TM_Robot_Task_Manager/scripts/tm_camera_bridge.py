@@ -48,13 +48,6 @@ class ImagePub(Node):
         self.set_image_and_notify_send(self.img)
 
     def image_publisher(self, image):
-        """디코딩된 이미지를 /techman_image 로 발행한다.
-
-        ⚠️ encoding 을 "bgr8" 로 못박으면 안 된다. 위에서 IMREAD_UNCHANGED 로
-           읽으므로 그레이(1채널)·알파(4채널)가 그대로 올 수 있고, 그때
-           cv2_to_imgmsg 가 예외를 던져 **발행 스레드가 통째로 죽었다.**
-           채널 수를 보고 맞는 encoding 을 고른다.
-        """
         if image is None:
             self.get_logger().error('[카메라] 디코딩 실패 — 이미지를 버립니다')
             return
@@ -82,11 +75,6 @@ class ImagePub(Node):
         self.con.release()
         
     def _drain_queue(self, isRequestData):
-        """대기열을 비운다. 한 장이 실패해도 **다음 장은 계속 간다.**
-
-        예전에는 예외가 스레드 밖으로 나가 스레드가 영구히 죽었고, 그 뒤로는
-        로그 한 줄 없이 모든 이미지가 사라졌다.
-        """
         while not self.imageQ.empty():
             raw = self.imageQ.get()
             try:
@@ -101,16 +89,13 @@ class ImagePub(Node):
                     self.image_publisher(img)
                 else:
                     self.image_publisher(raw)
-            except Exception as exc:                      # noqa: BLE001
+            except Exception as exc:
                 self.get_logger().error('[카메라] 발행 실패: %r' % (exc,))
 
     def pub_data_thread(self, isRequestData):
         self.con.acquire()
-        # 시작 직후 한 번 비운다 — 대기 진입 **전**에 들어온 첫 장은
-        # notify 를 놓쳐(lost wakeup) 다음 장이 올 때까지 묶여 있었다.
         self._drain_queue(isRequestData)
         while True:
-            # 타임아웃을 둬 notify 를 놓쳐도 1초 안에 스스로 확인한다.
             self.con.wait(timeout=1.0)
             self._drain_queue(isRequestData)
             if self.leaveThread:
@@ -202,8 +187,6 @@ class ImagePub(Node):
             print("Warning: model_id is not set, using default")
             model_id = "default"
 
-        # ⚠️ print 는 launch 파이프에서 블록 버퍼링돼 화면에 안 나온다.
-        #    «POST 가 오긴 하는가» 조차 알 수 없어 진단이 막혔다 → 로거로 남긴다.
         if 'image' in request.files:
             data = request.files['image'].read()
             self.set_image_and_notify_send(data)
@@ -233,10 +216,6 @@ def set_route(app, node):
     app.route('/ai/<string:m_method>', methods=['POST'])(node.post)
     app.route('/ai/<string:m_method>', methods=['GET'])(node.get)
 
-    # ── 무엇이든 받는 경로 ────────────────────────────────────────────
-    # TMflow 의 외부 감지 URL 경로를 확인할 수 없는 상황(로봇 접근 불가)에서는
-    # 경로가 /api/DET 이 아니라는 이유로 404 를 주면 이미지가 통째로 버려진다.
-    # 이미지가 실려 있으면 경로가 무엇이든 받는다. 로봇을 못 만지는 동안의 안전망.
     def catch_all(path=''):
         if request.method == 'POST':
             node.get_logger().warn(
@@ -267,8 +246,6 @@ def main():
         node = ImagePub('image_pub',isTest,None)
         set_route(app,node)
 
-        # TM_CAMERA_PORTS 로 포트를 더 열 수 있다 (예: "6189,6188,80").
-        # TMflow 가 어느 포트로 쏘는지 확인할 수 없을 때 그물을 넓힌다.
         ports = []
         for chunk in (os.environ.get('TM_CAMERA_PORTS') or '6189').split(','):
             chunk = chunk.strip()
@@ -278,11 +255,9 @@ def main():
             ports = [6189]
 
         def _serve(port):
-            # 포트 하나가 이미 쓰이고 있어도 나머지는 계속 뜬다 —
-            # 예전에는 바인딩 실패가 데몬 스레드 안에서 조용히 사라졌다.
             try:
                 serve(app, host='0.0.0.0', port=port)
-            except Exception as exc:                      # noqa: BLE001
+            except Exception as exc:
                 node.get_logger().error(
                     '[카메라] :%d 바인딩 실패 — %r (다른 프로세스가 쓰는 중?)'
                     % (port, exc))
@@ -290,9 +265,6 @@ def main():
         for _port in ports:
             threading.Thread(target=_serve, args=(_port,), daemon=True).start()
         server_thread = None
-        # 어느 주소로 POST 해야 하는지 로그에 남긴다 — TMflow 설정과 대조용.
-        # ⚠️ gethostbyname_ex 는 /etc/hosts 때문에 127.0.1.1 을 준다 — 쓸모없다.
-        #    실제 NIC 주소를 뽑아 TMflow 에 넣을 주소를 그대로 보여준다.
         host_ips = []
         try:
             import subprocess

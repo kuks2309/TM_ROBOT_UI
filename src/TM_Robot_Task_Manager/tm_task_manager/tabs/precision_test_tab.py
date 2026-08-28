@@ -10,7 +10,7 @@ from PyQt5 import uic
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from mpl_toolkits.mplot3d import Axes3D  # noqa: F401  (3d projection 등록용)
+from mpl_toolkits.mplot3d import Axes3D
 
 from .base_tab import BaseTab
 from .. import paths
@@ -35,7 +35,6 @@ class PrecisionTestTab(BaseTab):
         self.canvas_rotation = None
         self.ax_rotation = None
 
-        # --- 신규 블록 A/B 전용 상태 (기존 정밀도 테스트와 완전 분리) ---
         self.plate_dataset = None
         self.figure_dataset = None
         self.canvas_dataset = None
@@ -452,11 +451,6 @@ class PrecisionTestTab(BaseTab):
             self.ax_rotation.scatter(data['rx'], data['rz'], alpha=0.6)
         self.canvas_rotation.draw()
 
-    # ==================================================================
-    # 신규 블록 A: 저장 데이터 정밀도 분석 (plate_pose_calc)
-    # 신규 블록 B: Jig 3D 형상 검사
-    # 기존 정적/동적 테스트 경로와 상태·위젯·매니저를 공유하지 않는다.
-    # ==================================================================
 
     JIG_COLORS = ('#d62728', '#1f77b4', '#2ca02c', '#ff7f0e')
     DATASET_PLANES = (
@@ -599,11 +593,6 @@ class PrecisionTestTab(BaseTab):
                 ui.tableWidget_datasetStats.setItem(i, column, QTableWidgetItem(text))
 
     def _update_dataset_scatter(self):
-        """재현성 산점도.
-
-        기본은 평균 대비 편차다 — 절대 좌표로 그리면 jig 사이 200mm 간격에 눌려
-        정작 보려는 회차 간 산포(수 μm)가 점 하나로 뭉개진다. 절대 배치는 체크박스로 전환.
-        """
         from ..services.plate_pose_dataset import JIG_KEYS
 
         absolute = self.precision_ui.checkBox_datasetAbsolute.isChecked()
@@ -642,7 +631,6 @@ class PrecisionTestTab(BaseTab):
             self._update_dataset_scatter()
 
     def _side_pair_colors(self, sides: dict, validator) -> dict:
-        """대향변·대각선 쌍의 차이가 허용을 넘으면 그 쌍을 빨강으로 칠한다."""
         pairs = (
             (('jig1-jig3', 'jig2-jig4'), validator.TOLERANCE_SIDE_DIFF),
             (('jig1-jig2', 'jig3-jig4'), validator.TOLERANCE_SIDE_DIFF),
@@ -656,8 +644,6 @@ class PrecisionTestTab(BaseTab):
         return colors
 
     def _draw_jig_rectangle(self, ax, marks, sides, colors, label=None, annotate=True):
-        """jig 4개를 변·대각선으로 잇고 길이를 라벨링한다. index 는 정규화 순서."""
-        # 마지막 항은 라벨을 찍을 위치(변 위 비율). 두 대각선의 중점이 겹치므로 어긋나게 둔다.
         edges = (
             ('jig1-jig3', 0, 2, '-', 0.5),
             ('jig2-jig4', 1, 3, '-', 0.5),
@@ -669,7 +655,6 @@ class PrecisionTestTab(BaseTab):
 
         for index, (key, start, end, style, label_at) in enumerate(edges):
             a, b = marks[start], marks[end]
-            # 범례 항목은 변 하나에만 붙인다 — 중심별(회색)에 붙이면 색 구분이 사라진다.
             ax.plot([a['x'], b['x']], [a['y'], b['y']], [a['z'], b['z']],
                     linestyle=style, linewidth=2 if style == '-' else 1.2,
                     color=colors.get(key, '#1f77b4'),
@@ -774,13 +759,11 @@ class PrecisionTestTab(BaseTab):
 
     @staticmethod
     def _centred(marks):
-        """사각형을 중심이 원점에 오도록 평행이동. 형상만 비교하려면 배치를 빼야 한다."""
         center = {axis: sum(m[axis] for m in marks) / len(marks) for axis in ('x', 'y', 'z')}
         return [dict(m, x=m['x'] - center['x'], y=m['y'] - center['y'], z=m['z'] - center['z'])
                 for m in marks]
 
     def _update_jig3d_overlay(self):
-        """모든 팔레트의 평균 사각형을 중심 정렬해 한 축에 겹쳐 그린다."""
         from ..services.plate_pose_dataset import PlatePoseDataset
 
         ui = self.precision_ui
@@ -806,7 +789,6 @@ class PrecisionTestTab(BaseTab):
                 continue
 
             marks = overlay.mean_marks()
-            # 검사는 원좌표로 (평행이동은 변 길이·각도를 바꾸지 않지만 값은 원본을 쓴다)
             sides, results = overlay.geometry_report(marks)
             if not results:
                 continue
@@ -833,7 +815,6 @@ class PrecisionTestTab(BaseTab):
         self._fill_overlay_summary_table(summary_rows)
 
     def _fill_overlay_summary_table(self, summary_rows):
-        """겹쳐보기에서는 팔레트별 최악 항목만 표에 요약한다."""
         ui = self.precision_ui
         ui.tableWidget_jigCheck.setRowCount(len(summary_rows))
 
@@ -868,7 +849,6 @@ class PrecisionTestTab(BaseTab):
             ui.label_jigShapeVerdict.setStyleSheet("color: #080; font-weight: bold;")
 
     def _apply_equal_3d_range(self, ax, marks):
-        """세 축 스케일을 같게 맞춰 사각형이 왜곡돼 보이지 않게 한다."""
         xs = [m['x'] for m in marks]
         ys = [m['y'] for m in marks]
         zs = [m['z'] for m in marks]
@@ -888,7 +868,6 @@ class PrecisionTestTab(BaseTab):
         self._update_jig_shape()
 
     def _dataset_default_path(self, suffix: str) -> str:
-        """저장 대화상자 기본 경로. 기존 CSV 저장과 같은 data/<날짜>/ 규칙을 따른다."""
         now = datetime.now()
         data_dir = os.path.join(str(paths.DATA_DIR), now.strftime('%Y%m%d'))
         os.makedirs(data_dir, exist_ok=True)

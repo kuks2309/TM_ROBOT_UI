@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-"""load_plate_pose Job 단위 테스트.
-
-저장된 plate_pose YAML 을 읽어 스캔 없이 detected_plate_pose 와
-jig_landmark_results 를 복원하는 경로를 검증한다.
-"""
 import sys
 from pathlib import Path
 
@@ -38,7 +33,6 @@ def _write(dirpath, name, landmarks, plate_pose=None):
 
 
 class _Ex:
-    """_exec_load_plate_pose 만 떼어내 검증하기 위한 최소 스텁."""
 
     def __init__(self, alarm=None):
         self.on_plate_rect_alarm = alarm
@@ -63,7 +57,6 @@ class _Job:
 
 @pytest.fixture
 def good_dir(tmp_path):
-    # 완전 직사각형, Y 만 조금씩 다른 3개 파일 → 평균 검증용
     _write(tmp_path, 'pallet0_cali_a_100000.yaml', _marks(-68.0, -68.0, 68.0, 68.0))
     _write(tmp_path, 'pallet0_cali_b_100100.yaml', _marks(-69.0, -69.0, 69.0, 69.0))
     _write(tmp_path, 'pallet0_cali_c_100200.yaml', _marks(-70.0, -70.0, 70.0, 70.0))
@@ -93,7 +86,6 @@ def test_latest_file_chosen_when_average_count_is_one(good_dir):
     ex = _Ex()
     assert ex._exec_load_plate_pose(
         _Job(source_path=str(good_dir), file_prefix='pallet0_cali', average_count=1)) is True
-    # 최신 = 파일명 역순 첫 번째 = _c_100200 (jig1 y=-70, jig3 y=+70)
     assert ex.jig_landmark_results[1]['y'] == pytest.approx(-70.0)
 
 
@@ -101,13 +93,11 @@ def test_average_of_all_files(good_dir):
     ex = _Ex()
     assert ex._exec_load_plate_pose(
         _Job(source_path=str(good_dir), file_prefix='pallet0_cali', average_count=0)) is True
-    # (-68 + -69 + -70)/3 = -69
     assert ex.jig_landmark_results[1]['y'] == pytest.approx(-69.0)
     assert ex.jig_landmark_results[3]['y'] == pytest.approx(+69.0)
 
 
 def test_jig_landmark_results_restored_for_align_guard(good_dir):
-    """align_to_plane_normal 의 배치 검증이 이 값을 읽으므로 4개가 채워져야 한다."""
     ex = _Ex()
     ex._exec_load_plate_pose(_Job(source_path=str(good_dir), average_count=0))
     assert set(ex.jig_landmark_results) == {1, 2, 3, 4}
@@ -118,7 +108,6 @@ def test_jig_landmark_results_restored_for_align_guard(good_dir):
 
 
 def test_pose_recomputed_not_copied(tmp_path):
-    """저장된 plate_pose 값이 틀려도 랜드마크에서 재계산해야 한다."""
     _write(tmp_path, 'p_100000.yaml', _marks(-68.0, -68.0, 68.0, 68.0),
            plate_pose={'x': 9999.0, 'y': 9999.0, 'z': 9999.0,
                        'rx': 99.0, 'ry': 99.0, 'rz': 99.0})
@@ -158,7 +147,6 @@ def test_all_files_invalid_rejected(tmp_path):
 
 
 def test_rect_guard_warns_but_does_not_block_on_load(tmp_path):
-    """불러온 배치가 사다리꼴이어도 실행 단계에서는 묻지 않고 경고만 남긴다 (pallet3 실측 형상)."""
     _write(tmp_path, 'p_100000.yaml', _marks(-70.795, -68.767, 66.251, 65.044))
     ex = _Ex(alarm=lambda payload: pytest.fail("실행 단계인데 작업자에게 물었다"))
     assert ex._exec_load_plate_pose(

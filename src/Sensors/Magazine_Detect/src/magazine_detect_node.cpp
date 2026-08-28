@@ -39,12 +39,9 @@ public:
   }
 
 private:
-  // 파라미터를 읽고 검증한다. 실패하면 throw — 잘못된 매핑으로 도는 것보다 안 뜨는 편이 낫다.
-  // 매핑이 틀리면 「있는 자리를 비었다」고 말하는데, 그것은 조용히 틀린다.
   Config loadConfig()
   {
     Config cfg;
-    // 기본값은 4호기 실측(도면 시트 170 · 레거시 슬롯 순서). config 로 덮인다.
     const std::vector<int64_t> default_bits{26, 29, 27, 30, 28, 31};
     const auto bits = this->declare_parameter<std::vector<int64_t>>("di_bit", default_bits);
     cfg.detected_when_low = this->declare_parameter<bool>("detected_when_low", true);
@@ -93,14 +90,13 @@ private:
     pub_->publish(out);
   }
 
-  // io_resp 는 읽기 성공 시에만 나온다. 침묵은 정상이 아니라 이상이다.
   void onWatchdog()
   {
     if (last_rx_.nanoseconds() == 0) {
-      return;  // 아직 한 번도 못 받았다 — 기동 직후는 이상이 아니다
+      return;
     }
     if (!table_.state().valid) {
-      return;  // 이미 stale 로 알렸다
+      return;
     }
     if ((this->now() - last_rx_) > rclcpp::Duration(stale_after_)) {
       RCLCPP_WARN(this->get_logger(), "io_resp 가 끊겼다 — 재고를 stale 로 표시한다");
@@ -118,7 +114,7 @@ private:
   rclcpp::TimerBase::SharedPtr watchdog_;
 };
 
-}  // namespace magazine_detect
+}
 
 int main(int argc, char ** argv)
 {

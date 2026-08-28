@@ -1,4 +1,3 @@
-"""마커 좌표계 이동(move_to_landmark_pose) 검증."""
 import math
 
 import numpy as np
@@ -12,11 +11,9 @@ from tm_task_manager.tools.landmark_frame import (
     landmark_frame_rotation, pose_from_landmark_frame, pose_in_landmark_frame)
 
 
-# 2026-08-15 드로어 마커 실측 근처 값
 LM = {'x': 198.446, 'y': 473.0, 'z': 11.43,
       'rx': 179.30, 'ry': 1.71, 'rz': -178.48, 'detected': True}
 
-# 같은 날 실측한 마커 기준 4마크 접근 오프셋
 MARKS = {
     '1사분면': (58.471, 222.071, 29.967),
     '2사분면': (-78.716, 222.719, 30.147),
@@ -51,10 +48,7 @@ def _logs(ex):
     return "\n".join(ex.logs)
 
 
-# ── 순수 변환 ────────────────────────────────────────────────────────────
-
 def test_rz_only_ignores_marker_rx_ry():
-    """rz_only 프레임은 마커 rx/ry 가 흔들려도 결과가 안 바뀐다."""
     rel = {'x': 100.0, 'y': -50.0, 'z': 250.0, 'rx': 180.0, 'ry': 0.0, 'rz': 0.0}
     a = pose_from_landmark_frame(LM, rel, FRAME_MODE_RZ_ONLY)
     noisy = dict(LM, rx=LM['rx'] + 0.5, ry=LM['ry'] - 0.4)
@@ -64,7 +58,6 @@ def test_rz_only_ignores_marker_rx_ry():
 
 
 def test_full_mode_does_follow_marker_rx_ry():
-    """full 프레임은 반대로 마커 자세를 따라간다 — 박스 이송용."""
     rel = {'x': 100.0, 'y': -50.0, 'z': 250.0, 'rx': 180.0, 'ry': 0.0, 'rz': 0.0}
     a = pose_from_landmark_frame(LM, rel, FRAME_MODE_FULL)
     noisy = dict(LM, rx=LM['rx'] + 0.5, ry=LM['ry'] - 0.4)
@@ -100,7 +93,6 @@ def test_unknown_frame_mode_raises():
 
 
 def test_marker_rotation_carries_the_four_marks_rigidly():
-    """마커가 통째로 돌면 4점도 같이 돌고 마크 간 거리는 보존된다."""
     def pts(lm):
         return np.array([[pose_from_landmark_frame(lm, dict(zip('xyz', v)), FRAME_MODE_RZ_ONLY)[k]
                           for k in ('x', 'y', 'z')] for v in MARKS.values()])
@@ -109,8 +101,6 @@ def test_marker_rotation_carries_the_four_marks_rigidly():
     for i, j in itertools.combinations(range(4), 2):
         assert np.linalg.norm(b[i] - b[j]) == pytest.approx(np.linalg.norm(a[i] - a[j]), abs=1e-9)
 
-
-# ── Job 실행 ─────────────────────────────────────────────────────────────
 
 def test_job_type_is_registered():
     spec = RecipeManager.JOB_TYPES['move_to_landmark_pose']
@@ -166,8 +156,6 @@ def test_max_radius_zero_means_unlimited(executor):
         _job(offset_x=5000.0, max_radius_mm=0.0)) is True
 
 
-# ── 티칭 역산 ────────────────────────────────────────────────────────────
-
 def test_teach_inverts_current_tcp(executor):
     offset, msg = executor.estimate_landmark_frame_target(_job().params)
     assert offset is not None, msg
@@ -181,8 +169,6 @@ def test_teach_without_scan_reports(executor):
     assert offset is None
     assert 'scan_tm_landmark' in msg
 
-
-# ── 그리퍼 오차 (tool_offset_*) ──────────────────────────────────────────
 
 def test_tool_offset_params_registered():
     p = RecipeManager.JOB_TYPES['move_to_landmark_pose']['params']
@@ -212,31 +198,25 @@ def test_tool_offset_shifts_the_target(executor):
 
 
 def test_teach_fills_tool_offset_not_the_target(executor):
-    """'현재위치 입력' 은 그리퍼 오차를 채운다 — 목표(offset_*)는 안 건드린다."""
     params = _job(offset_x=57.597, offset_y=-222.473, offset_z=-28.647,
                   offset_rx=178.63, offset_ry=0.9, offset_rz=178.536).params
     offset, msg = executor.estimate_landmark_frame_tool_offset(params)
     assert offset is not None, msg
     assert set(offset) == {'x', 'y', 'z', 'rx', 'ry', 'rz'}
 
-    # 역산한 오차를 넣고 실행하면 손으로 맞춰 둔 TCP 위치가 재현된다.
-    # 공구 Z 방향 성분은 tool_offset 이 담당하지 않으므로(offset_z 소관) 그만큼만 남는다.
     executor._exec_move_to_landmark_pose(
         _job(**{**{k: v for k, v in params.items()},
                 **{f'tool_offset_{k}': offset[k] for k in offset}}))
     t = executor.moved[-1][1]
     residual = np.array([t['x'] - 271.63, t['y'] - 695.62, t['z'] - (-18.53)])
 
-    # 남는 성분은 공구 Z 방향 하나뿐이어야 한다 (tool_offset 에 z 축이 없으므로).
     from scipy.spatial.transform import Rotation as _R
     tool_z = _R.from_euler('ZYX', [t['rz'], t['ry'], t['rx']], degrees=True).as_matrix()[:, 2]
-    # 1e-3mm 는 자세 보정이 공구축을 아주 조금 돌리는 2차 효과분이다 (실측 0.0002mm).
     perp = np.linalg.norm(np.cross(residual, tool_z))
     assert perp < 1e-3, f"공구 Z 밖 잔차 {perp:.6f}mm — XY 재현이 안 됨"
 
 
 def test_teach_is_idempotent(executor):
-    """이미 오차가 들어 있어도 두 번 눌러 값이 겹쳐 쌓이지 않는다."""
     base = _job(offset_x=57.597, offset_y=-222.473, offset_z=-28.647).params
     first, _ = executor.estimate_landmark_frame_tool_offset(base)
     loaded = dict(base, **{f'tool_offset_{k}': first[k] for k in first})
@@ -244,8 +224,6 @@ def test_teach_is_idempotent(executor):
     for k in first:
         assert second[k] == pytest.approx(first[k], abs=1e-6)
 
-
-# ── 기준 좌표 소스 (landmark_source) ─────────────────────────────────────
 
 def _write_landmark_file(directory, name, pose):
     directory.mkdir(parents=True, exist_ok=True)
@@ -272,7 +250,6 @@ def test_source_file_reads_and_averages(executor, tmp_path):
         _job(landmark_source='file', source_path=str(d), file_prefix='a_', average_count=2))
     assert ok is True
     assert '2개 파일 평균' in _logs(executor)
-    # x 평균 150 이 기준이 되었는지 — 오프셋 0 이면 목표가 곧 마커 위치
     executor.moved.clear()
     executor._exec_move_to_landmark_pose(
         _job(landmark_source='file', source_path=str(d), file_prefix='a_', average_count=2,
@@ -291,7 +268,6 @@ def test_source_file_ignores_latest_scan(executor, tmp_path):
 
 
 def test_source_file_works_without_any_scan(executor, tmp_path):
-    """스캔 없이도 저장본만으로 이동할 수 있다 — 마커가 가려졌을 때의 경로."""
     d = tmp_path / 'lp'
     _write_landmark_file(d, 'a_20260815_100000.yaml', dict(LM))
     executor.tm_landmark_pose = None
@@ -323,7 +299,6 @@ def test_unknown_source_fails(executor):
 
 
 def test_tool_offset_z_moves_along_tool_axis(executor):
-    """tool_offset_z 가 실제로 공구 Z 방향으로 목표를 옮긴다."""
     from scipy.spatial.transform import Rotation as _R
     executor._exec_move_to_landmark_pose(_job(offset_x=50.0, offset_z=-30.0))
     base = executor.moved[-1][1]
@@ -339,7 +314,6 @@ def test_tool_offset_z_moves_along_tool_axis(executor):
 
 
 def test_offset_z_sign_is_robot_up_in_rz_only():
-    """rz_only 에서 offset_z 양수는 로봇 베이스 위쪽이다 (UI 설명과 일치)."""
     up = pose_from_landmark_frame(LM, {'x': 0, 'y': 0, 'z': 100.0}, FRAME_MODE_RZ_ONLY)
     down = pose_from_landmark_frame(LM, {'x': 0, 'y': 0, 'z': -100.0}, FRAME_MODE_RZ_ONLY)
     assert up['z'] == pytest.approx(LM['z'] + 100.0)
@@ -347,10 +321,7 @@ def test_offset_z_sign_is_robot_up_in_rz_only():
     assert (up['x'], up['y']) == pytest.approx((LM['x'], LM['y']))
 
 
-# ── 각도 원형 평균 (±180 경계) ───────────────────────────────────────────
-
 def test_circular_mean_survives_180_wrap():
-    """±180 경계를 오가는 측정도 올바른 평균을 낸다. 산술평균은 0 을 뱉는다."""
     from tm_task_manager.services.landmark_analyzer import LandmarkAnalyzer
     a = LandmarkAnalyzer()
     samples = [179.92, -179.88, 179.96, -179.95, 179.90,
@@ -367,7 +338,6 @@ def test_circular_mean_survives_180_wrap():
 
 
 def test_circular_mean_matches_plain_mean_away_from_wrap():
-    """경계에서 먼 각도는 기존과 같은 값이 나온다 — jig 마크(rz≈89.8) 동작 불변."""
     from tm_task_manager.services.landmark_analyzer import LandmarkAnalyzer
     a = LandmarkAnalyzer()
     samples = [89.78, 89.92, 89.74, 90.01, 89.86]
@@ -388,7 +358,6 @@ def test_xyz_mean_is_untouched():
 
 
 def test_teaching_pose_reproduces_exactly():
-    """2026-08-15 티칭값이 레시피 offset 으로 정확히 재현되는지."""
     LM_T = {'x': 209.116307, 'y': 532.93503, 'z': 11.842066549999998,
             'rx': 179.807403, 'ry': 1.27104361, 'rz': -179.448196}
     taught = {'x': 217.34, 'y': 778.17, 'z': -130.38,

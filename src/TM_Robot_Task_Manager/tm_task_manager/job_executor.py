@@ -56,7 +56,6 @@ PLANE_ALIGN_MAX_DIAGONAL_DIFF_MM = 10.0
 PLANE_ALIGN_MIN_ROTATION_DEG = 0.01
 
 
-
 class ExecutionState(Enum):
     IDLE = "idle"
     RUNNING = "running"
@@ -79,7 +78,6 @@ class JobExecutor:
         self.on_log: Optional[Callable[[str], None]] = None
         self.on_measure_point: Optional[Callable[[], None]] = None
         self.on_origin_check_alarm: Optional[Callable[[Any], None]] = None
-        # 직사각형 검증 실패를 UI 로 올려 작업자 판단을 받는다 (True=저장하고 계속 / False=중단).
         self.on_plate_rect_alarm: Optional[Callable[[Any], bool]] = None
 
         self.detected_ar_pose: Optional[Dict[str, float]] = None
@@ -90,7 +88,6 @@ class JobExecutor:
         self.measured_plane_distance: Optional[float] = None
 
         self.jig_landmark_results: Dict[int, Dict[str, float]] = {}
-        # save_pose 로 저장한 TCP 자세 (같은 Recipe 실행 안에서 유효)
         self.saved_poses: Dict[str, List[float]] = {}
 
         self.vision_manager = vision_manager
@@ -104,8 +101,6 @@ class JobExecutor:
 
         self.vision_origin_check_service = None
 
-        # 매크로 칠판 — 레시피 실행 1회 동안 매크로들이 산출물을 주고받는 곳.
-        # requires/produces 로 선언된 키가 여기에 오간다.
         self.macro_blackboard: Dict[str, Any] = {}
 
         self.recipe_mode: str = 'execution'
@@ -120,18 +115,12 @@ class JobExecutor:
 
     @property
     def last_origin_check_result(self):
-        """직전 원점 확인 판정 결과. 매크로가 칠판에 남긴 것을 그대로 읽는다."""
         return self.macro_blackboard.get('origin_check_result')
 
     def _macro_context(self) -> MacroContext:
         return MacroContext(self, self.macro_blackboard)
 
     def _run_macro_sequence(self, job: Job, macro_defs: List[Dict[str, Any]]) -> bool:
-        """Job 이 포함한 매크로들을 순서대로 실행한다.
-
-        macro_defs 항목: {'use': 매크로명, 'bind': {매크로파라미터: Job파라미터}}
-        bind 가 없으면 Job 파라미터를 이름 그대로 전달한다.
-        """
         ctx = self._macro_context()
 
         for index, macro_def in enumerate(macro_defs, start=1):
@@ -474,7 +463,6 @@ class JobExecutor:
     def _execute_job(self, job: Job) -> bool:
         job_type = job.type
 
-        # 매크로를 선언한 Job 은 매크로 경로로. 선언이 없으면 기존 핸들러 경로.
         macro_defs = RecipeManager.JOB_TYPES.get(job_type, {}).get('macros')
         if macro_defs:
             return self._run_macro_sequence(job, macro_defs)
@@ -884,15 +872,6 @@ class JobExecutor:
                                  velocity: float, decel_zone_mm: float,
                                  decel_velocity: float
                                  ) -> List[Tuple[str, float, float, float, float]]:
-        """현재점에서 목표점까지 한 직선으로 간다 (L 자 분해 없음).
-
-        평면 좌표계에서 X/Y 오프셋이 같고 높이만 다른 두 점은 **법선 위의 두 점**이다.
-        그 사이를 직선으로 가는 것이 곧 «법선따라 하강/상승» 이다. L 자로 쪼개면
-        평면이 기운 만큼(기울기 t, 높이차 h → h·tan t) 옆으로 밀린 채 수직 하강하므로
-        캐비티 벽을 긁는다 (MK4 짝수 팔레트 실측 2.8mm).
-
-        감속 분할은 하강일 때만, **같은 직선 위 내분점**에서 나눈다 — 경로가 꺾이지 않는다.
-        """
         dz = target_z - cur_z
         descending = dz < 0.0
         damping_on = descending and decel_zone_mm > 0.0 and velocity > decel_velocity
@@ -925,8 +904,6 @@ class JobExecutor:
         segments: List[Tuple[str, float, float, float, float]] = []
 
         if straight:
-            # 기본은 L 자 유지 — 장거리 이동을 대각선으로 바꾸면 장애물에 부딪힌다.
-            # 잡이 명시로 켠 구간(팔레트 접근↔파지)에서만 직선으로 간다.
             if math.hypot(dxy, dz) < POSE_KEEP_MIN_SEGMENT_MM:
                 return segments
             return self._build_straight_segments(
@@ -1186,11 +1163,6 @@ class JobExecutor:
         return self._exec_smc_gripper(job, 'home')
 
     def _exec_smc_gripper(self, job: Job, profile: str) -> bool:
-        """SMC 전동 그리퍼(MK4 하드웨어) — GripperCommand 액션(/gripper_node/command) 전송.
-
-        기존 DI/DO 그리퍼(_exec_gripper_*)와 독립. gripper_node(LifecycleNode)가
-        active 상태로 미리 떠 있어야 한다. 결과 result_code==0 이면 성공.
-        """
         timeout = float(job.params.get('timeout', 30.0))
 
         if not self.ros_node:
@@ -1237,8 +1209,6 @@ class JobExecutor:
             self._log(f"[SMC 그리퍼] {profile} 완료 (result_code=0)")
             return True
 
-        # verify_skip: 완료검증(INP 미도달=result_code 10)만 성공 처리 — 인터록 우회(bypass_interlock)와 별개.
-        # 그리퍼는 실제 구동됐고 목표 위치만 미확립(허공 파지 등). BUSY 미상승/미완료(8/9)는 실동작 실패라 제외.
         if bool(job.params.get('verify_skip', False)) and result.result_code == 10:
             self._log(f"[SMC 그리퍼] {profile} verify_skip — INP 미도달(허공 파지)을 성공 처리 (result_code=10)")
             return True
@@ -1247,11 +1217,6 @@ class JobExecutor:
         return False
 
     def _exec_schunk_gripper(self, job: Job, command: int) -> bool:
-        """SCHUNK 서보 그리퍼(MK2) — tc_msgs/srv/GripperCommand 서비스(/gripper_command).
-
-        command: 1=grip, 2=release, 3=home. 서비스는 bool received 만 반환한다(수신 확인).
-        기존 SMC(_exec_smc_gripper)와 독립. tc_msgs·서비스가 없으면(다른 하드웨어) 실패 반환.
-        """
         timeout = float(job.params.get('timeout', 15.0))
         names = {1: 'grip', 2: 'release', 3: 'home'}
         label = names.get(command, str(command))
@@ -1288,7 +1253,6 @@ class JobExecutor:
         return False
 
     def _exec_read_distance(self, job: Job) -> bool:
-        """거리감지 레이저(MK2) — tc_msgs/srv/DistanceCommand(/distance_command) → 2센서 거리."""
         timeout = float(job.params.get('timeout', 5.0))
         command = int(job.params.get('command', 0))
 
@@ -1342,12 +1306,6 @@ class JobExecutor:
             return False
 
     def _exec_check_magazine(self, job: Job) -> bool:
-        """버퍼 매거진 재고 확인 — 기대와 다르면 실패시켜 레시피를 세운다.
-
-        판정은 magazine_detect 노드가 한다(디바운스 확정값). 여기서는 기대치와 대조만 한다.
-        판정 불가(io_resp 끊김·미수신)는 «비었다» 가 아니라 실패다 — 모르는 것을
-        비었다고 읽으면 없는 박스를 집으러 간다.
-        """
         params = job.params
         try:
             slot = int(params.get('slot', 0))
@@ -1368,8 +1326,6 @@ class JobExecutor:
             self._log(f"[매거진] 슬롯 번호가 범위 밖입니다: {slot} (0~{service.SLOT_COUNT - 1})")
             return False
 
-        # 기동 직후에는 아직 못 받았을 수 있다. 첫 수신까지만 기다린다 —
-        # 이미 받고 있다면 즉시 지나간다.
         deadline = time.time() + timeout
         while service.slot_present(slot) is None and time.time() < deadline:
             time.sleep(0.05)
@@ -1390,14 +1346,6 @@ class JobExecutor:
         return self._handle_magazine_mismatch(params)
 
     def _handle_magazine_mismatch(self, params: Dict[str, Any]) -> bool:
-        """check_magazine 불일치 처리 — stop / skip / ignore.
-
-        판정 불가(io_resp 끊김·미수신)는 여기로 오지 않는다. 그것은 «기대와 다름» 이 아니라
-        «모름» 이고, 모르는 것을 진행 사유로 삼으면 없는 박스를 집으러 간다 — 항상 정지다.
-
-        skip 은 이 잡 다음부터 skip_count 개를 더 건너뛴다. 실행 루프가 잡 성공 후
-        current_job_index 를 1 전진시키므로(_execute_current_job), 여기서는 skip_count 만 더한다.
-        """
         mode = str(params.get('on_mismatch', 'stop')).lower()
 
         if mode == 'ignore':
@@ -1420,7 +1368,6 @@ class JobExecutor:
             self._log(f"[매거진] skip_count 가 음수입니다({skip_count}) — 정지합니다")
             return False
 
-        # 역순 실행에서 앞으로 건너뛰면 의도와 반대 방향으로 간다. 조용히 틀리느니 선다.
         if getattr(self, '_direction', 1) != 1:
             self._log("[매거진] 역순 실행 중에는 skip 을 적용하지 않습니다 — 정지합니다")
             return False
@@ -1801,12 +1748,6 @@ class JobExecutor:
                                 jig_number: Optional[int] = None,
                                 analysis_target: str = 'xyz') -> Tuple[Optional[Dict[str, float]],
                                                                        Optional[Dict[str, Any]]]:
-        """Landmark 를 repeat_count 회 스캔해 outlier 제거 후 평균 pose 를 낸다.
-
-        jig_number: None 이면 일반 TM Landmark 경로, 1~4 면 해당 Jig 경로.
-        wait_time: 스캔 명령 후 대기 (초)
-        반환: (평균 pose, 분석 결과). 유효 측정이 0 건이면 (None, None).
-        """
         analyzer = LandmarkAnalyzer()
         label = "TM Landmark" if jig_number is None else f"Jig{jig_number}"
 
@@ -1833,15 +1774,11 @@ class JobExecutor:
             else:
                 read_success, result = self.vision_manager.execute_tm_landmark_jig_read(jig_number)
 
-            # 실패를 원인별로 갈라 로그한다. 한 줄로 뭉치면 "변수를 못 읽었다"와
-            # "읽었는데 detect 가 false 다"를 구분할 수 없어 진단이 막힌다.
             if not read_success:
                 self._log(f"측정 {i+1}: 변수 읽기 실패 — {result}")
             elif not isinstance(result, dict):
                 self._log(f"측정 {i+1}: 결과 형식 오류 — {result}")
             elif not result.get('detected', False):
-                # 좌표까지 찍는다. 값이 정상이면 원인은 detect 변수 하나로 좁혀지고,
-                # 매 회차 같은 값이면 TM Flow 에 남아 있던 옛 값이라는 뜻이다.
                 detect_var = ('g_tm_landmark_detect' if jig_number is None
                               else f'g_jig_landmark{jig_number}_detect')
                 self._log(f"측정 {i+1}: 미검출 ({detect_var} 가 true/=1 아님) — "
@@ -1942,11 +1879,6 @@ class JobExecutor:
     def vision_origin_check(self, repeat_count: int = 5, outlier_method: str = 'iqr',
                             move_to_reference: bool = True, velocity: float = 20.0,
                             wait_after_command: int = 100) -> bool:
-        """원점 확인을 단발로 실행한다 (GUI 즉시 확인용).
-
-        Recipe 의 vision_origin_check Job 과 **같은 매크로**를 부르므로 판정·알람이 동일하다.
-        판정 상세는 실행 후 last_origin_check_result 로 읽는다.
-        """
         self.macro_blackboard.pop('origin_check_result', None)
         result = run_macro('vision_origin_check', self._macro_context(), {
             'move_to_reference': move_to_reference,
@@ -1960,13 +1892,6 @@ class JobExecutor:
         return result.ok
 
     def _exec_move_to_jig_landmark(self, job: Job) -> bool:
-        """[프로토타입] 스캔된 Jig Landmark 좌표 + 오프셋 위치로 이동한다.
-
-        프로토타입 주의:
-        - Jig Landmark 좌표계가 RobotBase 와 동일하다는 전제(TM Flow 설정 의존)
-        - 카메라 offset 보정은 사용자가 offset 파라미터로 직접 넣는다 (자동 보정 없음)
-        - TCP 자세(Rx, Ry, Rz)는 현재 자세를 그대로 유지한다 (자세 정렬 없음)
-        """
         params = job.params
 
         self._log("[프로토타입] move_to_jig_landmark 실행 — 검증 전 기능입니다")
@@ -2077,15 +2002,6 @@ class JobExecutor:
 
     def _confirm_plate_rectangle(self, landmarks: List[Dict[str, float]],
                                  params: Dict[str, Any], blocking: bool = True) -> bool:
-        """4 Landmark 가 직사각형인지 검증하고, 벗어나면 작업자 판단을 받는다.
-
-        반환 True = 진행(저장), False = 중단. 검증 자체가 불가하면 진행을 막지 않는다
-        (계산은 이미 성공했으므로 검증 실패로 정상 측정을 버리지 않는다).
-
-        blocking=False 면 실패해도 묻지 않고 경고 로그만 남긴 뒤 진행한다 —
-        측정·저장(캘리브레이션) 단계에서만 작업자를 붙잡고, 저장본을 불러오는
-        실행 단계에서는 작업을 멈추지 않기 위한 구분이다.
-        """
         if not bool(params.get('rect_guard_enabled', True)):
             return True
 
@@ -2134,13 +2050,6 @@ class JobExecutor:
 
     def _resolve_plate_pose_files(self, source_path: str, file_prefix: str,
                                   average_count: int) -> List[Path]:
-        """저장된 plate_pose YAML 목록을 최신순으로 고른다.
-
-        source_path 가 파일이면 그 파일 하나, 폴더면 file_prefix 로 시작하는
-        *.yaml 중 파일명(= 저장시각 포함) 역순으로 average_count 개를 고른다.
-        average_count <= 0 이면 매칭 전부. 상대 경로는 패키지 루트 기준
-        (`_save_plate_pose` 와 같은 규약).
-        """
         target = Path(source_path)
         if not target.is_absolute():
             target = paths.PACKAGE_ROOT / target
@@ -2158,12 +2067,6 @@ class JobExecutor:
         return files
 
     def _exec_load_plate_pose(self, job: Job) -> bool:
-        """저장된 plate_pose YAML 을 읽어 스캔 없이 평면 정보를 복원한다.
-
-        재측정이 불가능하거나(마커 탈거 등) 이전 다회 측정 평균을 쓰고 싶을 때
-        calculate_plate_pose 를 대체한다. 평균은 저장된 plate_pose 값이 아니라
-        **랜드마크 좌표**를 평균한 뒤 재계산해 pose 와 랜드마크의 정합을 보장한다.
-        """
         params = job.params
         source_path = str(params.get('source_path', '') or '').strip()
         if not source_path:
@@ -2200,7 +2103,6 @@ class JobExecutor:
             self._log("[오류] 평균 랜드마크로 Plate Pose 계산 실패")
             return False
 
-        # align_to_plane_normal 의 배치 검증이 jig_landmark_results 를 읽으므로 함께 복원한다.
         self.jig_landmark_results = {i + 1: dict(averaged[i]) for i in range(4)}
         self.detected_plate_pose = plate_pose
 
@@ -2211,7 +2113,6 @@ class JobExecutor:
         return self._confirm_plate_rectangle(averaged, params, blocking=False)
 
     def _plate_pose_file_name(self, job: Job, saved_at: str) -> str:
-        """저장 파일명 = <레시피명>_<캡션>_<저장시각>.yaml (없는 조각은 건너뛴다)."""
         parts = []
         if self.current_recipe is not None and self.current_recipe.file_path:
             parts.append(Path(self.current_recipe.file_path).stem)
@@ -2226,10 +2127,6 @@ class JobExecutor:
     def _save_plate_pose(self, save_dir: str, plate_pose: Dict[str, float],
                          landmarks: List[Dict[str, Any]], job: Job,
                          operator: str = '') -> bool:
-        """계산된 Plate Pose 를 지정 폴더에 <레시피명>_<캡션>_<저장시각>.yaml 로 기록한다.
-
-        상대 경로는 패키지 루트 기준으로 해석한다(소스/설치본 실행 경로 차이 흡수).
-        """
         now = time.localtime()
         directory = Path(save_dir)
         if not directory.is_absolute():
@@ -2272,12 +2169,6 @@ class JobExecutor:
     LANDMARK_POSE_KEYS = ('x', 'y', 'z', 'rx', 'ry', 'rz')
 
     def _exec_save_landmark_pose(self, job: Job) -> bool:
-        """scan_tm_landmark 로 잰 Landmark 좌표를 파일로 남긴다.
-
-        calculate_plate_pose 가 남기는 것은 Jig 4점뿐이라, 그 4점의 기준으로 쓴
-        Landmark(드로어 마커) 자체는 어디에도 기록되지 않는다. 작업을 멈추고
-        GUI 에서 저장하지 않아도 되도록 레시피 안에서 남기기 위한 Job 이다.
-        """
         params = job.params
 
         pose = self.tm_landmark_pose
@@ -2303,11 +2194,6 @@ class JobExecutor:
 
     def _save_landmark_pose(self, save_dir: str, pose: Dict[str, float],
                             job: Job, operator: str = '') -> bool:
-        """Landmark 좌표를 <레시피명>_<캡션>_<저장시각>.yaml 로 기록한다.
-
-        파일명 규칙(_plate_pose_file_name)과 상대경로 해석은 _save_plate_pose 와
-        같은 규약을 그대로 쓴다.
-        """
         now = time.localtime()
         directory = Path(save_dir)
         if not directory.is_absolute():
@@ -2342,13 +2228,6 @@ class JobExecutor:
     LANDMARK_FRAME_OFFSET_KEYS = ('x', 'y', 'z', 'rx', 'ry', 'rz')
 
     def _landmark_pose_age_min(self, path, data: Dict[str, Any]):
-        """저장본이 몇 분 전 것인지 돌려준다 (판정 불가면 None).
-
-        기준은 파일에 적힌 saved_at 이다 — _save_landmark_pose 가 저장 시각을
-        '%Y-%m-%d %H:%M:%S' 로 남긴다. 복사·rsync 로 mtime 이 갱신되면 낡은
-        파일이 새것으로 보이므로 mtime 을 1순위로 쓰지 않는다. saved_at 이
-        없거나 형식이 깨진 옛 파일만 mtime 으로 후퇴한다.
-        """
         raw = str(data.get('saved_at', '') or '').strip()
         if raw:
             try:
@@ -2363,12 +2242,6 @@ class JobExecutor:
             return None
 
     def _load_landmark_pose_from_files(self, params: Dict[str, Any]):
-        """save_landmark_pose 저장본에서 기준 마커 pose 를 읽어 평균낸다.
-
-        파일 선택 규약은 load_plate_pose 와 같다(_resolve_plate_pose_files 재사용) —
-        폴더면 file_prefix 로 시작하는 *.yaml 을 최신순 average_count 개.
-        반환 (pose dict | None, 메시지).
-        """
         source_path = str(params.get('source_path', '') or '').strip()
         if not source_path:
             return None, "source_path 가 비어 있습니다 (landmark_source=file)"
@@ -2423,11 +2296,6 @@ class JobExecutor:
         return pose, f"landmark_pose {len(poses)}개 파일 평균 사용"
 
     def _landmark_frame_inputs(self, params: Dict[str, Any]):
-        """마커 좌표계 이동의 공통 입력 — (마커 pose, frame_mode, 상대 pose).
-
-        마커가 없거나 frame_mode 가 잘못됐으면 (None, 사유) 를 돌려준다.
-        _exec_move_to_landmark_pose 와 티칭 역산이 같은 해석을 쓰도록 한곳에 둔다.
-        """
         source = str(params.get('landmark_source', 'latest_scan') or 'latest_scan')
         if source not in ('latest_scan', 'file'):
             return None, f"알 수 없는 landmark_source: {source!r} (가능: ['latest_scan', 'file'])"
@@ -2454,10 +2322,6 @@ class JobExecutor:
         return (landmark, frame_mode, relative), ""
 
     def _landmark_frame_target(self, params: Dict[str, Any]):
-        """그리퍼 오차까지 반영한 최종 목표 pose. 반환 (target | None, 사유).
-
-        실행과 티칭 역산이 같은 계산을 쓰도록 한곳에 둔다.
-        """
         parsed, reason = self._landmark_frame_inputs(params)
         if parsed is None:
             return None, reason
@@ -2485,15 +2349,6 @@ class JobExecutor:
         return target, ""
 
     def _exec_move_to_landmark_pose(self, job: Job) -> bool:
-        """마커 좌표계 상대 pose 로 이동한다.
-
-        원점은 scan_tm_landmark 가 잰 마커 위치, 회전은 frame_mode 가 정한다 —
-        rz_only 는 마커 Rz 만 쓰므로 마커 rx/ry 측정 산포가 레버암에서 증폭되지
-        않고, full 은 마커 자세 전체를 따라가므로 면을 마주봐야 하는 이송에 쓴다.
-
-        move_to_plane_pose 와 달리 마커 1 점만 있으면 되므로, 평면을 만들기 전
-        (calculate_plate_pose 이전) 단계에서도 쓸 수 있다.
-        """
         params = job.params
 
         if self.ros_node:
@@ -2516,14 +2371,6 @@ class JobExecutor:
         )
 
     def estimate_landmark_frame_target(self, params: Dict[str, Any]):
-        """현재 TCP 를 마커 좌표계 '목표 위치'(offset_*) 로 역산한다.
-
-        Task 를 처음 만들 때 목표를 조그로 잡는 용도다. 그리퍼 오차는 건드리지
-        않으므로, 오차가 이미 들어 있으면 그만큼 목표에 섞여 들어간다 —
-        오차 보정은 estimate_landmark_frame_tool_offset 을 쓴다.
-
-        반환 (offset dict | None, 메시지).
-        """
         parsed, reason = self._landmark_frame_inputs(params)
         if parsed is None:
             return None, f"[오류] {reason}"
@@ -2541,14 +2388,6 @@ class JobExecutor:
             f"rx={offset['rx']:.3f}, ry={offset['ry']:.3f}, rz={offset['rz']:.3f}")
 
     def estimate_landmark_frame_tool_offset(self, params: Dict[str, Any]):
-        """'현재위치 입력' — 현재 TCP 를 정답으로 보고 그리퍼 오차를 역산한다.
-
-        align_to_plane_normal 의 estimate_plane_align_tool_offset 과 같은 방식이다 —
-        오차를 0 으로 놓고 목표를 다시 계산한 뒤 현재 TCP 와의 차이를 잰다.
-        이미 들어 있는 오차 위에 오차가 겹쳐 쌓이는 것을 막는다.
-
-        반환 (offset dict[TOOL_OFFSET_KEYS] | None, 메시지).
-        """
         zeroed = dict(params)
         for key in TOOL_OFFSET_6DOF_KEYS:
             zeroed[f'tool_offset_{key}'] = 0.0
@@ -2602,7 +2441,6 @@ class JobExecutor:
         return True, f"배치 검증 통과 (대각선 차 {diff:.2f}mm ≤ {max_diff_mm:.2f}mm)"
 
     def _read_tcp_or_log(self, what: str) -> Optional[List[float]]:
-        """현재 TCP 를 읽는다. 못 읽으면 사유를 남기고 None."""
         if not self.ros_node or not self.ros_node.current_tcp_pose \
                 or len(self.ros_node.current_tcp_pose) < 6:
             self._log(f"{what} 실패: 현재 TCP 위치를 읽을 수 없습니다 (로봇 상태 미수신)")
@@ -2612,10 +2450,6 @@ class JobExecutor:
     def _move_pose_keep(self, label: str, target: Dict[str, float], velocity: float,
                         decel_zone_mm: float, decel_velocity: float,
                         straight: bool = False) -> bool:
-        """자세를 먼저 맞춘 뒤 위치로 접근한다 (align_to_plane_normal 과 같은 2단계).
-
-        공구가 목표 자세를 유지한 채 이동하므로 접근 중 자세가 흔들리지 않는다.
-        """
         tcp_before = self._read_tcp_or_log(label)
         if tcp_before is None:
             return False
@@ -2678,7 +2512,6 @@ class JobExecutor:
         return True
 
     def _exec_save_pose(self, job: Job) -> bool:
-        """현재 TCP 자세를 이름표로 저장한다 (같은 Recipe 실행 안에서 유효)."""
         key = str(job.params.get('key', 'start') or 'start').strip()
         tcp = self._read_tcp_or_log(f"자세 저장({key})")
         if tcp is None:
@@ -2690,7 +2523,6 @@ class JobExecutor:
         return True
 
     def _exec_move_to_saved_pose(self, job: Job) -> bool:
-        """save_pose 로 저장한 자세로 되돌아간다."""
         params = job.params
         key = str(params.get('key', 'start') or 'start').strip()
 
@@ -2709,12 +2541,6 @@ class JobExecutor:
         )
 
     def _exec_move_to_plane_pose(self, job: Job) -> bool:
-        """평면 좌표계 상대 pose 로 이동한다 (place 지점 재현용).
-
-        offset_* 는 평면 좌표계 기준이다 — x/y 는 평면 위 중심 기준 위치,
-        z 는 법선 방향 높이, rz 는 평면 X축 기준 공구 회전.
-        팔레트가 어디에 있든 같은 상대 위치로 간다.
-        """
         params = job.params
 
         if self.ros_node:
@@ -2769,11 +2595,6 @@ class JobExecutor:
         )
 
     def _plane_align_base_target(self, params: dict):
-        """오차 적용 전 정렬 목표 pose 를 구한다 (실행과 오차 추산이 함께 쓴다).
-
-        Returns: (target, tcp_before, tilt_deg) — 실패 시 (None, None, None).
-        실패 사유는 이미 로그로 남긴 뒤 반환한다.
-        """
         if self.ros_node:
             current_base = getattr(self.ros_node, 'current_base_name', 'RobotBase')
             if current_base and current_base != 'RobotBase':
@@ -2826,23 +2647,12 @@ class JobExecutor:
 
     @staticmethod
     def _plane_align_tool_offset(params: dict) -> dict:
-        """파라미터의 offset_* 를 공구 좌표계 오차 dict 로 모은다.
-
-        수직 정렬은 법선 방향 거리를 standoff_mm 이 정하므로 z 오차는 없다.
-        """
         return {
             key: float(params.get(f'offset_{key}', 0.0) or 0.0)
             for key in TOOL_OFFSET_KEYS
         }
 
     def estimate_plane_align_tool_offset(self, params: dict):
-        """현재 TCP 자세를 정답으로 보고 그리퍼 오차를 역산한다 ('현재위치 입력').
-
-        사람이 로봇을 손으로 맞춰 둔 뒤 부르면, 오차 0 기준 정렬 목표와 실제 자세의
-        차이가 그대로 오차가 된다.
-
-        Returns: (offset dict | None, 메시지)
-        """
         zeroed = dict(params)
         for key in TOOL_OFFSET_KEYS:
             zeroed[f'offset_{key}'] = 0.0
@@ -3330,8 +3140,6 @@ class JobExecutor:
             self._log("[AI] ROS2 노드가 없습니다")
             return False
 
-        # 반환값이 이번 요청의 기준 시퀀스다. 촬영 명령보다 **먼저** 열어야
-        # 명령 직후 도착하는 프레임을 놓치지 않는다.
         baseline = self.ros_node.start_techman_image_subscription()
 
         if not self.vision_manager.write_variable('g_robot_command', 3):
@@ -3343,7 +3151,6 @@ class JobExecutor:
             return False
 
         timeout_sec = timeout_ms / 1000.0
-        # 이번 요청 뒤에 도착한 프레임만 받는다 (공용 플래그 공유 문제 해소).
         msg, err = self.ros_node.wait_techman_image(
             baseline, timeout_sec,
             should_stop=lambda: self._stop_requested)

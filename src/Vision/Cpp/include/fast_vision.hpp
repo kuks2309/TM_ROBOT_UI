@@ -1,4 +1,3 @@
-
 #ifndef FAST_VISION_HPP
 #define FAST_VISION_HPP
 

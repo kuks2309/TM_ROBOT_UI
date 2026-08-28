@@ -1,7 +1,3 @@
-"""팔레트 티칭 마법사 — 매크로 계약과 레시피 발행 검증.
-
-로봇·ROS2 없이 돈다. 매크로는 가짜 executor 로, 발행기는 임시 디렉토리로 검증한다.
-"""
 import math
 import os
 import sys
@@ -12,10 +8,10 @@ import yaml
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from tm_task_manager.macros import MACROS, validate_sequence  # noqa: E402
-from tm_task_manager.macros.base import MacroContext  # noqa: E402
-from tm_task_manager.macros.pallet_teach import DEFAULT_CORNER_PLAN  # noqa: E402
-from tm_task_manager.services.pallet_recipe_generator import (  # noqa: E402
+from tm_task_manager.macros import MACROS, validate_sequence
+from tm_task_manager.macros.base import MacroContext
+from tm_task_manager.macros.pallet_teach import DEFAULT_CORNER_PLAN
+from tm_task_manager.services.pallet_recipe_generator import (
     CORNER_PLAN,
     PalletRecipeGenerator,
 )
@@ -27,7 +23,6 @@ class FakeNode:
 
 
 class FakeExecutor:
-    """MacroContext 가 건드리는 표면만 흉내낸다."""
 
     def __init__(self, tcp=(800.0, 300.0, -200.0, 180.0, 0.0, -90.0), marks=None):
         self.ros_node = FakeNode(tcp)
@@ -68,7 +63,6 @@ class FakeExecutor:
         return dict(pose), {}
 
 
-# 200 × 140 직사각형을 base XY 평면에 눕힌 배치 (Z 동일).
 SQUARE_MARKS = {
     4: {'x': 800.0, 'y': 300.0, 'z': -400.0, 'rx': 180.0, 'ry': 0.0, 'rz': 0.0},
     2: {'x': 940.0, 'y': 300.0, 'z': -400.0, 'rx': 180.0, 'ry': 0.0, 'rz': 0.0},
@@ -98,14 +92,12 @@ class MacroRegistrationTest(unittest.TestCase):
         self.assertTrue(ok, f"비고정식 순서가 검증에 실패했습니다: {problems}")
 
     def test_out_of_order_rejected(self):
-        """접근을 측정보다 먼저 두면 정적 검사가 잡아야 한다."""
         ok, problems = validate_sequence(
             ['pallet_center_approach', 'pallet_scan_4corners'])
         self.assertFalse(ok)
         self.assertTrue(any('plate_pose' in p for p in problems), problems)
 
     def test_corner_plan_matches_generator(self):
-        """매크로와 발행기의 순회 배치가 갈라지면 측정과 레시피가 어긋난다."""
         self.assertEqual(tuple(DEFAULT_CORNER_PLAN), tuple(CORNER_PLAN))
 
 
@@ -129,7 +121,6 @@ class ScanMacroTest(unittest.TestCase):
         self.assertIn('plate_pose', ctx.blackboard)
         self.assertIn('scan_start_tcp', ctx.blackboard)
         self.assertEqual(len(ctx.get('plate_marks')), 4)
-        # 3회 이동(1사분면은 제자리)
         self.assertEqual(len(executor.moves), 3)
 
     def test_scan_reports_undetected_corner(self):
@@ -159,19 +150,12 @@ class ScanMacroTest(unittest.TestCase):
 
 
 class StopFlagTest(unittest.TestCase):
-    """[정지] 뒤에도 마법사가 다시 돌아야 한다.
-
-    JobExecutor._stop_requested 는 run_from() 계열에서만 꺼진다. 매크로를 레시피 밖에서
-    직접 부르는 마법사는 그 경로를 안 지나므로, 한 번 정지하면 플래그가 남아 이후
-    모든 매크로가 진입 즉시 «정지 요청으로 …중단» 으로 끝났다 (2026-08-24 실기).
-    """
 
     def _run(self, macro, ctx, **params):
         from tm_task_manager.macros import run_macro
         return run_macro(macro, ctx, params)
 
     def test_stale_stop_flag_blocks_without_clear(self):
-        """회귀 재현 — 지우지 않으면 막힌다."""
         executor = FakeExecutor(marks=SQUARE_MARKS)
         executor._stop_requested = True
         ctx = MacroContext(executor, {})
@@ -200,7 +184,6 @@ class StopFlagTest(unittest.TestCase):
         self.assertIn('position_marker_pose', ctx.blackboard)
 
     def test_tab_clears_flag_on_each_run(self):
-        """탭이 매 실행 시작마다 지우는지 — 소스에 호출이 있어야 한다."""
         import inspect
         from tm_task_manager.tabs import pallet_teach_tab
         source = inspect.getsource(pallet_teach_tab.PalletTeachTab._run)
@@ -209,12 +192,6 @@ class StopFlagTest(unittest.TestCase):
 
 
 class CenterApproachTargetTest(unittest.TestCase):
-    """중심 접근의 목표 좌표.
-
-    (이전에 «PTP 대신 pose_keep 을 써야 한다» 는 가설로 테스트를 뒀으나, 실기에서
-     같은 에러가 재현되어 가설이 기각됐다. 원인은 이동 방식이 아니라 **평면 법선
-     방향**이었다 → PlaneNormalUpTest. 여기는 목표 좌표 계약만 남긴다.)
-    """
 
     PLATE = {'x': 870.0, 'y': 200.0, 'z': -400.0, 'rx': 0.0, 'ry': 0.0, 'rz': 0.0}
 
@@ -240,16 +217,11 @@ class CenterApproachTargetTest(unittest.TestCase):
 
 
 class PlaneNormalUpTest(unittest.TestCase):
-    """팔레트 면은 늘 위를 본다 — 법선이 아래면 목표가 팔레트 속으로 들어간다.
-
-    실측 2026-08-24: 팔레트가 90° 돌아 놓여 마크 감김이 뒤집히자 평면 rx -180.00 이
-    나왔고, 목표 Z 가 평면 -150mm(팔레트 속)로 잡혀 TMflow 가 거부했다.
-    """
 
     FLIPPED = {'x': 14.99, 'y': 909.23, 'z': -256.33,
-               'rx': -180.00, 'ry': 0.12, 'rz': 176.43}   # 실측
+               'rx': -180.00, 'ry': 0.12, 'rz': 176.43}
     UPRIGHT = {'x': 546.875, 'y': -219.146, 'z': -325.564,
-               'rx': 0.284, 'ry': -0.515, 'rz': 89.962}   # 실측 pallet5
+               'rx': 0.284, 'ry': -0.515, 'rz': 89.962}
 
     def _normal_z(self, plate):
         from tm_task_manager.tools.jig_plane_calculator import plane_normal_from_pose
@@ -281,7 +253,6 @@ class PlaneNormalUpTest(unittest.TestCase):
         self.assertAlmostEqual(np.linalg.det(_rotation_matrix_from_pose(fixed)), 1.0, places=6)
 
     def test_approach_target_is_above_plane(self):
-        """실측 뒤집힌 평면에서도 목표가 평면 **위** 여야 한다."""
         from tm_task_manager.macros import run_macro
         from tm_task_manager.macros.pallet_teach import normalize_plate_pose_up
         ex = FakeExecutor(tcp=(0.36, 639.52, -252.51, 180.0, 0.0, 0.0))
@@ -292,9 +263,7 @@ class PlaneNormalUpTest(unittest.TestCase):
                                self.FLIPPED['z'] + 150.0, places=2)
 
     def test_scan_normalizes_before_publishing(self):
-        """스캔 매크로가 칠판에 올리기 전에 정규화하는지."""
         from tm_task_manager.macros import run_macro
-        # jig 배치를 뒤집어 감김 방향을 반대로 만든다
         flipped_marks = {4: SQUARE_MARKS[1], 2: SQUARE_MARKS[3],
                          1: SQUARE_MARKS[4], 3: SQUARE_MARKS[2]}
         ex = FakeExecutor(marks=flipped_marks)
@@ -362,13 +331,11 @@ class RecipeGeneratorTest(unittest.TestCase):
     ]
 
     def test_pick_starts_by_restoring_plane(self):
-        """첫 잡이 load_plate_pose 여야 한다 — 없으면 «평면 pose 가 없습니다» 로 실패한다."""
         with tempfile.TemporaryDirectory() as tmp:
             paths = self._emit_fixed(tmp)
             pick = [p for p in paths if p.endswith('_pick.yaml')][0]
             with open(pick, encoding='utf-8') as handle:
                 document = yaml.safe_load(handle)
-            # 검증본과 같이 recipe_info · 그리퍼 열기 · 대기 뒤에 온다
             loads = [j for j in document['jobs'] if j['type'] == 'load_plate_pose']
             self.assertEqual(len(loads), 1)
             moves = [i for i, j in enumerate(document['jobs'])
@@ -381,7 +348,6 @@ class RecipeGeneratorTest(unittest.TestCase):
             self.assertEqual(params['file_prefix'], 'pallet9_teach')
 
     def test_snapshot_is_written_and_loadable(self):
-        """스냅샷이 load_plate_pose 가 읽는 형식이어야 한다 (landmarks jig1~4)."""
         with tempfile.TemporaryDirectory() as tmp:
             paths = self._emit_fixed(tmp, plate_marks=self.MARKS)
             snaps = [p for p in paths if 'plate_pose_calc' in p]
@@ -393,7 +359,6 @@ class RecipeGeneratorTest(unittest.TestCase):
                              ['jig1', 'jig2', 'jig3', 'jig4'])
             self.assertIn('plate_pose', snap)
 
-            # 실행기와 같은 경로로 평균이 되는지 (jig1~4 완비 검사 통과)
             from tm_task_manager.tools.jig_plane_calculator import (
                 average_landmarks_from_files)
             averaged, used, skipped = average_landmarks_from_files(snaps)
@@ -405,8 +370,6 @@ class RecipeGeneratorTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self._emit_fixed(tmp, plate_marks=self.MARKS[:3])
 
-    # 기존 검증본 pallet5_pick.yaml / pallet5_place.yaml 의 잡 순서 (2026-08-19 실기 확정)
-    # 상공 진입(+250) 이 맨 앞에 붙는다 — 낮은 높이로 옆에서 들어가지 않는다
     PICK_SHAPE = ['recipe_info', 'schunk_release', 'wait', 'load_plate_pose',
                   'move_to_plane_pose', 'move_to_plane_pose', 'move_to_plane_pose',
                   'schunk_grip', 'wait',
@@ -433,7 +396,6 @@ class RecipeGeneratorTest(unittest.TestCase):
             self.assertEqual([j['type'] for j in document['jobs']], self.PLACE_SHAPE)
 
     def test_heights_match_verified_pattern(self):
-        """파지면 → +20 접근 → +250 최종. 검증본이 쓰는 높이 패턴이다."""
         with tempfile.TemporaryDirectory() as tmp:
             paths = self._emit_fixed(tmp)
             document = yaml.safe_load(
@@ -441,7 +403,6 @@ class RecipeGeneratorTest(unittest.TestCase):
             moves = [j for j in document['jobs'] if j['type'] == 'move_to_plane_pose']
             self.assertEqual(len(moves), 5)
             grip_z = moves[2]['params']['offset_z']
-            # 상공 진입(+250) → 접근(+20) → 파지(0) → 이탈(+20) → 이탈(+250)
             self.assertAlmostEqual(moves[0]['params']['offset_z'], grip_z + 250.0, places=3)
             self.assertAlmostEqual(moves[1]['params']['offset_z'], grip_z + 20.0, places=3)
             self.assertAlmostEqual(moves[3]['params']['offset_z'], grip_z + 20.0, places=3)
@@ -450,7 +411,6 @@ class RecipeGeneratorTest(unittest.TestCase):
                                '첫 진입이 접근보다 높아야 한다')
 
     def test_contact_move_params_match_verified(self):
-        """접촉 구간은 3% + straight_path + decel_zone 0 — 검증본 그대로."""
         with tempfile.TemporaryDirectory() as tmp:
             paths = self._emit_fixed(tmp)
             document = yaml.safe_load(
@@ -462,7 +422,6 @@ class RecipeGeneratorTest(unittest.TestCase):
             self.assertEqual(contact['decel_zone_mm'], 0.0)
             self.assertEqual(contact['max_radius_mm'], 200.0)
             self.assertEqual(contact['max_tilt_deg'], 30.0)
-            # 접근 잡은 straight_path 를 켜지 않는다 (L자 경로)
             self.assertNotIn('straight_path', moves[0]['params'])
             self.assertEqual(moves[0]['params']['velocity'], 20.0)
 
@@ -481,11 +440,6 @@ class RecipeGeneratorTest(unittest.TestCase):
                 self.assertEqual(j['params']['duration'], 2000)
 
     def test_taught_pose_is_written_verbatim(self):
-        """기본 발행은 티칭값을 **그대로** 쓴다 — 회전도 위치도 손대지 않는다.
-
-        회전이 180/0/90 에서 벗어난 것은 오차가 아니라 사용자가 잡은 값이다
-        (2026-08-24 사용자 확인). 임의 보정은 회귀로 간주한다.
-        """
         with tempfile.TemporaryDirectory() as tmp:
             paths = self._emit_fixed(tmp)
             document = yaml.safe_load(
@@ -502,7 +456,6 @@ class RecipeGeneratorTest(unittest.TestCase):
             self.assertAlmostEqual(moves[2]['params']['offset_z'], taught['z'], places=3)
 
     def test_snap_is_opt_in_only(self):
-        """스냅은 명시적으로 켤 때만 동작한다."""
         with tempfile.TemporaryDirectory() as tmp:
             paths = self._emit_fixed(tmp, snap_rotation=True)
             document = yaml.safe_load(
@@ -535,7 +488,6 @@ class RecipeGeneratorTest(unittest.TestCase):
             with open(pick, encoding='utf-8') as handle:
                 document = yaml.safe_load(handle)
             moves = [j for j in document['jobs'] if j['type'] == 'move_to_landmark_pose']
-            # 상공진입 · 접근 · 접촉 · 근접이탈 · 최종이탈
             self.assertEqual(len(moves), 5)
             params = moves[2]['params']
             self.assertEqual(params['frame_mode'], 'rz_only')
@@ -544,7 +496,6 @@ class RecipeGeneratorTest(unittest.TestCase):
             self.assertGreater(params['max_age_min'], 0.0)
 
     def test_marker_scan_grips_before_shooting(self):
-        """촬영 전 그리퍼를 **닫는다** — 열면 턱이 카메라 시야를 가린다."""
         with tempfile.TemporaryDirectory() as tmp:
             paths = self._generator(tmp).emit(
                 pallet_name='pallet9', mount='floating', plate_pose=self.PLATE,
@@ -559,7 +510,6 @@ class RecipeGeneratorTest(unittest.TestCase):
                              [j['type'] for j in document['jobs']])
 
     def test_marker_scan_approaches_from_above(self):
-        """촬영 자세로 직행하지 않고 상공 200mm 를 경유해 하강한다."""
         from tm_task_manager.services.pallet_recipe_generator import MARKER_VIEW_LIFT_MM
         with tempfile.TemporaryDirectory() as tmp:
             paths = self._generator(tmp).emit(
@@ -574,20 +524,12 @@ class RecipeGeneratorTest(unittest.TestCase):
             self.assertAlmostEqual(high['Z'], self.START['z'] + MARKER_VIEW_LIFT_MM, places=3)
             self.assertAlmostEqual(low['Z'], self.START['z'], places=3)
             self.assertGreater(high['Z'], low['Z'], '상공이 더 높아야 한다')
-            # XY·자세는 동일 — 수직 하강
             for key in ('X', 'Y', 'Rx', 'Ry', 'Rz'):
                 self.assertAlmostEqual(high[key], low[key], places=3)
-            # 스캔은 하강 뒤에
             types = [j['type'] for j in document['jobs']]
             self.assertLess(types.index('move_to_point'), types.index('scan_tm_landmark'))
 
     def test_landmark_radius_covers_every_job(self):
-        """max_radius_mm 는 실행기와 **같은 3D 식**으로, 모든 잡을 덮어야 한다.
-
-        실행기는 √(x²+y²+z²) 로 검사한다(job_executor.py:2231). 평면거리(x·y)만 보고
-        상한을 잡으면 상승 구간에서 z 가 커져 오거부된다
-        (2026-08-25 실기: 실제 487.20mm 인데 상한 420.30mm 로 발행 → 거부).
-        """
         import math
         with tempfile.TemporaryDirectory() as tmp:
             paths = self._generator(tmp).emit(
@@ -644,12 +586,10 @@ class RecipeGeneratorTest(unittest.TestCase):
             self._emit_fixed(tmp)
             with self.assertRaises(FileExistsError):
                 self._emit_fixed(tmp)
-            # overwrite=True 면 통과해야 한다
             self._emit_fixed(tmp, overwrite=True)
 
 
 def _write_measurement(directory, name, marks, jitter=0.0):
-    """`calculate_plate_pose` 가 남기는 것과 같은 모양의 측정 파일을 만든다."""
     landmarks = {}
     for index in range(1, 5):
         base = marks[index]
@@ -665,7 +605,6 @@ def _write_measurement(directory, name, marks, jitter=0.0):
     return path
 
 
-# jig 번호 기준 배치 (파일은 jig1~4 를 이름으로 갖는다)
 FILE_MARKS = {
     1: {'x': 940.0, 'y': 100.0, 'z': -400.0, 'rx': 180.0, 'ry': 0.0, 'rz': 0.0},
     2: {'x': 940.0, 'y': 300.0, 'z': -400.0, 'rx': 180.0, 'ry': 0.0, 'rz': 0.0},
@@ -693,7 +632,6 @@ class LoadMeasurementsTest(unittest.TestCase):
             self.assertAlmostEqual(plate['y'], 200.0, places=3)
 
     def test_outlier_file_is_rejected(self):
-        """한 파일이 크게 튀면 iqr 이 걷어내 중심이 끌려가지 않아야 한다."""
         with tempfile.TemporaryDirectory() as tmp:
             for i in range(6):
                 _write_measurement(tmp, f'good{i}.yaml', FILE_MARKS, jitter=0.0)
@@ -738,7 +676,6 @@ class LoadMeasurementsTest(unittest.TestCase):
             self.assertEqual(ctx.get('measurement_sources'), [chosen])
 
     def test_clears_scan_start_tcp(self):
-        """이 경로에는 실측 시작 자세가 없다 — 남아 있으면 엉뚱한 cali 가 발행된다."""
         with tempfile.TemporaryDirectory() as tmp:
             _write_measurement(tmp, 'a.yaml', FILE_MARKS)
             ctx = MacroContext(FakeExecutor(), {'scan_start_tcp': {'x': 1.0}})
@@ -753,7 +690,6 @@ class LoadMeasurementsTest(unittest.TestCase):
 
 
 class FileRouteEmitTest(unittest.TestCase):
-    """저장된 측정으로 만든 평면은 cali 를 새로 발행하지 않는다."""
 
     def test_fixed_without_start_pose_emits_two(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -777,9 +713,7 @@ class FileRouteEmitTest(unittest.TestCase):
 
 
 class CenterApproachAlignmentTest(unittest.TestCase):
-    """중심 접근 자세 — 공구 면이 평면과 평행하고 회전이 팔레트를 따라야 한다."""
 
-    # 일부러 기울인 평면 (Rx 3°, Ry -2°) + 회전 40°
     TILTED = {'x': 870.0, 'y': 200.0, 'z': -400.0, 'rx': 3.0, 'ry': -2.0, 'rz': 40.0}
 
     def _approach(self, mode):
@@ -802,12 +736,9 @@ class CenterApproachAlignmentTest(unittest.TestCase):
         return math.degrees(math.acos(min(1.0, cos)))
 
     def test_default_is_pallet_aligned(self):
-        """기본값이 plane 이어야 한다 — 티칭 시작 자세가 팔레트에 맞춰져 있어야 한다."""
         self.assertEqual(MACROS['pallet_center_approach'].defaults()['rz_mode'], 'plane')
 
     def test_tool_face_parallel_to_plane_in_both_modes(self):
-        # 허용오차 1e-3 deg — acos 는 인자가 1 에 가까울수록 조건수가 나빠 정확히
-        # 0 이 안 나온다(실측 잔차 1.2e-06 deg). 기계적으로는 완전 일치다.
         for mode in ('plane', 'keep'):
             with self.subTest(mode=mode):
                 pose = self._approach(mode)
@@ -818,7 +749,6 @@ class CenterApproachAlignmentTest(unittest.TestCase):
 
     def test_plane_mode_follows_pallet_rotation(self):
         pose = self._approach('plane')
-        # 평면 Y축(긴 변) 정렬 = 평면 Rz + 90
         expected = self.TILTED['rz'] + 90.0
         delta = abs((pose['rz'] - expected + 180.0) % 360.0 - 180.0)
         self.assertLess(delta, 0.5, f"Rz {pose['rz']:.3f} 이 팔레트 회전을 안 따랐습니다")
@@ -829,19 +759,12 @@ class CenterApproachAlignmentTest(unittest.TestCase):
         self.assertLess(delta, 0.5, 'keep 은 현재 공구 회전을 유지해야 한다')
 
     def test_tilt_is_followed_not_flat(self):
-        """기울어진 평면이면 Rx/Ry 가 180/0 에 머물지 않아야 한다."""
         pose = self._approach('plane')
         flat = abs(abs(pose['rx']) - 180.0) < 0.05 and abs(pose['ry']) < 0.05
         self.assertFalse(flat, '기울기를 따라가지 않고 수평 자세로 갔습니다')
 
 
 class RecipeDirResolutionTest(unittest.TestCase):
-    """레시피 저장 위치 — 반드시 **소스** 트리여야 한다.
-
-    colcon 이 build/ 에 소스 심링크를 걸어 두므로, `__file__` 을 심링크 해석 없이
-    거슬러 올라가면 build/ 가 나온다. 그러면 저장한 레시피가 소스에 안 남고 다음
-    빌드에 사라진다 (2026-08-24 실사고).
-    """
 
     def test_default_root_matches_paths_ssot(self):
         from tm_task_manager import paths
@@ -862,18 +785,13 @@ class RecipeDirResolutionTest(unittest.TestCase):
 
 
 class TabWiringTest(unittest.TestCase):
-    """탭 배선 검증 — 위젯 키 오타·시그널 연결 누락은 실행해 봐야만 드러난다.
-
-    화면 없이(offscreen) 실제 위젯을 만들어 버튼 핸들러를 호출한다. PyQt5 가 없으면
-    건너뛴다(테스트 환경 차이로 전체 스위트를 깨지 않는다).
-    """
 
     @classmethod
     def setUpClass(cls):
         os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
         try:
             from PyQt5.QtWidgets import QApplication
-        except ImportError as exc:                       # pragma: no cover
+        except ImportError as exc:
             raise unittest.SkipTest(f"PyQt5 없음: {exc}")
         cls.app = QApplication.instance() or QApplication([])
 
@@ -907,10 +825,6 @@ class TabWiringTest(unittest.TestCase):
         self.assertEqual(window.tabWidget_main.tabText(0), '팔레트 티칭')
 
     def test_tab_is_not_appended_last_when_bar_is_full(self):
-        """탭바가 이미 꽉 찼을 때 끝에 붙이면 스크롤 뒤로 숨는다 — 앞쪽에 끼워야 한다.
-
-        실기에서 «탭이 안 생겼다» 로 보인 원인이 이것이었다(기존 탭 15개, 우리 것이 16번째).
-        """
         from PyQt5.QtWidgets import QTabWidget, QWidget
         from tm_task_manager.tabs import PalletTeachTab
         from tm_task_manager.tabs.pallet_teach_tab import TAB_INSERT_INDEX
@@ -919,7 +833,7 @@ class TabWiringTest(unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.tabWidget_main = QTabWidget(self)
-                for i in range(15):                      # main_window.ui 의 기존 탭 수
+                for i in range(15):
                     self.tabWidget_main.addTab(QWidget(), f'기존{i}')
                 self.ros_node = None
                 self.recipe_manager = None
@@ -966,7 +880,6 @@ class TabWiringTest(unittest.TestCase):
             self.assertEqual(tab._listed_paths(), [])
 
     def test_handlers_exist_for_every_button(self):
-        """버튼마다 연결된 핸들러가 실제로 있는지 — 이름 오타를 잡는다."""
         _, tab = self._make_tab()
         for key in ('src_pick_files', 'src_pick_folder', 'src_clear', 'src_remove',
                     'src_apply', 'scan_button', 'approach_button', 'pick_button',

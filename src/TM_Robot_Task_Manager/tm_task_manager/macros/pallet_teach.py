@@ -1,34 +1,3 @@
-"""팔레트 티칭 매크로 — 4점 측정 → 중심 접근 → 조그 티칭 → 레시피 발행.
-
-한 탭에서 버튼만 눌러 팔레트를 등록하는 마법사의 실행부다. UI 는 이 매크로들을
-순서대로 부르기만 하고 계산·이동·파일 발행은 전부 여기서 한다.
-
-## 왜 매크로인가
-
-`macros/base.py` 가 이미 칠판(blackboard)·선행조건 검사·정적 순서 검증을 제공한다
-(`run_macro` 가 `blackboard_requires` 미충족 시 실행 전에 막고, `validate_sequence`
-가 Job 정의 시점에 순서 오류를 잡는다). 별도 마법사 서비스를 만들면 그 셋을 다시
-구현하게 되므로 매크로로 등록한다.
-설계 근거: docs/adr/2026-08-24-pallet-teach-wizard.md
-
-## 칠판 사슬
-
-    pallet_capture_marker  → position_marker_pose   (비고정식만 — 고정식은 건너뛴다)
-    pallet_scan_4corners   → plate_pose, plate_marks, scan_start_tcp
-    pallet_center_approach → approach_pose          (requires plate_pose)
-    pallet_capture_teach   → teach_poses            (requires plate_pose)
-    pallet_emit_recipes    → recipe_paths           (requires plate_pose, teach_poses)
-
-`validate_sequence(['pallet_scan_4corners', ...])` 로 이 순서를 정적으로 검증할 수
-있다 — 탭이 단계를 건너뛰면 로봇을 움직이기 전에 잡힌다.
-
-## 좌표 계약
-
-티칭 결과는 **평면(plate) 좌표계 상대값**으로 칠판에 남긴다
-(`jig_plane_calculator.pose_in_plane_frame`). 절대 TCP 로 남기면 팔레트가 조금만
-움직여도 무효가 되지만, 평면 상대값은 재측정한 평면에 그대로 얹을 수 있다 —
-비고정식 팔레트가 성립하는 이유가 이것이다.
-"""
 import glob
 import os
 from typing import Any, Dict, List, Optional, Tuple
@@ -45,26 +14,17 @@ from ..tools.jig_plane_calculator import (
     tcp_pose_for_plane_normal,
 )
 
-# 4점 순회 기본 배치. pallet0_cali.yaml 실측 순서를 그대로 옮겼다 —
-# 1사분면에서 시작해 +X → -Y → -X 로 돌며 jig4 → jig2 → jig1 → jig3 을 찍는다.
-# (dx, dy) 는 **직전 지점 기준 상대 이동**이고 jig 번호는 그 자리에서 찍을 지그다.
 DEFAULT_CORNER_PLAN: Tuple[Tuple[int, float, float], ...] = (
-    (4, 0.0, 0.0),      # 1사분면 — 사용자가 조그로 맞춰 둔 시작 지점
-    (2, 1.0, 0.0),      # 2사분면 — +pitch_x
-    (1, 0.0, -1.0),     # 3사분면 — -pitch_y
-    (3, -1.0, 0.0),     # 4사분면 — -pitch_x
+    (4, 0.0, 0.0),
+    (2, 1.0, 0.0),
+    (1, 0.0, -1.0),
+    (3, -1.0, 0.0),
 )
 
-# 티칭 슬롯 — 레시피 생성기가 이 이름으로 찾는다.
 TEACH_SLOTS = ('approach', 'pick', 'place')
 
 
 def _current_tcp(ctx: MacroContext) -> Optional[List[float]]:
-    """현재 TCP 6축을 읽는다. 못 읽으면 None.
-
-    executor 의 비공개 상태를 건드리지 않으려고 ros_node 에서 직접 읽는다 —
-    `job_executor` 도 같은 경로를 쓴다(`job_executor.py:420` 등).
-    """
     node = ctx.ros_node
     pose = getattr(node, 'current_tcp_pose', None) if node else None
     if not pose or len(pose) < 6:
@@ -78,21 +38,6 @@ def _tcp_dict(pose: List[float]) -> Dict[str, float]:
 
 
 def normalize_plate_pose_up(plate_pose: Dict[str, float]) -> Dict[str, float]:
-    """평면 법선이 아래를 향하면 뒤집어 **항상 +Z(위)** 로 만든다.
-
-    팔레트 면은 물리적으로 늘 위를 향한다 — 박스가 아래에 매달리지 않는다. 그런데
-    `JigPlaneCalculator.calculate_plane_pose` 의 법선은 마크 1→4 의 **감김 방향**에서
-    나오므로, 팔레트가 90° 돌아 놓이면 순서가 뒤집혀 법선이 아래를 가리킨다.
-
-    그대로 두면 `목표 = 중심 + 법선 × standoff` 가 **팔레트 속**을 가리켜 로봇이
-    갈 수 없는 자세가 되고, TMflow 가 컨트롤러 기능 라이브러리 에러로 거부한다
-    (2026-08-24 실측: 평면 rx -180.00 · rz 176.43 → 목표 Z -406.33 = 평면 -150mm).
-    티칭 상대좌표(`pose_in_plane_frame`)의 z 부호도 함께 뒤집혀 발행 레시피의
-    `offset_z` 가 음수가 되고, `move_to_plane_pose` 는 그걸 거부한다.
-
-    뒤집기는 **평면 X축 둘레 180° 회전**이다 — 법선과 Y축이 함께 반전되어
-    오른손 좌표계가 유지된다(det=+1). 위치(x·y·z)는 건드리지 않는다.
-    """
     rotation = _rotation_matrix_from_pose(plate_pose)
     if rotation[2, 2] >= 0:
         return dict(plate_pose)
@@ -104,14 +49,6 @@ def normalize_plate_pose_up(plate_pose: Dict[str, float]) -> Dict[str, float]:
 
 
 def package_root() -> str:
-    """상대 저장경로 해석 기준 — `move_to_landmark_pose` 의 `source_path` 규약
-    ("상대경로는 패키지 루트 기준")과 같은 뿌리를 쓴다.
-
-    ⚠️ 직접 `__file__` 로 역산하지 않는다. `data/`·`ui/`·`config/` 는 파이썬 모듈
-       디렉토리(`tm_task_manager/`)가 아니라 **그 위 ROS 패키지 루트**에 있어서,
-       역산하면 한 단계 깊은 곳을 가리켜 파일을 하나도 못 찾는다(2026-08-24 실측).
-       `paths.PACKAGE_ROOT` 가 그 단일 근원이다.
-    """
     from .. import paths
     return str(paths.PACKAGE_ROOT)
 
@@ -124,11 +61,6 @@ def resolve_measurement_dir(source_path: str) -> str:
 
 def list_measurement_files(source_path: str, file_prefix: str = '',
                            max_files: int = 0) -> List[str]:
-    """저장된 plate_pose 측정 파일을 **최신순**으로 고른다.
-
-    `calculate_plate_pose` 의 `save_path` 가 남긴 파일들이다. 최신순인 이유는 팔레트를
-    옮긴 뒤의 옛 측정이 섞이면 평균이 조용히 오염되기 때문이다 — 최근 것부터 쓴다.
-    """
     directory = resolve_measurement_dir(source_path)
     if not os.path.isdir(directory):
         return []
@@ -143,16 +75,6 @@ def list_measurement_files(source_path: str, file_prefix: str = '',
 def average_marks_with_outliers(file_paths: List[str],
                                 outlier_method: str = 'iqr') -> Tuple[
         Optional[List[Dict[str, float]]], List[str], List[Tuple[str, str]], Dict[int, Dict]]:
-    """여러 측정 파일의 jig1~4 를 **outlier 제거 후** 평균낸다.
-
-    `jig_plane_calculator.average_landmarks_from_files` 는 단순 평균만 하므로 쓰지
-    않는다 — 한 번 튄 측정이 그대로 중심을 끌고 간다. 대신 꼭짓점마다
-    `LandmarkAnalyzer` 를 물려 스캔 반복에 쓰는 것과 **같은 outlier 규칙**(iqr·3sigma)을
-    파일 간에도 적용한다.
-
-    Returns:
-        (jig1~4 순서 마크 4개 | None, 사용한 파일, [(건너뛴 파일, 사유)], 꼭짓점별 통계)
-    """
     from ..services.landmark_analyzer import LandmarkAnalyzer
 
     keys = ('x', 'y', 'z', 'rx', 'ry', 'rz')
@@ -240,8 +162,6 @@ def pallet_load_measurements(ctx: MacroContext,
             f"쓸 수 있는 측정이 없습니다 (후보 {len(paths)}개, 건너뜀 {len(skipped)}개) — "
             "jig1~4 가 모두 들어 있는 파일이 필요합니다"
         )
-    # 파일 1개면 평균·outlier 가 의미 없다. 막지는 않되 그 사실을 드러낸다 —
-    # 사용자가 '여러 개 골라 평균' 을 의도했는데 1개만 잡힌 경우를 조용히 넘기지 않는다.
     if len(used) == 1:
         ctx.log("  ⚠ 파일이 1개입니다 — 평균·outlier 제거가 적용되지 않습니다")
 
@@ -252,13 +172,10 @@ def pallet_load_measurements(ctx: MacroContext,
     if plate_pose is None:
         return MacroResult.failure("평면 pose 계산 실패 — 평균 마크 배치가 퇴화했습니다")
 
-    # 법선을 항상 위로 — 마크 감김 방향에 좌우되지 않게 한다
     plate_pose = normalize_plate_pose_up(plate_pose)
     ctx.put('plate_pose', plate_pose)
     ctx.put('plate_marks', marks)
     ctx.put('measurement_sources', list(used))
-    # 이 경로에는 실측 시작 자세가 없다. cali 레시피는 이 파일들을 만든 기존 레시피가
-    # 이미 있으므로 새로 발행하지 않는다(발행기가 None 을 보고 건너뛴다).
     ctx.blackboard.pop('scan_start_tcp', None)
 
     removed = sum(s.get('outliers_removed', 0) for s in stats.values())
@@ -362,7 +279,6 @@ def pallet_scan_4corners(ctx: MacroContext,
     if start is None:
         return MacroResult.failure("현재 TCP 를 읽지 못했습니다 — 로봇 상태 채널을 확인하세요")
 
-    # 시작 자세(Rx/Ry/Rz)는 유지한다 — 사용자가 4마커가 보이도록 맞춰 둔 자세다.
     ctx.log(f"[팔레트] 4점 측정 시작 — 간격 {pitch_x:.1f} × {pitch_y:.1f}mm, "
             f"시작 (X{start[0]:.1f} Y{start[1]:.1f} Z{start[2]:.1f})")
 
@@ -406,11 +322,6 @@ def pallet_scan_4corners(ctx: MacroContext,
         marks.append(mark)
         ctx.log(f"  jig{jig_number}: X={mark['x']:.2f} Y={mark['y']:.2f} Z={mark['z']:.2f}")
 
-    # ⚠️ 순회 순서(jig4 → jig2 → jig1 → jig3)가 아니라 **jig 번호 순**으로 넣는다.
-    #    `JigPlaneCalculator.calculate_plane_pose` 는 위치 인덱스로 축을 만들기 때문이다
-    #    (v_x = m[2]-m[0], v_y = m[1]-m[0]). 스캔 순서 그대로 주면 축이 뒤엉켜
-    #    평면 계산이 실패하거나 법선이 뒤집힌다. `_exec_calculate_plate_pose` 도
-    #    `for i in range(1, 5)` 로 같은 순서를 만든다(job_executor.py:2037).
     ordered = [mark for _, mark in sorted(
         ((int(mark['jig_number']), mark) for mark in marks), key=lambda pair: pair[0])]
 
@@ -422,12 +333,9 @@ def pallet_scan_4corners(ctx: MacroContext,
     if plate_pose is None:
         return MacroResult.failure("평면 pose 계산 실패")
 
-    # 법선을 항상 위로 — 마크 감김 방향에 좌우되지 않게 한다
     plate_pose = normalize_plate_pose_up(plate_pose)
     ctx.put('plate_pose', plate_pose)
     ctx.put('plate_marks', ordered)
-    # 1사분면 시작 자세 — cali 레시피의 첫 이동 지점이 된다. 이 자세에서 4마커가
-    # 검출된다는 것이 실측으로 확인된 셈이므로 그대로 레시피에 박는다.
     ctx.put('scan_start_tcp', _tcp_dict(start))
 
     message = (f"평면 계산 완료 — 중심 (X{plate_pose['x']:.2f} Y{plate_pose['y']:.2f} "
@@ -445,8 +353,6 @@ def pallet_scan_4corners(ctx: MacroContext,
     params={
         'standoff_mm': {'type': 'float', 'default': 150.0, 'min': 1.0,
                         'description': '평면에서 띄울 거리 (mm)'},
-        # 기본은 plane — 티칭 시작 자세는 «팔레트에 맞춰진» 상태여야 조그가 적게 든다
-        # (사용자 지시 2026-08-24). keep 은 지금 잡아 둔 공구 회전을 그대로 두는 경우용.
         'rz_mode': {'type': 'choice', 'default': 'plane', 'choices': ['plane', 'keep'],
                     'description': "plane=팔레트 긴 변에 회전 정렬(기본) · "
                                    "keep=현재 공구 회전 유지. 기울기는 두 경우 모두 평면을 따른다"},
@@ -460,19 +366,6 @@ def pallet_center_approach(ctx: MacroContext,
                            standoff_mm: float = 150.0,
                            rz_mode: str = 'plane',
                            velocity: float = 20.0) -> MacroResult:
-    """평면 중심 위로 **팔레트에 정렬해** 이동한다.
-
-    `tcp_pose_for_plane_normal` 은 공구 Z 를 항상 `-법선` 으로 놓으므로 **기울기는
-    rz_mode 와 무관하게** 평면을 따른다(실측 2026-08-24: 공구 Z ↔ 법선 각차 0.0000°).
-    `rz_mode` 가 정하는 것은 **법선축 둘레의 회전**뿐이다:
-
-        plane : 평면 Y축(긴 변)에 맞춘다 → Rz ≈ 평면 Rz + 90
-        keep  : 지금 공구 회전을 유지한다
-
-    실측 대조 (pallet0, 평면 Rz 89.576 · 기울기 0.270°):
-        keep  → Rx 179.739 Ry  0.066 Rz  -90.000
-        plane → Rx 179.936 Ry -0.262 Rz  179.576
-    """
     plate_pose = ctx.get('plate_pose')
     current = _current_tcp(ctx)
     if current is None:
@@ -527,10 +420,6 @@ def pallet_capture_teach(ctx: MacroContext, slot: str = 'pick') -> MacroResult:
     absolute = _tcp_dict(current)
     relative = pose_in_plane_frame(plate_pose, absolute)
 
-    # 평면 상대값과 절대 TCP 를 **둘 다** 남긴다. 고정식 레시피는 평면 상대값을
-    # 그대로 쓰지만, 비고정식은 위치 마커 프레임으로 다시 환산해야 하므로
-    # (pose_in_landmark_frame) 절대값이 있어야 한다. 여기서 두 프레임을 모두
-    # 계산하지 않는 이유는 마커가 아직 없을 수도 있기 때문이다 — 환산은 발행 시점에 한다.
     poses: Dict[str, Dict[str, Any]] = dict(ctx.get('teach_poses') or {})
     poses[slot] = {'plane': relative, 'absolute': absolute}
     ctx.put('teach_poses', poses)
@@ -597,8 +486,6 @@ def pallet_emit_recipes(ctx: MacroContext,
             "비고정식은 위치 마커가 필요합니다 — [위치 마커 촬영]을 먼저 수행하세요"
         )
 
-    # 그리퍼 기종은 여기서 확정한다 — 발행기는 ROS2 를 모르는 순수 모듈이라
-    # 감지를 그쪽에 두면 «로봇 없이 테스트된다» 규약이 깨진다.
     from ..hardware.gripper import NoGripperDetected
     from ..hardware.gripper import resolve as resolve_gripper
     try:
@@ -622,8 +509,6 @@ def pallet_emit_recipes(ctx: MacroContext,
             scan_start_tcp=ctx.get('scan_start_tcp'),
             marker_pose=ctx.get('position_marker_pose'),
             marker_view_tcp=ctx.get('marker_view_tcp'),
-            # 평면 스냅샷용 — 이게 없으면 pick/place 가 평면을 복원하지 못해
-            # «평면 pose 가 없습니다» 로 실패한다(2026-08-24 실기).
             plate_marks=ctx.get('plate_marks'),
             pitch_x=pitch_x, pitch_y=pitch_y,
             trim_x=trim_x, trim_y=trim_y,

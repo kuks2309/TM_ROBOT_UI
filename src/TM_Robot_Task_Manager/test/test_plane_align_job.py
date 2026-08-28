@@ -66,7 +66,6 @@ def _logs(executor):
     return "\n".join(executor.logs)
 
 
-
 def test_rejects_when_plate_pose_missing(executor):
     executor.detected_plate_pose = None
     assert executor._exec_align_to_plane_normal(_align_job()) is False
@@ -128,7 +127,6 @@ def test_rejects_when_tcp_pose_unavailable(executor, node):
     assert executor._exec_align_to_plane_normal(_align_job()) is False
     assert "TCP" in _logs(executor)
     assert executor.line_calls == []
-
 
 
 def test_two_stage_motion_rotates_then_approaches(executor):
@@ -202,7 +200,6 @@ def test_rejects_unknown_rz_mode(executor):
     assert executor.line_calls == []
 
 
-
 def test_measure_returns_positive_above_plane(executor):
     executor.detected_plate_pose = dict(HORIZONTAL_PLANE)
     assert executor._exec_measure_plane_distance(_measure_job()) is True
@@ -248,7 +245,6 @@ def test_measure_rejects_without_tcp_pose(executor, node):
     assert executor._exec_measure_plane_distance(_measure_job()) is False
 
 
-
 def test_execute_job_routes_align(executor):
     executor.detected_plate_pose = dict(HORIZONTAL_PLANE)
     assert executor._execute_job(_align_job(standoff_mm=150.0)) is True
@@ -260,9 +256,7 @@ def test_execute_job_routes_measure(executor):
     assert executor.measured_plane_distance is not None
 
 
-
 def _final_target(executor):
-    """마지막 LINE 호출의 (x, y, z, rx, ry, rz)."""
     _, x, y, z, rx, ry, rz, _ = executor.line_calls[-1]
     return x, y, z, rx, ry, rz
 
@@ -276,7 +270,6 @@ def test_zero_offset_target_matches_plane_center(executor):
 
 
 def test_tool_offset_shifts_target_in_tool_frame(executor):
-    """공구가 180° 뒤집힌 정렬 자세에서 공구 +Y 오차는 베이스 -Y 로 나간다."""
     executor.detected_plate_pose = dict(HORIZONTAL_PLANE)
     assert executor._exec_align_to_plane_normal(
         _align_job(standoff_mm=150.0, offset_x=10.0, offset_y=4.0)) is True
@@ -301,7 +294,6 @@ def test_tool_offset_rz_rotates_target(executor):
 
 
 def test_tool_offset_does_not_move_along_normal(executor):
-    """z 오차 축은 없다 — standoff_mm 만 법선 거리를 정한다."""
     executor.detected_plate_pose = dict(HORIZONTAL_PLANE)
     assert executor._exec_align_to_plane_normal(
         _align_job(standoff_mm=150.0, offset_x=25.0, offset_y=-15.0)) is True
@@ -323,15 +315,12 @@ def test_estimate_offset_returns_zero_when_already_on_target(executor, node):
 
 
 def test_estimate_offset_recovers_manual_correction(executor, node):
-    """손으로 맞춰 둔 자세가 곧 오차 — 추산값을 넣고 실행하면 그 자세로 간다."""
     executor.detected_plate_pose = dict(HORIZONTAL_PLANE)
     node.current_tcp_pose = [112.0, 47.0, 150.0, 180.0, 0.0, 30.0]
 
     offset, _ = executor.estimate_plane_align_tool_offset(
         {'standoff_mm': 150.0, 'rz_mode': 'plane'})
 
-    # 추산 후 로봇을 다른 곳으로 옮겨 둔다 — 목표에 이미 서 있으면 이동이 생략돼
-    # 최종 목표를 확인할 수 없다.
     node.current_tcp_pose = [0.0, 0.0, 500.0, 180.0, 0.0, 0.0]
 
     params = {'standoff_mm': 150.0, 'rz_mode': 'plane'}
@@ -344,7 +333,6 @@ def test_estimate_offset_recovers_manual_correction(executor, node):
 
 
 def test_estimate_offset_ignores_existing_offset_params(executor, node):
-    """이미 들어있는 오차에 오차가 겹쳐 쌓이면 안 된다 — 항상 0 기준으로 다시 잰다."""
     executor.detected_plate_pose = dict(HORIZONTAL_PLANE)
     node.current_tcp_pose = [110.0, 50.0, 150.0, 180.0, 0.0, 0.0]
 
@@ -387,7 +375,6 @@ def test_job_types_registered_with_expected_params():
     assert align['params']['max_tilt_deg']['default'] == PLANE_ALIGN_MAX_TILT_DEG
     assert align['params']['max_diagonal_diff_mm']['default'] == PLANE_ALIGN_MAX_DIAGONAL_DIFF_MM
 
-    # 그리퍼 오차는 x, y, rx, ry, rz 5종 — 수직 정렬이라 z 오차는 두지 않는다.
     for axis in ('x', 'y', 'rx', 'ry', 'rz'):
         assert align['params'][f'offset_{axis}']['default'] == 0.0
     assert 'offset_z' not in align['params']

@@ -1,16 +1,7 @@
-"""안전 구역 판정 — 허용 구역(keep-in)·금지 구역(keep-out) 의 순수 계산.
+"""안전 구역(허용 박스 합집합 + 금지 박스) 설정과 기하 판정 함수군.
 
-ROS2 에 의존하지 않으므로 로봇 없이 단위 테스트가 가능하다. ROS 결합(명령 차단·
-실시간 정지)은 motion_guard·boundary_monitor 가 담당한다.
-
-단위는 mm, 좌표계는 로봇 베이스 프레임이다 (TCP·조그와 통일).
-
-판정 정확도가 두 구역에서 다르다:
-
-- keep-out 은 박스마다 독립으로 slab 법 선분↔AABB 교차를 본다. 박스가 서로 겹치거나
-  합집합이 비볼록이어도 **근사가 없다**.
-- keep-in 은 박스 합집합이 비볼록이라 정확식이 없다. 끝점은 정확히 보고 중간은
-  `step_mm` 간격으로 샘플링한다 — 그보다 좁은 틈은 건너뛸 수 있다.
+모든 좌표는 로봇 베이스 좌표계 mm 축정렬 박스(AABB) 기준이다.
+설정 파일은 config/safety_area.yaml.
 """
 import os
 from typing import List, Optional, Sequence, Tuple
@@ -19,6 +10,7 @@ import yaml
 
 CONFIG_FILE_NAME = 'safety_area.yaml'
 
+# 로봇 베이스 원점 — 허용 구역이 이 점을 빼먹으면 상시 위반이 되므로 검증에 쓴다
 BASE_POINT_MM = (0.0, 0.0, 0.0)
 
 DEFAULT_TOOL = {
@@ -38,13 +30,17 @@ DEFAULT_AREA = {
 
 
 def config_path() -> str:
-    """safety_area.yaml 의 절대 경로. paths 모듈이 패키지 루트를 단일 해석한다."""
+    """config/safety_area.yaml 절대 경로를 돌려준다."""
     from .. import paths
     return paths.config(CONFIG_FILE_NAME)
 
 
 def load_area(path: Optional[str] = None) -> dict:
-    """구역 정의를 읽는다. 파일이 없으면 기본값(비활성 = 제약 없음)을 돌려준다."""
+    """설정 파일을 읽어 기본값과 병합한 area dict 를 돌려준다.
+
+    파일이 없으면 DEFAULT_AREA(비활성) 사본. 구조 검증은 하지 않으므로
+    외부 편집 파일은 validate_area 로 별도 검사해야 한다.
+    """
     path = path or config_path()
     if not os.path.isfile(path):
         return dict(DEFAULT_AREA)
@@ -66,7 +62,7 @@ def load_area(path: Optional[str] = None) -> dict:
 
 
 def save_area(area: dict, path: Optional[str] = None) -> str:
-    """구역 정의를 저장한다. 저장 전 검증은 호출자 책임(validate_area)."""
+    """area dict 를 yaml 로 저장하고 저장 경로를 돌려준다."""
     path = path or config_path()
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, 'w', encoding='utf-8') as f:
@@ -75,10 +71,13 @@ def save_area(area: dict, path: Optional[str] = None) -> str:
 
 
 def validate_area(area: dict) -> Tuple[bool, str]:
-    """구역 정의 검증. Returns: (ok, reason).
+    """area 구조·값의 유효성을 검사한다.
 
-    베이스 포함 검사가 핵심이다. 허용 구역이 로봇 베이스(원점)를 품지 않거나 금지 구역이
-    베이스를 품으면 로봇이 상시 위반 상태가 되어 **모든 이동이 거부**된다. 저장 시점에 막는다.
+    박스 min/max 형식, 허용 구역의 베이스 원점 포함 여부(미포함이면 모든
+    이동이 상시 거부됨), margin·tool 수치 범위를 본다.
+
+    Returns:
+        (ok, 사유 문자열). 비활성 구역은 구조 검사 없이 통과.
     """
     if not isinstance(area, dict):
         return False, 'area 는 객체여야 합니다'
@@ -134,11 +133,12 @@ def validate_area(area: dict) -> Tuple[bool, str]:
 
 
 def is_enabled(area: dict) -> bool:
+    """구역 감시 활성 여부."""
     return bool(area.get('enabled'))
 
 
 def tool_inflation_mm(area: dict) -> float:
-    """금지 구역 확장에 더할 공구 반경(mm). 공구 비활성·비정상 값이면 0."""
+    """공구 반경 팽창값(mm) — TCP 점 판정을 공구 부피만큼 보수화하는 데 쓴다."""
     tool = area.get('tool') or {}
     if not tool.get('enabled'):
         return 0.0
@@ -149,16 +149,12 @@ def tool_inflation_mm(area: dict) -> float:
 
 
 def keep_out_inflation_mm(area: dict) -> float:
-    """금지 구역을 바깥으로 넓히는 총량 = margin_mm + 공구 반경."""
+    """금지 박스 팽창값(mm) = 안전 마진 + 공구 반경."""
     return float(area.get('margin_mm', 0.0)) + tool_inflation_mm(area)
 
 
 def point_in_area(area: dict, xyz_mm: Sequence[float]) -> bool:
-    """점이 허용 구역(박스 합집합) 안인가. 비활성이면 항상 True.
-
-    allowed_boxes 가 비어 있으면 keep-in 제약이 없는 것으로 본다 — 금지 구역만 쓰는
-    구성을 지원하기 위함이다. 이때도 금지 구역 판정은 그대로 동작한다.
-    """
+    """점(mm)이 허용 박스 합집합 안에 있는지 검사한다 (비활성/박스 없음이면 True)."""
     if not area.get('enabled'):
         return True
     boxes = area.get('allowed_boxes') or []
@@ -172,10 +168,7 @@ def point_in_area(area: dict, xyz_mm: Sequence[float]) -> bool:
 
 
 def violations(area: dict, points_mm: Sequence[Sequence[float]]) -> List[dict]:
-    """허용 구역을 벗어난 점들. Returns: [{index, point, nearest_box, exceeded}].
-
-    exceeded 는 어느 축을 얼마나(mm) 벗어났는지로, 거부 사유를 사람이 읽게 만들기 위한 것이다.
-    """
+    """허용 구역을 벗어난 점마다 최근접 박스·축별 초과량(mm)을 담아 돌려준다."""
     if not area.get('enabled'):
         return []
 
@@ -210,7 +203,7 @@ def violations(area: dict, points_mm: Sequence[Sequence[float]]) -> List[dict]:
 
 
 def describe_violation(violation: dict) -> str:
-    """violations() 항목 하나를 거부 사유 문장으로."""
+    """violations 항목 하나를 한국어 사유 문장으로 만든다."""
     if not violation:
         return ''
     parts = []
@@ -224,14 +217,11 @@ def describe_violation(violation: dict) -> str:
 
 def segment_intersects_box(p0: Sequence[float], p1: Sequence[float],
                            lo: Sequence[float], hi: Sequence[float]) -> bool:
-    """3D 선분(p0→p1)이 AABB [lo, hi] 와 만나는가 — slab 법 **정확** 판정.
-
-    이산 샘플링이 아니므로 얇은 박스를 건너뛰지 않는다. 경계 접촉도 교차로 본다(보수적).
-    p0 == p1 이면 점 포함 판정으로 수렴한다.
-    """
+    """선분 p0-p1 이 AABB(lo, hi)와 교차하는지 slab 법으로 정확 판정한다."""
     tmin, tmax = 0.0, 1.0
     for i in range(3):
         d = float(p1[i]) - float(p0[i])
+        # 해당 축으로 평행한 선분: 축 범위 밖이면 교차 불가
         if abs(d) < 1e-12:
             if p0[i] < lo[i] or p0[i] > hi[i]:
                 return False
@@ -249,9 +239,9 @@ def segment_intersects_box(p0: Sequence[float], p1: Sequence[float],
 
 def keep_out_hits(area: dict, p0_mm: Sequence[float],
                   p1_mm: Optional[Sequence[float]] = None) -> List[dict]:
-    """점(p1_mm 생략) 또는 선분이 **확장된** 금지 구역과 만나는 목록.
+    """마진+공구 반경만큼 팽창한 금지 박스와의 교차 목록을 돌려준다.
 
-    확장량은 margin_mm + 공구 반경이다. Returns: [{label, inflate_mm, segment}].
+    p1_mm 을 주면 선분 검사(slab 정확 판정), 없으면 점 검사.
     """
     if not area.get('enabled'):
         return []
@@ -275,7 +265,7 @@ def keep_out_hits(area: dict, p0_mm: Sequence[float],
 
 
 def describe_keep_out_hit(hit: dict) -> str:
-    """keep_out_hits() 항목 하나를 거부 사유 문장으로."""
+    """keep_out_hits 항목 하나를 한국어 사유 문장으로 만든다."""
     if not hit:
         return ''
     what = '이동 경로가' if hit.get('segment') else '목표가'
@@ -285,10 +275,11 @@ def describe_keep_out_hit(hit: dict) -> str:
 
 def segment_in_allowed(area: dict, p0_mm: Sequence[float], p1_mm: Sequence[float],
                        step_mm: float = 10.0) -> Tuple[bool, Optional[dict]]:
-    """선분 전체가 허용 구역(합집합) 안인가. Returns: (ok, violation|None).
+    """선분이 허용 구역 안에 머무는지 step_mm 간격 샘플링으로 검사한다.
 
-    끝점은 항상 포함하고 중간은 step_mm 간격으로 샘플링한다 — 합집합이 비볼록이라
-    끝점만으로는 박스 사이 틈을 통과하는 중간 이탈을 놓친다.
+    허용 구역은 박스 합집합이라 slab 단일 판정이 안 되어 샘플링 근사를 쓴다
+    — 샘플 간격(기본 10mm)보다 짧은 미세 이탈은 놓칠 수 있다.
+    금지 구역 쪽은 keep_out_hits 가 정확 판정을 담당한다.
     """
     if not area.get('enabled'):
         return True, None
@@ -308,7 +299,6 @@ def segment_in_allowed(area: dict, p0_mm: Sequence[float], p1_mm: Sequence[float
 
 
 def check_point(area: dict, point_mm: Sequence[float]) -> Tuple[bool, str]:
-    """점 하나가 안전한가. Returns: (ok, reason)."""
     if not area.get('enabled'):
         return True, ''
     found = violations(area, [point_mm])
@@ -322,10 +312,6 @@ def check_point(area: dict, point_mm: Sequence[float]) -> Tuple[bool, str]:
 
 def check_segment(area: dict, p0_mm: Sequence[float], p1_mm: Sequence[float],
                   step_mm: float = 10.0) -> Tuple[bool, str]:
-    """선분 전체가 안전한가. Returns: (ok, reason).
-
-    금지 구역은 slab 법으로 정확히, 허용 구역은 step_mm 샘플링으로 판정한다.
-    """
     if not area.get('enabled'):
         return True, ''
 

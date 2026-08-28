@@ -1,4 +1,3 @@
-// 노드의 파라미터 선언·수집. yaml 키를 ParamBag 으로 옮기는 일만 하며 판정은 config_loader 가 한다.
 #include "gripper_node.hpp"
 
 namespace gripper::ros
@@ -6,7 +5,6 @@ namespace gripper::ros
 namespace
 {
 
-// 적재기가 요구하는 정수 키 전부. 기본값을 두지 않는다 — 선언만 하고 값은 yaml 이 준다.
 const char *const kIntKeys[] = {"profiles.grip",
                                 "profiles.release",
                                 "profiles.home",
@@ -59,11 +57,10 @@ const char *const kIntKeys[] = {"profiles.grip",
 const char *const kStringKeys[] = {"interlock.auto_mode.grip", "interlock.auto_mode.release",
                                    "interlock.auto_mode.home", "interlock.stale_snapshot_action"};
 
-} // namespace
+}
 
 void GripperNode::declareParameters()
 {
-    // 타입만 선언하고 값은 두지 않는다 — yaml 이 주지 않으면 «미설정» 으로 남아 적재기가 짚는다.
     for (const char *key : kIntKeys)
     {
         declare_parameter(key, rclcpp::ParameterType::PARAMETER_INTEGER);
@@ -74,7 +71,6 @@ void GripperNode::declareParameters()
     }
     declare_parameter("maintenance.allowed_steps", rclcpp::ParameterType::PARAMETER_INTEGER_ARRAY);
 
-    // 결선 파라미터는 기본값을 둔다 — 스테이션 계약 이름이라 설비마다 달라지지 않는다.
     declare_parameter<std::string>("io.service_name", "io_service");
     declare_parameter<std::string>("io.topic_name", "io_resp");
     declare_parameter<int64_t>("io.call_timeout_ms", 500);
@@ -84,7 +80,6 @@ void GripperNode::declareParameters()
 ParamBag GripperNode::collectParams()
 {
     ParamBag bag;
-    // 값이 없으면 키를 담지 않는다 — 적재기가 «누락» 과 «0» 을 구분할 수 있어야 한다.
     for (const char *key : kIntKeys)
     {
         rclcpp::Parameter p;
@@ -110,4 +105,4 @@ ParamBag GripperNode::collectParams()
     return bag;
 }
 
-} // namespace gripper::ros
+}

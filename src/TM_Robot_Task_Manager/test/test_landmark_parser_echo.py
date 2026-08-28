@@ -1,7 +1,3 @@
-"""파싱 실패 메시지가 원문을 함께 남기는지 검증.
-
-사유만 있으면 TM Flow 쪽 원인(변수 타입·형식·미초기화)을 짚을 수 없다.
-"""
 import pytest
 
 from tm_task_manager.tools.landmark_parser import (
@@ -16,7 +12,6 @@ def test_success_unchanged():
 
 
 def test_prefixed_braces_still_parse():
-    """변수명 접두가 붙어도 중괄호만 찾으면 되므로 기존 동작 유지."""
     ok, pose = parse_tm_landmark('g_TM_Landmark={1,2,3,4,5,6}')
     assert ok
     assert pose.z == pytest.approx(3.0)

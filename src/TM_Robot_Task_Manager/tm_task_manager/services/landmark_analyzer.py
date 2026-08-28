@@ -19,12 +19,6 @@ ANGLE_COLUMNS = ('rx', 'ry', 'rz')
 
 
 def circular_mean_deg(values) -> float:
-    """각도 평균 — ±180 경계를 넘어가도 맞게 낸다.
-
-    산술평균은 [179.9, -179.9] 를 0 으로 만든다. 실제 방향과 180 도 어긋난 값이
-    나오고, 마커 자세가 ±180 부근일 때 회차마다 엉뚱하게 튄다
-    (2026-08-15 실측: 저장본에 rx=-134.94, rz=-139.90 같은 값이 남았다).
-    """
     if len(values) == 0:
         return 0.0
     radians = np.deg2rad(np.asarray(values, dtype=float))
@@ -32,20 +26,17 @@ def circular_mean_deg(values) -> float:
 
 
 def angle_deviation_deg(values, center: float) -> np.ndarray:
-    """center 기준 최단 각거리 (-180, 180]. outlier 판정·표준편차에 쓴다."""
     delta = np.asarray(values, dtype=float) - center
     return (delta + 180.0) % 360.0 - 180.0
 
 
 def circular_std_deg(values) -> float:
-    """원형 평균 기준 편차의 표준편차. 경계에서 부풀지 않는다."""
     if len(values) == 0:
         return 0.0
     return float(np.std(angle_deviation_deg(values, circular_mean_deg(values))))
 
 
 class LandmarkAnalyzer:
-    # 각도 컬럼은 _get_values_array 의 3번째 열부터다 (x, y, z, rx, ry, rz)
     ANGLE_COLUMN_START = 3
 
     def __init__(self):
@@ -82,8 +73,6 @@ class LandmarkAnalyzer:
         for col in range(n_cols):
             col_data = values[:, col]
             if col >= self.ANGLE_COLUMN_START:
-                # 각도는 원형 평균 기준 편차로 본다. 원값으로 사분위를 재면
-                # ±180 경계에서 정상 측정이 통째로 걸러진다.
                 col_data = angle_deviation_deg(col_data, circular_mean_deg(col_data))
             q1 = np.percentile(col_data, 25)
             q3 = np.percentile(col_data, 75)

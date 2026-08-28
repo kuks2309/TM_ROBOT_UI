@@ -47,8 +47,6 @@ class VisionTab(BaseTab):
             getattr(self.mw, f'pushButton_visionJog{name}Plus').clicked.connect(
                 lambda _checked=False, a=axis: self.mw.jog_service.jog(a, 1))
 
-        # 이동 거리·속도는 JogService 가 단일 보유한다. Task 편집 탭의 스핀박스와
-        # 직접 엮지 않고 서비스를 거쳐야 진입점이 늘어도 값이 어긋나지 않는다.
         self.mw.spinBox_visionJogStep.valueChanged.connect(
             lambda v: self.mw.jog_service.set_params(step_mm=v))
         self.mw.spinBox_visionJogVelocity.valueChanged.connect(

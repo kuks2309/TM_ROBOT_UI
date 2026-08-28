@@ -6,7 +6,6 @@ MOTION_KEYWORDS = (
 
 
 class TmRobotScriptMotion:
-    """TMScript 로 나가는 모션. gateway 를 주면 안전 구역 사전 검사를 거친다."""
 
     def __init__(self, gv_manager, log_callback: Callable[[str], None] = None,
                  gateway=None):
@@ -24,7 +23,6 @@ class TmRobotScriptMotion:
     def _guard(self, kind: str, label: str,
                target_mm: Optional[Sequence[float]] = None,
                offset_mm: Optional[Sequence[float]] = None) -> Tuple[bool, str]:
-        """사전 검사. 관문이 없으면 통과시킨다(가드 미배선 환경 호환)."""
         if self._gateway is None:
             return True, ''
         decision = self._gateway.check(
@@ -140,11 +138,6 @@ class TmRobotScriptMotion:
             return False, f"상대 이동 실패: {msg}"
 
     def send_raw_script(self, script: str) -> Tuple[bool, str]:
-        """임의 TMScript 전송 — 모션 명령이 섞여 있으면 안전 구역 활성 시 거부한다.
-
-        목표를 파싱하지 않으므로 검사할 수 없다. 관문을 우회하는 구멍이 되지 않도록
-        구역이 켜져 있는 동안은 모션 키워드가 보이면 막고, 전용 메서드를 쓰게 한다.
-        """
         if not self.gv_manager:
             return False, "GlobalVariableScript가 없습니다"
 

@@ -43,7 +43,6 @@ from .services.coordinate_transformer import CoordinateTransformer
 from .services.vision_origin_check_service import VisionOriginCheckService
 from tm_msgs.srv import SetPositions, AskItem, SendScript, SetIO
 
-# SMC 전동 그리퍼 액션(MK4 하드웨어) — gripper_ros 미소싱 환경에서도 GUI 정상 동작하도록 방어적 import
 try:
     from rclpy.action import ActionClient as _SmcActionClient
     from gripper_ros.action import GripperCommand as _SmcGripperCommand
@@ -51,7 +50,6 @@ try:
 except ImportError:
     _SMC_GRIPPER_AVAILABLE = False
 
-# SCHUNK 그리퍼·거리레이저(MK2 하드웨어) 서비스 — tc_msgs 미소싱 시 방어적 비활성
 try:
     from tc_msgs.srv import GripperCommand as _SchunkGripperCommand, DistanceCommand as _DistanceCommand
     _TC_MSGS_AVAILABLE = True
@@ -105,18 +103,6 @@ class TaskManagerNode(Node):
         self.current_techman_image = None
         self.waiting_for_techman_image = False
 
-        # ── 최신 프레임 캐시 ────────────────────────────────────────────
-        # 예전에는 `waiting_for_techman_image` 가 True 인 동안에만 프레임을
-        # 저장했다. 그래서 촬영 명령을 보낸 뒤 대기 루프에 들어가기 **직전**에
-        # 도착한 프레임이 통째로 버려졌고(«찍어도 UI 에 안 뜬다»), 반대로 이전
-        # 캡처의 늦은 프레임이 대기 시작 직후에 들어오면 그것을 이번 사진으로
-        # 오인했다. QoS depth 가 10 이라 이전 프레임이 밀려 있을 여지가 크다.
-        #
-        # 이제 대기 여부와 무관하게 **항상** 최신 프레임을 남기고, 소비자는
-        # 자기 요청 시점의 시퀀스보다 **뒤에 도착한 것**만 골라 간다.
-        # 소비자마다 기준값을 따로 들고 있으므로 동시에 기다려도 서로의
-        # 이미지를 가져가지 않는다.
-        # 로직은 ROS 를 모르는 ImageFrameCache 가 들고 있다 — 로봇 없이 테스트된다.
         self.techman_image_cache = ImageFrameCache()
 
         self.techman_image_sub = self.create_subscription(
@@ -134,7 +120,6 @@ class TaskManagerNode(Node):
 
         self.set_io_client = self.create_client(SetIO, 'set_io')
 
-        # SMC 전동 그리퍼 액션 클라이언트(MK4) — gripper_ros 있을 때만
         if _SMC_GRIPPER_AVAILABLE:
             self.gripper_action_client = _SmcActionClient(self, _SmcGripperCommand, '/gripper_node/command')
             self.get_logger().info('SMC 그리퍼 액션 클라이언트 생성 (/gripper_node/command)')
@@ -142,7 +127,6 @@ class TaskManagerNode(Node):
             self.gripper_action_client = None
             self.get_logger().warn('gripper_ros 미소싱 — SMC 그리퍼 태스크 비활성')
 
-        # SCHUNK 그리퍼·거리레이저(MK2) 서비스 클라이언트 — tc_msgs 있을 때만
         if _TC_MSGS_AVAILABLE:
             self.schunk_gripper_client = self.create_client(_SchunkGripperCommand, 'gripper_command')
             self.distance_client = self.create_client(_DistanceCommand, 'distance_command')
@@ -160,11 +144,6 @@ class TaskManagerNode(Node):
         self.get_logger().info('Task Manager Node initialized')
 
     def _init_safety_guard(self):
-        """안전 구역 가드 배선 — 사전 검사(가드) · 실시간 감시(감시기) · 정지(SetEvent).
-
-        모든 모션은 self.motion_gateway 를 지나야 한다. 관문을 우회하면 가드가 새므로
-        새 모션 경로를 추가할 때도 여기를 거치게 한다.
-        """
         from .safety import safety_area as sa
         from .safety.boundary_monitor import BoundaryMonitor
         from .safety.motion_guard import MotionGuard
@@ -204,7 +183,6 @@ class TaskManagerNode(Node):
                 f'[안전구역] 비활성 — 구역 제약 없이 동작합니다 ({sa.config_path()})')
 
     def reload_safety_area(self):
-        """설정 파일을 다시 읽어 가드·감시기에 반영한다. Returns: (ok, reason)."""
         from .safety import safety_area as sa
 
         area = self.safety_guard.reload()
@@ -290,23 +268,14 @@ class TaskManagerNode(Node):
                 print(f"[DEBUG] io_control_service not set on TaskManagerNode")
 
     def _on_techman_image(self, msg):
-        # 대기 중이 아니어도 **항상** 보관한다. 예전에는 여기서 버려서
-        # «찍어도 UI 에 안 뜨는» 증상이 났다.
         self.techman_image_cache.push(msg)
 
-        # 아래 두 줄은 예전 경로 호환용이다. 새 소비자는 wait_techman_image() 를 쓴다.
         if self.waiting_for_techman_image:
             self.current_techman_image = msg
             self.waiting_for_techman_image = False
             self.get_logger().info('techman_image 수신 완료')
 
     def start_techman_image_subscription(self):
-        """촬영 대기를 연다. 반환값은 **이번 요청의 기준 시퀀스**다.
-
-        이 값보다 뒤에 도착한 프레임만 이번 요청의 것으로 본다. 호출부는
-        반환값을 받아 `wait_techman_image(baseline, ...)` 에 넘긴다.
-        기존 호출부와 깨지지 않도록 시그니처는 그대로 두고 반환값만 더했다.
-        """
         self.waiting_for_techman_image = True
         self.current_techman_image = None
         baseline = self.techman_image_cache.baseline()
@@ -315,24 +284,14 @@ class TaskManagerNode(Node):
 
     def wait_techman_image(self, baseline, timeout_sec,
                            should_stop=None, spin=False):
-        """`baseline` 뒤에 도착한 프레임을 기다린다.
-
-        Returns:
-            (msg, error) — msg 가 None 이면 error 에 사유가 담긴다.
-
-        `spin=True` 는 자체 실행기가 없는 호출부(단일 스레드에서 도는 쪽)가
-        직접 콜백을 돌려야 할 때 쓴다.
-        """
         on_poll = None
         if spin:
-            # 자체 실행기가 없는 호출부는 여기서 직접 콜백을 돌려야 한다.
             def on_poll():
                 rclpy.spin_once(self, timeout_sec=0.05)
 
         msg, err = self.techman_image_cache.wait_after(
             baseline, timeout_sec, should_stop=should_stop, on_poll=on_poll)
         if msg is not None:
-            # 예전 경로를 읽는 코드가 남아 있어도 어긋나지 않게 맞춰 둔다.
             self.current_techman_image = msg
             self.waiting_for_techman_image = False
         return msg, err
@@ -341,7 +300,6 @@ class TaskManagerNode(Node):
         return self.motion_service.check_motion_complete()
 
     def _motion_kind_of(self, motion_type):
-        """SetPositions.motion_type → 가드가 쓰는 모션 종류."""
         from .safety import motion_guard as mg
 
         if motion_type == SetPositions.Request.LINE_T:
@@ -353,14 +311,6 @@ class TaskManagerNode(Node):
         return f'set_positions({motion_type})'
 
     def _log_motion_command(self, kind, positions, velocity):
-        """명령 발행 시점의 좌표계·실측 TCP·목표를 파일 로그(~/.ros/log)에 남긴다.
-
-        GUI 로그(textEdit_log)는 화면에만 남아 사후 재구성이 불가능하다. 조그가 의도치
-        않은 회전을 일으킨 건(2026-08-17)을 조사할 때 어떤 값을 보냈는지 남은 기록이
-        전혀 없었으므로, 모든 모션이 지나는 이 한 곳에서 남긴다.
-
-        진단 로그가 모션을 막으면 안 되므로 예외는 삼킨다.
-        """
         import math
         from .safety import motion_guard as mg
 
@@ -388,11 +338,6 @@ class TaskManagerNode(Node):
             self.get_logger().warn(f'[모션] 진단 로그 실패: {e}')
 
     def _call_set_positions(self, motion_type, positions, velocity, acc_time, blend_percentage=0, fine_goal=False):
-        """안전 구역 관문을 지나는 set_positions. 판정에서 거부되면 명령을 보내지 않는다.
-
-        positions 는 m·rad 단위이므로 가드에 넘길 때 mm 로 바꾼다
-        (check_motion_complete 가 쓰는 환산과 같다).
-        """
         from .safety import motion_guard as mg
 
         kind = self._motion_kind_of(motion_type)
@@ -552,8 +497,6 @@ class MainWindow(QMainWindow):
         self.teaching_service.jog_completed.connect(lambda msg: self._log(msg))
         self.teaching_service.move_completed.connect(lambda success, msg: self._log(msg))
 
-        # 수동·조그 명령 단일 실행 게이트. 진입점마다 따로 두면 한쪽으로 들어온 명령이
-        # 다른 쪽 실행 중에 끼어들 수 있으므로 창 전체가 하나를 공유한다.
         self.command_gate = CommandGate(log_callback=self._log)
         self.offset_preset_service = OffsetPresetService()
 
@@ -586,11 +529,8 @@ class MainWindow(QMainWindow):
 
         self.ros_node.io_control_service = self.io_control_service
 
-        # 버퍼 매거진 재고 — magazine_detect 노드 구독. 미소싱이면 내부에서 비활성된다.
         self.magazine_state_service = MagazineStateService(ros_node=self.ros_node)
 
-        # 그리퍼 강제 열기(인터록 우회) — Manual Control 탭 버튼 전용 탈출 경로.
-        # SMC(MK4) → SCHUNK(MK2) 순으로 시도하고, 둘 다 없으면 실행하지 않는다.
         self.gripper_override_service = GripperOverrideService(self.ros_node, log_callback=self._log)
         self.ros_node.magazine_state_service = self.magazine_state_service
 
@@ -1085,14 +1025,11 @@ class MainWindow(QMainWindow):
         filename = f"capture_{timestamp}.png"
         filepath = os.path.join(save_dir, filename)
 
-        # ⚠️ cv2.imwrite 는 실패해도 **예외를 던지지 않고 False** 를 돌려준다.
-        #    반환값을 안 보면 파일이 없는데 «저장됨» 로그만 남는다.
         if not cv2.imwrite(filepath, cv_image):
             self._log(f"이미지 저장 실패 (경로·권한·형식 확인): {filepath}")
             return None
         self._log(f"이미지 저장: {filepath}")
         return filepath
-
 
 
     def _on_detect_chessboard(self):
@@ -1137,7 +1074,6 @@ class MainWindow(QMainWindow):
             self._log(f"저장 실패: {message}")
 
 
-
     def _move_to_position(self, motion_type, positions, velocity, acc_time, blend_percentage=0, fine_goal=False):
         if not self.ros_node:
             return False, "ROS 노드 없음"
@@ -1163,39 +1099,23 @@ class MainWindow(QMainWindow):
                 self.listWidget_taskSequence.addItem(item)
 
 
-
     @property
     def current_tcp_orientation(self):
         return self.coordinate_system_manager.get_current_tcp_orientation()
 
-    # 로그 한 줄의 성격을 문구로 판정하는 규칙. 위에서부터 먼저 맞는 것이 이긴다 —
-    # 실패가 성공보다 앞서야 "이동 실패: ... 완료 확인 타임아웃" 처럼 둘 다 든 문장이
-    # 초록으로 새지 않는다. (2026-08-23: 통과/실패가 검은 글씨로 묻혀 안 보인다는 지적)
     LOG_STYLES = (
-        # (판정키, 표식, 글자색, 배경색, 문구 목록)
         ('fail', '✕', '#b00020', '#fdecea',
          ('실패', '오류', '[거부]', '[중단]', '[ERROR]', '초과', '타임아웃', '불가',
-          '기대는')),          # check_magazine 불일치: "… 비어 있음 — 기대는 매거진 있음 입니다"
+          '기대는')),
         ('warn', '▲', '#8a6100', '#fff6e0',
          ('[경고]', '[알람]', '건너뜀', '건너뜁니다', '생략', '주의', '무시')),
-        # 성공은 «판정» 만 물들인다. '완료'·'성공' 을 넣으면 매 Job 이 찍는
-        # "✓ Job 완료: …"(코드상 102곳)까지 걸려 로그가 온통 초록이 되고,
-        # 그러면 정작 중요한 판정이 다시 묻힌다 — 색의 목적이 사라진다.
-        # 반복 실행 요약처럼 꼭 필요한 성공은 kind='ok' 로 «명시» 한다.
         ('ok', '✔', '#0b6b2f', '#e8f6ec',
          ('통과', '일치')),
     )
 
-    # 로그 문구에 이미 붙어 오는 표식 — 우리 표식과 겹쳐 "✕ ✗" 로 두 번 찍힌다.
     LOG_PREMARKS = ('✅', '❌', '⚠️', '⚠', '✓', '✗')
 
     def _log_style_for(self, message, kind=None):
-        """(표식, 글자색, 배경색) 을 고른다. 해당 없으면 None.
-
-        kind 를 주면 문구 추정을 건너뛰고 그대로 따른다('plain' 은 서식 없음).
-        요약 줄처럼 «성공 3 · 실패 0» 이 한 줄에 같이 있어 문구로는 판정할 수
-        없는 경우가 있어서, 호출부가 아는 사실을 그대로 받는 길을 둔다.
-        """
         if kind is not None:
             if kind == 'plain':
                 return None
@@ -1209,7 +1129,6 @@ class MainWindow(QMainWindow):
         return None
 
     def _strip_log_premark(self, message):
-        """앞머리에 이미 붙은 표식을 떼어낸다 (우리 표식과 중복 방지)."""
         text = message.lstrip()
         for mark in self.LOG_PREMARKS:
             if text.startswith(mark):
@@ -1217,15 +1136,6 @@ class MainWindow(QMainWindow):
         return message
 
     def _log(self, message, kind=None):
-        """GUI 로그 한 줄. 판정 결과만 색과 표식으로 도드라지게 한다.
-
-        kind 로 'ok'·'warn'·'fail'·'plain' 을 직접 지정할 수 있다. 생략하면
-        문구로 추정한다.
-
-        textEdit_log 는 QTextEdit 이라 서식을 넣을 수 있다. 평문 append 로는
-        수백 줄 사이에서 판정 결과가 묻혀 보이지 않는다.
-        서식은 표시 전용이며, 저장(pushButton_saveLog)은 toPlainText 라 원문 그대로 남는다.
-        """
         from datetime import datetime
         from html import escape
         from PyQt5.QtGui import QTextCharFormat
@@ -1238,26 +1148,20 @@ class MainWindow(QMainWindow):
             self.textEdit_log.append(f"[{timestamp}] {message}")
         else:
             mark, fg, bg = style
-            # append() 는 평문이므로 서식이 필요한 줄만 HTML 로 넣는다.
             body = escape(self._strip_log_premark(message)).replace('\n', '<br>')
-            self.textEdit_log.append('')  # 새 블록을 열어 이전 줄 서식이 이어지지 않게 한다
+            self.textEdit_log.append('')
             cursor = self.textEdit_log.textCursor()
             cursor.movePosition(cursor.End)
             cursor.insertHtml(
                 f'<span style="color:{fg}; background-color:{bg}; font-weight:bold;">'
                 f'[{timestamp}] {mark} {body}</span>'
             )
-            # insertHtml 이 커서에 남긴 서식을 «지운다». 이걸 안 하면 뒤따르는
-            # 평문 append 가 그 서식을 그대로 물려받아 로그 전체가 초록으로 물든다
-            # (2026-08-24 mk2 실기에서 «초록 떡칠» 로 관측). 삽입 «전» 에 새 블록을
-            # 여는 것만으로는 못 막는다 — 문제는 삽입 «후» 의 커서 상태다.
             cursor.setCharFormat(QTextCharFormat())
             self.textEdit_log.setTextCursor(cursor)
             self.textEdit_log.setCurrentCharFormat(QTextCharFormat())
 
         self.textEdit_log.ensureCursorVisible()
         QApplication.processEvents()
-
 
 
     def _update_recent_files_menu(self):
@@ -1297,8 +1201,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.warning(self, "오류", f"Recipe 로드 실패:\n{e}")
             self._log(f"Recipe 로드 실패: {e}")
-
-
 
 
     def closeEvent(self, event):

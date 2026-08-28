@@ -1,6 +1,3 @@
-// SIL 스테이션 — remote_io_ros 자리에 gripper_sim 플랜트를 세운다.
-// 계약(io_service·io_resp·비트 인덱스)이 실기와 같아, 그리퍼 쪽 코드는 동일 경로를 탄다.
-// 이 노드는 시험 장비이며 실기 배포 대상이 아니다.
 #include <chrono>
 #include <memory>
 #include <thread>
@@ -23,7 +20,6 @@ namespace
 sim::PlantConfig operationalPlant()
 {
     sim::PlantConfig p;
-    // 실기 실측 경향 — close 가 길고(1.0s) open 이 짧다(0.5s).
     p.steps[0] = sim::StepData{0, hal::Duration{1000}, true};
     p.steps[1] = sim::StepData{100, hal::Duration{500}, false};
     p.steps[2] = sim::StepData{100, hal::Duration{800}, false};
@@ -34,7 +30,7 @@ sim::PlantConfig operationalPlant()
     return p;
 }
 
-} // namespace
+}
 
 class SimStationNode : public rclcpp::Node
 {
@@ -43,11 +39,9 @@ class SimStationNode : public rclcpp::Node
         : rclcpp::Node("sim_station_node", options), plant_(operationalPlant())
     {
         declare_parameter<bool>("magazine_present", false);
-        // 고장 주입 — 실기 스테이션이 내는 실패를 SIL 에서 재현한다.
         declare_parameter<std::string>("fault.write_mode", "ok");
         declare_parameter<bool>("fault.link_down", false);
 
-        // 신호맵은 그리퍼와 같은 yaml 을 읽는다 — 두 벌이 어긋나면 시험이 의미를 잃는다.
         declareMapParams();
         ParamBag bag;
         for (const auto &key : mapKeys())
@@ -152,14 +146,13 @@ class SimStationNode : public rclcpp::Node
         const auto fault = writeFault();
         if (fault == WriteFault::kNoResponse)
         {
-            // 응답을 만들지 않고 오래 붙잡는다 — 호출자가 «적용됐는지 모른다» 를 겪게 한다.
             std::this_thread::sleep_for(std::chrono::seconds(3));
             res->received = false;
             return;
         }
         if (fault == WriteFault::kReject)
         {
-            res->received = false; // 스테이션이 쓰기를 확정하지 않았다
+            res->received = false;
             return;
         }
         if (req->indices.size() != req->states.size())
@@ -183,12 +176,10 @@ class SimStationNode : public rclcpp::Node
         res->states_resp = req->states;
         if (fault == WriteFault::kEchoCorrupt && !res->states_resp.empty())
         {
-            // echo 가 요청과 다르면 «무엇이 적용됐는지» 를 알 수 없다.
             res->states_resp[0] = res->states_resp[0] ? 0 : 1;
         }
     }
 
-    // DO 이미지의 현재 값을 플랜트 입력으로 옮긴다 — 스테이션이 하는 일과 같다.
     void applyToPlant()
     {
         uint8_t step = 0;
@@ -216,7 +207,6 @@ class SimStationNode : public rclcpp::Node
 
     void publishImage()
     {
-        // 링크 두절은 «발행이 끊긴다» 로 재현한다 — 소비자는 스냅샷이 늙는 것으로 알아채야 한다.
         if (get_parameter("fault.link_down").as_bool())
         {
             return;
@@ -241,7 +231,6 @@ class SimStationNode : public rclcpp::Node
                 di_bits_[static_cast<size_t>(index)] = 1;
             }
         }
-        // 매거진 감지는 극성이 반대다(원시 0 = 감지) — 신호맵의 detected_level 을 그대로 쓴다.
         const auto detected = plant_.magazineDetected();
         const int32_t on = map_.magazine_detected_level;
         if (map_.magazine_1 >= 0 && map_.magazine_1 < map_.di_bit_count)
@@ -268,7 +257,7 @@ class SimStationNode : public rclcpp::Node
     rclcpp::TimerBase::SharedPtr timer_;
 };
 
-} // namespace gripper::ros
+}
 
 int main(int argc, char **argv)
 {

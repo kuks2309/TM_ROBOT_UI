@@ -1,4 +1,3 @@
-"""convert_to_runtime 이 save_landmark_pose 산출물을 기준점으로 쓰는지 검증."""
 import os
 import sys
 
@@ -9,7 +8,7 @@ from scipy.spatial.transform import Rotation
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools'))
 
-from convert_to_runtime import RecipeConverter, find_latest_landmark_pose_file  # noqa: E402
+from convert_to_runtime import RecipeConverter, find_latest_landmark_pose_file
 
 
 LANDMARK = {'x': 199.731, 'y': 567.025, 'z': 248.081,
@@ -101,7 +100,6 @@ def test_four_marks_become_relative_and_round_trip(tmp_path):
 
 
 def test_rotating_the_system_rotates_the_four_points(tmp_path):
-    """드로어 마커 Rz 만 30도 돌면 4점도 같은 각도로 돌고, 마크 간 거리는 불변."""
     def relative_params(rz):
         d = tmp_path / f'rz{int(rz)}'
         conv = RecipeConverter(landmark_pose_file=_landmark_file(d, dict(LANDMARK, rz=rz)))
@@ -118,14 +116,12 @@ def test_rotating_the_system_rotates_the_four_points(tmp_path):
         return np.array([(T_lm @ _T({k: p[k] for k in ('X', 'Y', 'Z', 'Rx', 'Ry', 'Rz')}))[:3, 3]
                          for p in params])
 
-    # 같은 상대좌표를 30도 돌아간 기준점에 얹으면 4점이 통째로 30도 돈다
     pa, pb = restored(a, 15.0), restored(a, 45.0)
     origin = np.array([LANDMARK['x'], LANDMARK['y'], LANDMARK['z']])
     th = np.deg2rad(30.0)
     R = np.array([[np.cos(th), -np.sin(th), 0], [np.sin(th), np.cos(th), 0], [0, 0, 1]])
     assert pb == pytest.approx(origin + (R @ (pa - origin).T).T, abs=0.05)
 
-    # 마커 간 거리는 회전과 무관하게 보존된다
     for i in range(4):
         for j in range(i + 1, 4):
             assert np.linalg.norm(pb[i] - pb[j]) == pytest.approx(
@@ -133,11 +129,6 @@ def test_rotating_the_system_rotates_the_four_points(tmp_path):
 
 
 def test_system_rotation_leaves_relative_coords_unchanged(tmp_path):
-    """팔레트 시스템이 통째로 30도 돌면(마커+4마크 동시) 상대좌표는 그대로여야 한다.
-
-    마커가 개별적으로 움직이는 게 아니라 시스템이 도는 것이므로, 마커 기준
-    오프셋은 회전에 불변이다 — 이것이 상대좌표로 도는 이유 자체다.
-    """
     origin = np.array([LANDMARK['x'], LANDMARK['y']])
     th = np.deg2rad(30.0)
     R = np.array([[np.cos(th), -np.sin(th)], [np.sin(th), np.cos(th)]])
@@ -165,7 +156,6 @@ def test_system_rotation_leaves_relative_coords_unchanged(tmp_path):
 
 
 def test_master_reference_still_wins(tmp_path):
-    """기존 우선순위 유지 — 마스터 reference 가 있으면 그쪽을 쓴다."""
     master = _master(reference={'tm_jig_landmark': {
         'X': 1.0, 'Y': 2.0, 'Z': 3.0, 'Rx': 0.0, 'Ry': 0.0, 'Rz': 0.0}})
     conv = RecipeConverter(landmark_pose_file=_landmark_file(tmp_path))

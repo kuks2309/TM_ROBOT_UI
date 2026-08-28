@@ -1,8 +1,6 @@
-"""워크스페이스 앵커 탐색 — 패키지 내 모든 경로의 단일 해석 지점.
+"""패키지 리소스 경로(config/ui/data 등)의 단일 근원 — import 시점에 소스 루트를 확정한다.
 
-소스 트리 실행과 설치본(`ros2 launch`) 실행에서 `__file__` 의 위치가 달라지므로
-개별 모듈이 상대 경로를 직접 조립하면 두 환경에서 서로 다른 곳을 가리킨다.
-이 모듈이 패키지 루트를 한 번만 확정하고 나머지는 거기서 파생시킨다.
+상향 탐색·share 역산이 모두 실패하면 import 자체가 RuntimeError 로 실패한다(fail-fast).
 """
 import os
 from pathlib import Path
@@ -12,7 +10,7 @@ _MARKER = 'package.xml'
 
 
 def _from_upward_search() -> Path | None:
-    """__file__ 에서 위로 올라가며 package.xml 탐색 (소스 트리 실행 경로)."""
+    """__file__ 의 부모 디렉토리를 상향 탐색해 package.xml 이 있는 패키지 루트를 찾는다."""
     for d in Path(__file__).resolve().parents:
         if (d / _MARKER).exists():
             return d
@@ -20,11 +18,7 @@ def _from_upward_search() -> Path | None:
 
 
 def _from_share_dir() -> Path | None:
-    """설치본 실행 경로. share 디렉터리에서 워크스페이스를 역산해 소스 루트를 찾는다.
-
-    site-packages 위에는 package.xml 이 없어 상향 탐색이 실패하므로 이 경로가 필요하다.
-    share = <ws>/install/<pkg>/share/<pkg> 이므로 parents[3] 이 워크스페이스 루트다.
-    """
+    """ament share 디렉토리에서 소스 트리를 역산한다 (install 환경용 폴백)."""
     try:
         from ament_index_python.packages import get_package_share_directory
         share = Path(get_package_share_directory(_PACKAGE_NAME))
@@ -38,6 +32,7 @@ def _from_share_dir() -> Path | None:
 
 
 def _find_package_root() -> Path:
+    """두 리졸버를 순차 시도해 패키지 루트를 확정한다. 모두 실패하면 RuntimeError."""
     for resolver in (_from_upward_search, _from_share_dir):
         root = resolver()
         if root is not None:
@@ -49,6 +44,7 @@ def _find_package_root() -> Path:
     )
 
 
+# import 시 1회 확정 — 실패하면 이 모듈을 import 하는 모든 모듈이 기동 불능(의도된 fail-fast).
 PACKAGE_ROOT: Path = _find_package_root()
 SRC_ROOT: Path = PACKAGE_ROOT.parent
 
@@ -58,24 +54,21 @@ DATA_DIR: Path = PACKAGE_ROOT / 'data'
 SCRIPTS_DIR: Path = PACKAGE_ROOT / 'scripts'
 AI_ROOT: Path = SRC_ROOT / 'AI'
 
-# 기계마다 갈리는 값(robot_ip · 그리퍼)은 config/robots/<id>.yaml 에 있다.
-# 여기서는 **디렉터리만** 확정한다 — 해석은 robot_profile 이 하며, 그렇게
-# 나눠야 paths <-> robot_profile 순환 import 가 생기지 않는다.
 ROBOTS_DIR: Path = CONFIG_DIR / 'robots'
 
 
 def ui(name: str) -> str:
-    """UI 파일의 절대 경로 문자열. uic.loadUi() 가 str 을 받으므로 str 로 반환한다."""
+    """UI_DIR 하위 파일의 절대 경로 문자열을 반환한다."""
     return str(UI_DIR / name)
 
 
 def config(name: str) -> str:
-    """config 디렉터리 내 파일의 절대 경로 문자열."""
+    """CONFIG_DIR 하위 파일의 절대 경로 문자열을 반환한다."""
     return str(CONFIG_DIR / name)
 
 
 def log_resolved(logger=None) -> str:
-    """기동 시 1회 호출해 해석된 경로를 남긴다. logger 가 없으면 stdout 으로 출력한다."""
+    """해석된 경로 일람을 logger(없으면 stdout)로 남기고 그 텍스트를 반환한다."""
     lines = [
         f'[paths] PACKAGE_ROOT = {PACKAGE_ROOT}',
         f'[paths] UI_DIR       = {UI_DIR}  (존재: {UI_DIR.is_dir()})',

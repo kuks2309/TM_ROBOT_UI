@@ -1,13 +1,3 @@
-"""평면 수직 정렬 그리퍼 오차 preset 저장소.
-
-현장에서 그리퍼 오차는 공구를 바꾸거나 재장착할 때마다 다시 잡는다. 매번 6칸을
-손으로 채우는 대신 이름을 붙여 저장해 두고 골라 쓰기 위한 파일 저장소다.
-
-오차 축은 x, y, rx, ry, rz 5종이다 — 수직 정렬은 법선 방향 거리를 standoff_mm 이
-정하므로 z 오차는 두지 않는다(jig_plane_calculator.TOOL_OFFSET_KEYS 와 같은 정의).
-
-UI 는 본 서비스만 호출하고 파일을 직접 열지 않는다.
-"""
 import os
 from typing import Dict, List, Optional, Tuple
 
@@ -49,7 +39,6 @@ class OffsetPresetService:
 
     @staticmethod
     def _normalize(values: Dict) -> Dict[str, float]:
-        """정의된 축만 남기고 float 로 맞춘다. 없는 축은 0.0."""
         normalized = {}
         for key in TOOL_OFFSET_KEYS:
             try:
@@ -65,7 +54,6 @@ class OffsetPresetService:
         return self._load_all().get(name)
 
     def save(self, name: str, offset: Dict[str, float]) -> Tuple[bool, str]:
-        """preset 을 추가하거나 덮어쓴다. Returns: (ok, 사유)."""
         name = (name or "").strip()
         if not name:
             return False, "preset 이름이 비어 있습니다"

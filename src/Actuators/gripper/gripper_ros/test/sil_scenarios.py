@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-"""gripper_ros SIL 시나리오 — 액션 서버를 실제로 두드려 고장·취소·비활성화·연속운전을 검사한다.
-
-C++ 단위 시험은 각 계층을 따로 본다. 여기서는 «조립층 + FSM + 스테이션» 이 결합된 상태를
-두드린다 — 실기에서 무는 것은 대개 정상 경로가 아니라 고장 경로다.
-
-전제: sim_station_node 와 gripper_node 가 떠 있고 gripper_node 가 active 여야 한다.
-"""
 import sys
 import time
 
@@ -59,7 +52,6 @@ class Runner(Node):
         return future.done()
 
     def send(self, command, profile="", step=0, timeout_s=60.0, cancel_after_s=None):
-        """목표 1건. 반환은 결과 코드(int) 또는 REJECTED."""
         goal = GripperCommand.Goal()
         goal.command = command
         goal.profile = profile
@@ -95,7 +87,7 @@ class Runner(Node):
         future = self.station_params.call_async(req)
         if not self.spin_until(future, 10.0):
             raise RuntimeError("파라미터 설정 응답 없음")
-        time.sleep(0.2)  # 다음 io_resp 주기가 값을 싣도록
+        time.sleep(0.2)
 
     def set_lifecycle(self, transition_id):
         req = ChangeState.Request()
@@ -136,7 +128,6 @@ def scenario_write_reject(r):
     r.check(r.send(COMMAND_PROFILE, "release") == 0, "사전 원점 확립")
     r.set_station(**{"fault.write_mode": "reject"})
     code = r.send(COMMAND_PROFILE, "release", timeout_s=90.0)
-    # 적용 여부를 모르는 상태다 — 성공으로 끝나면 안 된다.
     r.check(code != 0, f"쓰기 미확정이면 성공하지 않는다(관측 {name_of(code)} · 사유 {r.last_message})")
     r.reset_station()
 
@@ -166,7 +157,7 @@ def scenario_link_down(r):
     r.reset_station()
     r.check(r.send(COMMAND_PROFILE, "release") == 0, "사전 원점 확립")
     r.set_station(**{"fault.link_down": True})
-    time.sleep(1.0)  # 스냅샷이 늙도록
+    time.sleep(1.0)
     code = r.send(COMMAND_PROFILE, "release", timeout_s=90.0)
     r.check(code in (REJECTED, 3), f"링크 두절이면 stale 로 끊는다(관측 {name_of(code)})")
     r.set_station(**{"fault.link_down": False})
@@ -178,7 +169,6 @@ def scenario_cancel(r):
     print("[S-F] 동작 중 취소")
     r.reset_station()
     r.check(r.send(COMMAND_PROFILE, "release") == 0, "사전 원점 확립")
-    # 매거진을 놓지 않으면 grip 이 인터록에서 거절돼 취소 경로를 아예 타지 않는다.
     r.set_station(magazine_present=True)
     code = r.send(COMMAND_PROFILE, "grip", timeout_s=60.0, cancel_after_s=0.3)
     r.check(code != REJECTED, "취소 시험이 실제로 구동에 진입했다")
@@ -192,7 +182,7 @@ def scenario_deactivate_midmotion(r):
     print("[S-G] 동작 중 비활성화")
     r.reset_station()
     r.check(r.send(COMMAND_PROFILE, "release") == 0, "사전 원점 확립")
-    r.set_station(magazine_present=True)  # grip 이 인터록을 통과해야 «동작 중» 이 성립한다
+    r.set_station(magazine_present=True)
     goal = GripperCommand.Goal()
     goal.command = COMMAND_PROFILE
     goal.profile = "grip"
@@ -204,7 +194,6 @@ def scenario_deactivate_midmotion(r):
     result_future = handle.get_result_async()
     r.set_lifecycle(Transition.TRANSITION_DEACTIVATE)
     r.check(r.lifecycle_label() == "inactive", "비활성화 성공")
-    # 비활성화는 «지금 멈춘다» 이므로 진행 중 목표가 매달려 있으면 안 된다.
     r.check(r.spin_until(result_future, 10.0), "비활성화가 진행 중 목표를 마감한다")
     r.set_lifecycle(Transition.TRANSITION_ACTIVATE)
     r.check(r.lifecycle_label() == "active", "재활성화 성공")

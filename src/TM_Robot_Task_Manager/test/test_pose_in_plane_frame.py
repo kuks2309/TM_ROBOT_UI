@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""pose_in_plane_frame / average_landmarks_from_files 단위 테스트."""
 import math
 import sys
 from pathlib import Path
@@ -33,7 +32,6 @@ def test_pure_translation_maps_to_plane_axes():
 
 
 def test_plate_rotation_is_removed():
-    """평면이 Rz=90도 돌아 있으면 베이스 +X 변위는 평면 -Y 로 나온다."""
     plate = dict(FLAT, rz=90.0)
     tcp = dict(FLAT, x=110.0, rz=90.0)
     rel = pose_in_plane_frame(plate, tcp)
@@ -50,7 +48,6 @@ def test_gripper_rotation_error_is_reported_as_rz():
 
 
 def test_z_matches_standoff_from_align_helper():
-    """align 이 만든 목표 pose 를 되돌리면 평면 좌표계에서 (0,0,standoff) 여야 한다."""
     plate = {'x': 817.6, 'y': 215.0, 'z': -325.9,
              'rx': 0.26, 'ry': -0.07, 'rz': 89.58}
     target = tcp_pose_for_plane_normal(plate, 150.0, 'plane', None)
@@ -61,17 +58,13 @@ def test_z_matches_standoff_from_align_helper():
 
 
 def test_tilted_plate_z_is_normal_distance():
-    """기울어진 평면에서도 z 는 법선 방향 거리다."""
     plate = dict(FLAT, ry=30.0)
-    # 법선 방향으로 50mm 떨어진 점
     n = (math.sin(math.radians(30.0)), 0.0, math.cos(math.radians(30.0)))
     tcp = dict(FLAT, x=FLAT['x'] + 50 * n[0], z=FLAT['z'] + 50 * n[2], ry=30.0)
     rel = pose_in_plane_frame(plate, tcp)
     assert rel['z'] == pytest.approx(50.0, abs=1e-6)
     assert rel['x'] == pytest.approx(0.0, abs=1e-6)
 
-
-# ---- average_landmarks_from_files ----
 
 def _write(path, jig1_y, ok=True):
     lm = {f'jig{i}': {'x': 10.0 * i, 'y': jig1_y + i, 'z': -5.0,
@@ -87,7 +80,7 @@ def test_average_of_two_files(tmp_path):
     b = _write(tmp_path / 'b.yaml', 10.0)
     marks, used, skipped = average_landmarks_from_files([a, b])
     assert len(used) == 2 and not skipped
-    assert marks[0]['y'] == pytest.approx(6.0)   # (1 + 11) / 2
+    assert marks[0]['y'] == pytest.approx(6.0)
     assert marks[0]['detected'] is True
 
 

@@ -10,7 +10,7 @@ std::vector<int32_t> expandBits(const std::vector<uint16_t> &words, size_t bit_c
     {
         const size_t w = i / 16;
         if (w >= words.size())
-            break; // 워드가 모자라면 나머지는 0 — 호출자가 레이아웃을 보증한다
+            break;
         out[i] = ((words[w] >> (i % 16)) & 0x1u) ? 1 : 0;
     }
     return out;
@@ -23,7 +23,7 @@ std::vector<uint16_t> buildInitialImage(const std::vector<int32_t> &on_bits, uin
     for (int32_t b : on_bits)
     {
         if (b < 0 || b >= limit)
-            return {}; // 범위 밖이 하나라도 있으면 이미지를 만들지 않는다
+            return {};
         img[static_cast<size_t>(b) / 16] =
             static_cast<uint16_t>(img[static_cast<size_t>(b) / 16] | (1u << (b % 16)));
     }
@@ -50,10 +50,8 @@ WriteRequestCheck checkWriteRequest(const std::vector<int32_t> &indices,
 
 AlarmDecision decideAlarm(AlarmCode current, bool reconnected_this_tick)
 {
-    // 재연결 직후에는 해제(0)를 1회 알린다 — legacy cpp:218-224.
     if (reconnected_this_tick)
         return {true, AlarmCode::kNone};
-    // 에러가 서 있는 동안은 매 틱 반복 발행 — legacy cpp:562-567.
     if (current != AlarmCode::kNone)
         return {true, current};
     return {false, AlarmCode::kNone};
@@ -64,7 +62,6 @@ TickPlan planTick(const TickInput &in)
     TickPlan p;
     if (!in.read_ok)
     {
-        // 읽기 실패 — 발행하지 않는다. 원인에 따라 알람만 세운다.
         p.error_code = (in.err == hal::RemoteIoError::kNotConnected) ? AlarmCode::kDisconnect
                                                                     : AlarmCode::kReadingFail;
         return p;
@@ -74,11 +71,10 @@ TickPlan planTick(const TickInput &in)
     p.reconnected = !in.was_connected;
     if (!p.reconnected)
     {
-        p.error_code = in.current_error; // 정상 틱은 기존 알람 상태를 유지한다
+        p.error_code = in.current_error;
         return p;
     }
 
-    // 링크 (재)확립 틱
     p.seed_mirror = !in.mirror_seeded;
     p.apply_initial = in.apply_initial_image && !in.initial_applied;
     p.configure_watchdog = in.watchdog_timeout_ms > 0 && !in.watchdog_configured;
@@ -89,7 +85,7 @@ TickPlan planTick(const TickInput &in)
 bool shouldRetryWrite(hal::RemoteIoError err, int attempt, int retries)
 {
     if (err == hal::RemoteIoError::kNotConnected)
-        return false; // 링크가 그 사이 살아날 리 없다 — 슬립만 틱을 막는다
+        return false;
     return attempt + 1 < retries;
 }
 
@@ -98,4 +94,4 @@ AlarmCode clearOnWriteSuccess(AlarmCode current)
     return current == AlarmCode::kWritingFail ? AlarmCode::kNone : current;
 }
 
-} // namespace remote_io::ros_assembly
+}

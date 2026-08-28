@@ -1,5 +1,3 @@
-// 그리퍼 조립 노드 — 설정 적재·포트 결선·액션 서버를 lifecycle 경계에 맞춰 연다.
-// 시퀀스 판정은 전부 gripper_motion 소유이고 여기에는 결선만 있다(ADR-001 D3).
 #ifndef GRIPPER_ROS_GRIPPER_NODE_HPP_
 #define GRIPPER_ROS_GRIPPER_NODE_HPP_
 
@@ -63,6 +61,6 @@ class GripperNode : public rclcpp_lifecycle::LifecycleNode
     hal::impl::SignalMap signal_map_;
 };
 
-} // namespace gripper::ros
+}
 
-#endif // GRIPPER_ROS_GRIPPER_NODE_HPP_
+#endif

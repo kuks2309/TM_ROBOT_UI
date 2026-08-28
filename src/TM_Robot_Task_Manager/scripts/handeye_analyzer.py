@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+"""Hand-Eye 캘리브레이션 테스트 CSV(handeye_test_*.csv)의 반복정밀도(σ·3σ)·히트맵·상관을 표시하는 PyQt5 오프라인 분석기.
+
+실행: python3 scripts/handeye_analyzer.py [csv경로] (ROS 불필요, 단독 데스크톱 앱)
+"""
 import warnings
 warnings.filterwarnings('ignore', category=UserWarning, module='pandas')
 warnings.filterwarnings('ignore', category=UserWarning, module='matplotlib')
@@ -35,6 +39,8 @@ plt.rcParams['axes.unicode_minus'] = False
 
 
 class ZoomableGraphWidget(QWidget):
+    """휠 줌(커서 기준)·더블클릭 원래 범위 복원을 지원하는 matplotlib 캔버스 위젯."""
+
     def __init__(self, parent=None, title="", compact=False):
         super().__init__(parent)
         self.title = title
@@ -44,6 +50,7 @@ class ZoomableGraphWidget(QWidget):
         self.setup_ui()
 
     def setup_ui(self):
+        """Figure·캔버스·툴바를 구성하고 스크롤/클릭 이벤트를 연결한다."""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -99,6 +106,7 @@ class ZoomableGraphWidget(QWidget):
             self.canvas.draw_idle()
 
     def save_original_limits(self):
+        """현재 축 범위를 더블클릭 복원용 원본으로 저장한다."""
         self._xlim_orig = self.ax.get_xlim()
         self._ylim_orig = self.ax.get_ylim()
 
@@ -109,12 +117,15 @@ class ZoomableGraphWidget(QWidget):
         self.ax.set_aspect('equal', adjustable='datalim')
 
     def draw(self):
+        """레이아웃 정리 후 렌더링하고 축 범위를 원본으로 저장한다."""
         self.figure.tight_layout()
         self.canvas.draw()
         self.save_original_limits()
 
 
 class HandEyeDataAnalyzer:
+    """Hand-Eye 측정 DataFrame 에서 전체·위치별 통계(mm/deg)를 산출·보관한다."""
+
     def __init__(self, data: pd.DataFrame):
         self.data = data
         self.position_stats = None
@@ -128,6 +139,7 @@ class HandEyeDataAnalyzer:
     def _normalize_angle(self, angles: pd.Series) -> pd.Series:
         result = angles.copy()
 
+        # ±180° 경계에 걸친 각도열은 음수쪽을 +360° 시프트해 랩을 풀어야 σ 가 왜곡되지 않는다.
         if angles.max() - angles.min() > 180:
             result = angles.apply(lambda x: x + 360 if x < 0 else x)
 
@@ -183,25 +195,31 @@ class HandEyeDataAnalyzer:
             self.position_stats.append(stats)
 
     def get_unique_positions(self) -> int:
+        """측정 위치(Pos) 수를 반환한다."""
         if 'Pos' in self.data.columns:
             return self.data['Pos'].nunique()
         return 0
 
     def get_repeat_count(self) -> int:
+        """위치당 반복 횟수(총 행수/위치수)를 반환한다."""
         if 'Pos' in self.data.columns:
             return int(len(self.data) / self.data['Pos'].nunique())
         return 0
 
     def get_success_rate(self) -> float:
+        """성공률(%) — CSV 에 실패 판정 컬럼이 없어 100.0 고정값을 돌려준다."""
         return 100.0
 
     def get_z_levels(self) -> List[float]:
+        """TCP_Z(mm)를 정수 반올림한 고유 높이 목록을 반환한다(히트맵 Z 필터용)."""
         if 'TCP_Z' in self.data.columns:
             return sorted(self.data['TCP_Z'].round(0).unique())
         return []
 
 
 class MainWindow(QMainWindow):
+    """CSV 로드→분석→요약·그래프·테이블 갱신과 리포트/PNG 내보내기를 담당하는 메인 창."""
+
     def __init__(self):
         super().__init__()
         self.data = None
@@ -211,6 +229,7 @@ class MainWindow(QMainWindow):
         self.setup_connections()
 
     def setup_ui(self):
+        """ui/handeye_analyzer.ui 를 로드해 중앙 위젯으로 얹고 그래프 위젯을 치환한다."""
         self.setWindowTitle("Hand-Eye Calibration Analyzer")
         self.setMinimumSize(1200, 800)
 
@@ -228,6 +247,7 @@ class MainWindow(QMainWindow):
         self.setup_graphs()
 
     def setup_graphs(self):
+        """.ui 의 placeholder 위젯들을 ZoomableGraphWidget 으로 교체한다(개요4·히트맵·회전3·상관3)."""
         overview_graphs = [
             ('widget_overviewXY', 'Lm X-Y'),
             ('widget_overviewYZ', 'Lm Y-Z'),
@@ -268,6 +288,7 @@ class MainWindow(QMainWindow):
 
         index = layout.indexOf(old_widget)
 
+        # grid 레이아웃은 (row, col) 자리를, box 레이아웃은 index 를 보존해야 배치가 유지된다.
         if hasattr(layout, 'getItemPosition'):
             row, col, _, _ = layout.getItemPosition(index)
             layout.removeWidget(old_widget)
@@ -285,6 +306,7 @@ class MainWindow(QMainWindow):
         self.graph_widgets[widget_name] = new_widget
 
     def setup_connections(self):
+        """버튼·콤보박스 시그널을 슬롯에 연결한다."""
         self.ui.pushButton_openFile.clicked.connect(self.open_csv_file)
         self.ui.pushButton_recentFile.clicked.connect(self.open_recent_file)
         self.ui.pushButton_exportReport.clicked.connect(self.export_report)
@@ -294,6 +316,7 @@ class MainWindow(QMainWindow):
         self.ui.comboBox_zLevel.currentIndexChanged.connect(self.update_heatmap)
 
     def open_csv_file(self):
+        """파일 다이얼로그로 CSV 를 선택해 로드한다."""
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "CSV 파일 열기",
@@ -305,6 +328,7 @@ class MainWindow(QMainWindow):
             self.load_csv(file_path)
 
     def open_recent_file(self):
+        """data/ 의 날짜 폴더 중 최신에서 handeye_test_*.csv 를 찾아 로드한다."""
         csv_files = []
         for date_dir in sorted(DATA_DIR.glob("*"), reverse=True):
             if date_dir.is_dir():
@@ -318,6 +342,7 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "알림", "Hand-Eye 테스트 파일이 없습니다.")
 
     def load_csv(self, file_path: str):
+        """CSV 를 로드·검증(필수 컬럼)·수치 변환한 뒤 전체 뷰를 갱신한다."""
         try:
             df = pd.read_csv(file_path)
 
@@ -356,6 +381,7 @@ class MainWindow(QMainWindow):
                 combo.addItem(f"Z = {z:.1f}")
 
     def update_all(self):
+        """요약·통계·그래프·테이블 8개 뷰를 일괄 갱신한다."""
         if self.data is None or self.analyzer is None:
             return
 

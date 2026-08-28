@@ -12,7 +12,7 @@
 | debt | c47313d | 2026-08-28 | - |
 | issue_fix | c47313d | 2026-08-28 | - |
 | mistake | c47313d | 2026-08-28 | - |
-| git_workflow | c47313d | 2026-08-28 | - |
 | session_workflow | c47313d | 2026-08-28 | - |
 | reverse_engineering | c47313d | 2026-08-28 | - |
 | drawio | c47313d | 2026-08-28 | - |
+| git_workflow | 32f0bd0 | 2026-08-29 | - |

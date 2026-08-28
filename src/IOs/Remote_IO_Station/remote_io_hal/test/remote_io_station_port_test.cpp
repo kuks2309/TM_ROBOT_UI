@@ -1,5 +1,3 @@
-// RemoteIoStationPort 단위 테스트 — 인프로세스 mock GL-9089 TCP 서버(comm::modbus_tcp::test 재사용).
-// 검증: 스냅샷·RMW 병합·read-back 검증·범위 가드(§6-7)·이미지 적용·watchdog 구성(0x1020/0x1100).
 #include "remote_io_hal/remote_io_station_port.hpp"
 
 #include <cstdint>
@@ -19,7 +17,7 @@ uint8_t reqFc(const std::vector<uint8_t>& r) { return r[7]; }
 uint16_t reqAddr(const std::vector<uint8_t>& r) {
   return static_cast<uint16_t>((static_cast<uint16_t>(r[8]) << 8) | r[9]);
 }
-uint16_t reqTail(const std::vector<uint8_t>& r) {  // FC3 수량 또는 FC6 값
+uint16_t reqTail(const std::vector<uint8_t>& r) {
   return static_cast<uint16_t>((static_cast<uint16_t>(r[10]) << 8) | r[11]);
 }
 
@@ -36,8 +34,6 @@ std::vector<uint8_t> fc6Echo(uint16_t tid, const std::vector<uint8_t>& req) {
   return srv::buildFrame(tid, 1, pdu);
 }
 
-// 레지스터 뱅크 서버 — 요청 n건 순차 처리(FC3 읽기/FC6 쓰기 반영). tamper_addr 지정 시 그 주소의
-// FC6 쓰기값을 +1 로 저장(read-back 불일치 유도).
 struct Bank {
   std::map<uint16_t, uint16_t> regs;
   int tampered = -1;
@@ -73,9 +69,9 @@ RemoteIoStationPort::Config makeConfig(uint16_t port) {
   cfg.client.connect_timeout = Duration{300};
   cfg.client.backoff_initial = Duration{10};
   cfg.layout.di_start_addr = 0x0000;
-  cfg.layout.di_word_count = 5;  // 운영값(io.info:9) — 테스트도 동일 규모
+  cfg.layout.di_word_count = 5;
   cfg.layout.do_start_addr = 0x0800;
-  cfg.layout.do_word_count = 6;  // 운영값(io.info:14)
+  cfg.layout.do_word_count = 6;
   cfg.clock = [] { return TimePoint{} + Duration{777}; };
   return cfg;
 }
@@ -83,10 +79,10 @@ RemoteIoStationPort::Config makeConfig(uint16_t port) {
 TEST(RemoteIoStationPort, ReadSnapshotHappyAndSeq) {
   srv::MockGl9089Server server;
   Bank bank;
-  bank.regs[0x0000] = 0x0001;  // DI bit0
-  bank.regs[0x0004] = 0x8000;  // DI bit79
-  bank.regs[0x0800] = 0x0002;  // DO bit1
-  server.serveOnce([&](int fd) { serveBank(fd, 4, &bank); });  // read() = FC3×2, 2회 호출
+  bank.regs[0x0000] = 0x0001;
+  bank.regs[0x0004] = 0x8000;
+  bank.regs[0x0800] = 0x0002;
+  server.serveOnce([&](int fd) { serveBank(fd, 4, &bank); });
   RemoteIoStationPort port(makeConfig(server.port()));
 
   auto s1 = port.read();
@@ -109,39 +105,38 @@ TEST(RemoteIoStationPort, ReadSnapshotHappyAndSeq) {
 TEST(RemoteIoStationPort, WriteBitsMergesSameWordSingleRmw) {
   srv::MockGl9089Server server;
   Bank bank;
-  // 같은 워드(word0)의 bit0·bit3 set + 다른 워드(word5) bit95 set → FC6 2회 + read-back FC3 2회 = 4건
   server.serveOnce([&](int fd) { serveBank(fd, 4, &bank); });
   RemoteIoStationPort port(makeConfig(server.port()));
 
   auto r = port.writeBits({{0, true}, {3, true}, {95, true}});
   ASSERT_TRUE(r);
   server.join();
-  EXPECT_EQ(bank.regs[0x0800], 0x0009);  // bit0|bit3
-  EXPECT_EQ(bank.regs[0x0805], 0x8000);  // bit95 = word5 bit15
+  EXPECT_EQ(bank.regs[0x0800], 0x0009);
+  EXPECT_EQ(bank.regs[0x0805], 0x8000);
 }
 
 TEST(RemoteIoStationPort, WriteBitsMirrorPreservesPriorBits) {
   srv::MockGl9089Server server;
   Bank bank;
-  server.serveOnce([&](int fd) { serveBank(fd, 4, &bank); });  // 쓰기 2회×(FC6+FC3)
+  server.serveOnce([&](int fd) { serveBank(fd, 4, &bank); });
   RemoteIoStationPort port(makeConfig(server.port()));
 
   ASSERT_TRUE(port.writeBits({{0, true}}));
-  ASSERT_TRUE(port.writeBits({{1, true}}));  // 미러 RMW — bit0 보존돼야 함
+  ASSERT_TRUE(port.writeBits({{1, true}}));
   server.join();
   EXPECT_EQ(bank.regs[0x0800], 0x0003);
 }
 
 TEST(RemoteIoStationPort, WriteBitsOutOfRangeRejectedWithoutTx) {
-  RemoteIoStationPort port(makeConfig(1));  // 연결 불가 포트 — 송신되면 실패로 구분됨
-  auto r = port.writeBits({{96, true}});  // do 6워드 = 비트 0~95, 96 은 범위 밖(§6-7)
+  RemoteIoStationPort port(makeConfig(1));
+  auto r = port.writeBits({{96, true}});
   ASSERT_FALSE(r);
   EXPECT_EQ(r.error(), RemoteIoError::kOutOfRange);
 }
 
 TEST(RemoteIoStationPort, ApplyOutputImageSizeMismatchRejected) {
   RemoteIoStationPort port(makeConfig(1));
-  auto r = port.applyOutputImage(std::vector<uint16_t>(5, 0));  // 6워드 필요
+  auto r = port.applyOutputImage(std::vector<uint16_t>(5, 0));
   ASSERT_FALSE(r);
   EXPECT_EQ(r.error(), RemoteIoError::kOutOfRange);
 }
@@ -149,7 +144,7 @@ TEST(RemoteIoStationPort, ApplyOutputImageSizeMismatchRejected) {
 TEST(RemoteIoStationPort, ApplyOutputImageWritesAllWordsAndClearAllZeros) {
   srv::MockGl9089Server server;
   Bank bank;
-  server.serveOnce([&](int fd) { serveBank(fd, 24, &bank); });  // (FC6+FC3)×6 ×2회
+  server.serveOnce([&](int fd) { serveBank(fd, 24, &bank); });
   RemoteIoStationPort port(makeConfig(server.port()));
 
   std::vector<uint16_t> img = {0x0001, 0, 0, 0, 0, 0x8000};
@@ -166,25 +161,25 @@ TEST(RemoteIoStationPort, ApplyOutputImageWritesAllWordsAndClearAllZeros) {
 TEST(RemoteIoStationPort, SeedOutputMirrorPreservesExistingDeviceBits) {
   srv::MockGl9089Server server;
   Bank bank;
-  bank.regs[0x0800] = 0x2A2A;  // 장치 잔존 이미지(실측 HIL 값 재현)
-  server.serveOnce([&](int fd) { serveBank(fd, 4, &bank); });  // read(FC3×2) + set(FC6+FC3)
+  bank.regs[0x0800] = 0x2A2A;
+  server.serveOnce([&](int fd) { serveBank(fd, 4, &bank); });
   RemoteIoStationPort port(makeConfig(server.port()));
 
   auto pre = port.read();
   ASSERT_TRUE(pre);
   ASSERT_TRUE(port.seedOutputMirror(pre.value().do_words));
-  ASSERT_TRUE(port.writeBits({{0, true}}));  // bit0 set — 잔존 비트 보존돼야 함
+  ASSERT_TRUE(port.writeBits({{0, true}}));
   server.join();
-  EXPECT_EQ(bank.regs[0x0800], 0x2A2B);  // 0x2A2A | 0x0001 (미시드였다면 0x0001 로 잔존 소실)
+  EXPECT_EQ(bank.regs[0x0800], 0x2A2B);
 
-  auto bad = port.seedOutputMirror(std::vector<uint16_t>(5, 0));  // 6워드 아님 → 거부
+  auto bad = port.seedOutputMirror(std::vector<uint16_t>(5, 0));
   EXPECT_EQ(bad.error(), RemoteIoError::kOutOfRange);
 }
 
 TEST(RemoteIoStationPort, ReadBackMismatchIsProtocolError) {
   srv::MockGl9089Server server;
   Bank bank;
-  bank.tampered = 0x0800;  // word0 쓰기값 변조 → read-back 불일치
+  bank.tampered = 0x0800;
   server.serveOnce([&](int fd) { serveBank(fd, 2, &bank); });
   RemoteIoStationPort port(makeConfig(server.port()));
 
@@ -198,11 +193,11 @@ TEST(RemoteIoStationPort, ReadBackMismatchIsProtocolError) {
 TEST(RemoteIoStationPort, ConfigureWatchdogWritesAndReadsBackBothRegs) {
   srv::MockGl9089Server server;
   Bank bank;
-  server.serveOnce([&](int fd) { serveBank(fd, 4, &bank); });  // (FC6+FC3)×2
+  server.serveOnce([&](int fd) { serveBank(fd, 4, &bank); });
   RemoteIoStationPort port(makeConfig(server.port()));
 
   WatchdogConfig wc;
-  wc.timeout = Duration{5000};  // → 50 (100ms 단위)
+  wc.timeout = Duration{5000};
   wc.master_fault_action_enable = true;
   ASSERT_TRUE(port.configureWatchdog(wc));
   server.join();
@@ -229,4 +224,4 @@ TEST(RemoteIoStationPort, ZeroLayoutRejectedWithoutTx) {
   EXPECT_EQ(r.error(), RemoteIoError::kOutOfRange);
 }
 
-}  // namespace
+}

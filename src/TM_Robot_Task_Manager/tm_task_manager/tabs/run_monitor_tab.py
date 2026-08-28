@@ -16,7 +16,6 @@ class RunMonitorTab(BaseTab):
 
         self._repeat_remaining = 0
         self._repeat_total = 0
-        # 반복 실행 성적. label_currentTask 에 «반복 4/10 · 성공 3 · 실패 1» 로 보인다.
         self._repeat_ok = 0
         self._repeat_fail = 0
 
@@ -58,11 +57,6 @@ class RunMonitorTab(BaseTab):
 
 
     def _validate_vision_origin_check_placement(self, recipe):
-        """recipe_info 의 vision_origin_check 정책대로 기준점 확인 Job 이 배치됐는지 검사한다.
-
-        반환: (통과 여부, 위반 사유). 위치 판정에서 recipe_info 자체는 제외한다 —
-        메타데이터 Job 이라 로봇을 움직이지 않으므로 "첫 번째 동작"이 될 수 없다.
-        """
         policy = 'none'
         for job in recipe.jobs:
             if job.type == 'recipe_info':
@@ -89,7 +83,6 @@ class RunMonitorTab(BaseTab):
         return True, ''
 
     def _check_vision_origin_placement_or_warn(self, recipe) -> bool:
-        """배치 검사 후 위반이면 로그·안내창을 띄우고 False. 실행 거부 판단용."""
         is_valid, reason = self._validate_vision_origin_check_placement(recipe)
         if is_valid:
             return True
@@ -204,7 +197,6 @@ class RunMonitorTab(BaseTab):
     def _stop_repeat(self):
         if self._repeat_remaining > 0:
             done = self._repeat_total - self._repeat_remaining
-            # 요약 줄은 '성공 n · 실패 m' 을 한 줄에 담아 문구 추정이 못 한다 — 명시한다.
             self._log(f"=== 반복 실행 중지 ({done}/{self._repeat_total}회 완료 · "
                       f"성공 {self._repeat_ok} · 실패 {self._repeat_fail}) ===", kind='warn')
             recipe = self.recipe_manager.current_recipe
@@ -217,14 +209,7 @@ class RunMonitorTab(BaseTab):
             self._repeat_total = 0
 
 
-    # ── 현재 상태 표시 (label_currentTask · progressBar_task) ──────────────
-    #
-    # UI 에는 있었으나 갱신하는 코드가 없어 죽어 있던 위젯이다(2026-08-23 확인).
-    # 로그는 흘러가 버려 «반복 1/10 성공» 이 눈에 안 띈다는 지적에 따라 배선했다.
-    # 이 영역은 고정이라 실행 중 항상 같은 자리에서 읽힌다.
-
     def _repeat_suffix(self) -> str:
-        """반복 실행 중일 때만 «· 반복 n/N · 성공 a · 실패 b» 를 만든다."""
         if self._repeat_total <= 0:
             return ""
         current = self._repeat_total - self._repeat_remaining + 1
@@ -233,7 +218,6 @@ class RunMonitorTab(BaseTab):
                 f"  ·  성공 {self._repeat_ok}  ·  실패 {self._repeat_fail}")
 
     def _set_status(self, text: str, done: int, total: int, state: str = 'run'):
-        """현재 작업 한 줄 + 진행률 막대. state 는 run|ok|fail 로 색을 가른다."""
         colors = {'run': '#1565c0', 'ok': '#0b6b2f', 'fail': '#b00020'}
         marks = {'run': '▶', 'ok': '✔', 'fail': '✕'}
         color = colors.get(state, colors['run'])
@@ -252,11 +236,6 @@ class RunMonitorTab(BaseTab):
         )
 
     def _reset_status(self, text: str = "대기"):
-        """진행 표시를 처음 상태로. 반복 성적은 **반복 중이 아닐 때만** 지운다.
-
-        _start_repeat_iteration() 이 매 회차 _update_monitor_jobs() 를 부르고 그것이
-        여기로 오므로, 무조건 지우면 «성공 3 · 실패 1» 이 회차마다 0 으로 돌아간다.
-        """
         if self._repeat_total <= 0:
             self._repeat_ok = 0
             self._repeat_fail = 0
@@ -342,7 +321,6 @@ class RunMonitorTab(BaseTab):
         recipe = self.recipe_manager.current_recipe
         total = len(recipe.jobs) if recipe else 0
         caption = (getattr(job, 'caption', '') or getattr(job, 'name', '') or job.type)
-        # 완료된 잡까지 채운다 — index 는 0 기준이므로 +1.
         self._set_status(caption, min(index + 1, total) if total else 0, total,
                          'ok' if success else 'fail')
 

@@ -281,11 +281,6 @@ class BridgeNode(Node):
 
 
     def _trigger_capture_command(self):
-        """이미지 캡처 트리거 — 전역변수 명령 방식.
-
-        PyQt 쪽 image_capture_service.py 및 job_executor.py 의 AI 캡처 경로와
-        동일한 규약(`g_robot_command=3` + `ScriptExit()`)을 쓴다.
-        """
         if not self.send_script_client.wait_for_service(timeout_sec=1.0):
             return False, "send_script 서비스를 사용할 수 없습니다 (tm_driver 미기동?)"
 

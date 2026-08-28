@@ -14,7 +14,6 @@ import numpy as np
 try:
     from .. import paths
 except ImportError:
-    # 단독 스크립트 실행 경로(settings_tab.py 가 파일 경로로 기동) — 패키지 컨텍스트가 없다.
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     import paths
 
@@ -159,7 +158,6 @@ class JigPlateValidator:
             return False
 
     def load_from_dicts(self, mark_dicts: List[Dict[str, float]]) -> bool:
-        """실측 landmark dict 4개를 그대로 싣는다 (YAML 경유 없이 검증하려는 호출자용)."""
         if len(mark_dicts) != 4:
             print(f"4개의 mark가 필요합니다 (입력: {len(mark_dicts)}개)")
             return False
@@ -174,7 +172,6 @@ class JigPlateValidator:
         return True
 
     def get_side_lengths(self) -> Dict[str, float]:
-        """네 변과 두 대각선의 실측 길이 (표시용). mark 가 4개가 아니면 빈 dict."""
         if len(self.marks) != 4:
             return {}
 

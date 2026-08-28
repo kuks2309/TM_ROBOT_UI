@@ -17,7 +17,6 @@ hal::impl::WriteAck RosStationIoClient::write_bits(const std::vector<hal::impl::
     hal::impl::WriteAck ack;
     if (commands.empty())
     {
-        // 보낼 것이 없으면 성공도 실패도 아니다 — 왕복 없이 확정 처리한다.
         ack.transport_ok = true;
         ack.received = true;
         return ack;
@@ -25,7 +24,7 @@ hal::impl::WriteAck RosStationIoClient::write_bits(const std::vector<hal::impl::
     if (!client_ || !client_->service_is_ready())
     {
         noteError("service_not_ready");
-        return ack; // transport_ok=false — 상태를 단정하지 않는다
+        return ack;
     }
 
     auto request = std::make_shared<tc_msgs::srv::Io::Request>();
@@ -40,7 +39,6 @@ hal::impl::WriteAck RosStationIoClient::write_bits(const std::vector<hal::impl::
     auto future = client_->async_send_request(request);
     if (future.wait_for(call_timeout_) != std::future_status::ready)
     {
-        // 응답이 없으면 스테이션에 적용됐는지 모른다 — 포트가 kIndeterminate 로 승격한다.
         client_->remove_pending_request(future);
         noteError("call_timeout(" + std::to_string(call_timeout_.count()) + "ms, bits=" +
                   std::to_string(commands.size()) + ")");
@@ -70,8 +68,6 @@ hal::impl::StationImage RosStationIoClient::image() const
     return image_;
 }
 
-// stamp 는 steady_clock 계약이다(gripper_hal/types.hpp) — 포트가 그 시계로 나이를 잰다.
-// ROS 시계를 섞으면 도메인이 어긋나 stale 판정이 무의미해진다.
 bool RosStationIoClient::link_up() const
 {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -93,4 +89,4 @@ void RosStationIoClient::onImage(const tc_msgs::msg::Io::SharedPtr msg)
     image_.valid = true;
 }
 
-} // namespace gripper::ros
+}

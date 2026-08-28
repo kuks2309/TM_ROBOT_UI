@@ -226,7 +226,6 @@ class JigPlaneCalculator:
         }
 
 
-
 MIN_AXIS_NORM = 1e-9
 
 MIN_KEEP_PROJECTION = 1e-6
@@ -263,16 +262,6 @@ def pose_in_plane_frame(
     plate_pose: Dict[str, float],
     tcp_pose: Dict[str, float],
 ) -> Dict[str, float]:
-    """TCP pose 를 평면(plate) 좌표계 기준 상대 pose 로 바꾼다.
-
-    평면 좌표계는 원점 = 4 마커 무게중심, X = 짧은 변 방향, Y = 긴 변 방향,
-    Z = 평면 법선(위) 이다. 반환값의 의미:
-
-    - x, y : 평면 위에서 중심으로부터의 상대 위치 (mm)
-    - z    : 법선 방향 높이 (mm, 평면 위가 양수 — signed_point_to_plane_distance 와 동일)
-    - rz   : 평면 X축 기준 공구 회전 (deg) — 그리퍼 회전 오차 판정에 쓴다
-    - rx, ry : 평면에 대한 공구 기울기 (deg)
-    """
     plane_rotation = _rotation_matrix_from_pose(plate_pose)
     tool_rotation = _rotation_matrix_from_pose(tcp_pose)
 
@@ -295,11 +284,6 @@ def pose_from_plane_frame(
     plate_pose: Dict[str, float],
     relative_pose: Dict[str, float],
 ) -> Dict[str, float]:
-    """평면(plate) 좌표계 상대 pose 를 로봇 베이스 pose 로 되돌린다.
-
-    pose_in_plane_frame 의 역변환이다. 축 정의는 그 함수와 동일하며,
-    relative_pose 는 x, y, z, rx, ry, rz 를 모두 갖는다(없으면 0 으로 본다).
-    """
     plane_rotation = _rotation_matrix_from_pose(plate_pose)
     relative_rotation = _rotation_matrix_from_pose({
         'rx': float(relative_pose.get('rx', 0.0)),
@@ -330,11 +314,6 @@ def pose_from_plane_frame(
 def average_landmarks_from_files(
     file_paths: List[Any],
 ) -> Tuple[Optional[List[Dict[str, float]]], List[Any], List[Tuple[Any, str]]]:
-    """여러 plate_pose YAML 의 jig1~4 좌표를 평균한다.
-
-    반환: (평균 mark 4개, 사용한 파일, [(건너뛴 파일, 사유)]).
-    jig1~4 가 모두 있는 파일만 쓰며, 하나도 없으면 첫 항목이 None 이다.
-    """
     keys = ('x', 'y', 'z', 'rx', 'ry', 'rz')
     sums = {i: {k: 0.0 for k in keys} for i in range(1, 5)}
     used: List[Any] = []
@@ -399,9 +378,6 @@ def tcp_pose_for_plane_normal(
             axis_x = projected / np.linalg.norm(projected)
 
     if axis_x is None:
-        # rz_mode='plane' 은 평면 Y축(긴 변)을 따른다 = 법선축 기준 +90° 회전.
-        # 평면 X축을 그대로 쓰면 팔레트 긴 변에 공구 짧은 변이 맞아 90° 어긋난다.
-        # 'keep' 의 투영 실패 fallback 은 기존대로 평면 X축을 유지한다(keep 의미 보존).
         source_axis = plane_rotation[:, 1] if rz_mode == 'plane' else plane_rotation[:, 0]
         axis_x = source_axis - np.dot(source_axis, axis_z) * axis_z
         norm_x = np.linalg.norm(axis_x)
@@ -436,14 +412,6 @@ def apply_tool_offset(
     base_pose: Dict[str, float],
     offset: Dict[str, float],
 ) -> Dict[str, float]:
-    """정렬 목표 pose 에 공구(그리퍼) 좌표계 오차를 더한다.
-
-    수직 정렬은 법선 방향(= 공구 Z) 거리를 standoff_mm 이 이미 정하므로 z 오차는 두지
-    않는다. 따라서 위치 보정은 공구 XY 평면 위에서만 일어나고, 자세 보정은 공구 축 기준
-    합성(R_base @ R_offset)이라 팔레트가 어디를 향하든 같은 그리퍼 보정이 재현된다.
-
-    offset 은 TOOL_OFFSET_KEYS 중 있는 것만 쓰고, 없으면 0 으로 본다.
-    """
     base_rotation = _rotation_matrix_from_pose(base_pose)
     offset_rotation = _rotation_matrix_from_pose({
         'rx': float(offset.get('rx', 0.0)),
@@ -475,14 +443,6 @@ def tool_offset_from_poses(
     base_pose: Dict[str, float],
     actual_pose: Dict[str, float],
 ) -> Tuple[Dict[str, float], float]:
-    """실제 TCP pose 를 보고 공구 좌표계 오차를 역산한다 (apply_tool_offset 의 역변환).
-
-    사람이 로봇을 손으로 맞춰 둔 상태에서 '현재위치 입력' 을 누르면, 계산된 정렬 목표
-    대비 실제 자세의 차이가 그대로 그리퍼 오차가 된다.
-
-    반환: (오차 dict[TOOL_OFFSET_KEYS], 무시한 공구 Z 방향 차이 mm).
-    Z 차이는 standoff_mm 이 담당하는 축이라 오차로 만들지 않고 확인용으로만 돌려준다.
-    """
     base_rotation = _rotation_matrix_from_pose(base_pose)
 
     delta = np.array([

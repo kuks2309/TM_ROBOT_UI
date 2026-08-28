@@ -1,4 +1,3 @@
-// mock 픽스처 자체의 회귀 — 요청 수 불일치에서 핸들러가 풀리는지, 정상 교환이 유지되는지.
 #include "mock_gl9089_server.hpp"
 
 #include <gtest/gtest.h>
@@ -16,7 +15,6 @@
 namespace srv = comm::modbus_tcp::test;
 using namespace std::chrono_literals;
 
-// 테스트 클라이언트 소켓을 서버 포트에 연결한다. 실패하면 -1.
 int connectTo(uint16_t port)
 {
     const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
@@ -43,7 +41,7 @@ TEST(MockGl9089Server, RecvTimeoutUnblocksHandlerOnRequestShortfall)
 
     std::atomic<int> received{0};
     server.serveOnce([&received](int fd) {
-        for (int i = 0; i < 3; ++i) // 클라이언트가 실제로 보내는 것보다 많이 기대한다
+        for (int i = 0; i < 3; ++i)
         {
             const auto req = srv::recvRequest(fd);
             if (req.empty())
@@ -92,8 +90,8 @@ TEST(MockGl9089Server, NormalExchangeStillWorks)
     const ssize_t n = ::recv(client, buf, sizeof(buf), 0);
     ASSERT_GT(n, 0);
     EXPECT_EQ(buf[0], 0x00);
-    EXPECT_EQ(buf[1], 0x2A); // 요청 tid 반향
-    EXPECT_EQ(buf[7], 0x03); // FC3 응답
+    EXPECT_EQ(buf[1], 0x2A);
+    EXPECT_EQ(buf[7], 0x03);
     EXPECT_EQ(buf[9], 0x12);
     EXPECT_EQ(buf[10], 0x34);
 
