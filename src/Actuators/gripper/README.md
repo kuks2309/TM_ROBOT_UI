@@ -5,6 +5,7 @@
 
 - **용어**: HAL(Hardware Abstraction Layer), ADR(Architecture Decision Record), SSOT(Single Source of Truth), DL(Deviation Ledger), SIL(Software In the Loop), HIL(Hardware In the Loop), DI/DO(Digital Input/Output), MGZ(Magazine), BOM(Bill of Materials), NC(Normally Closed), AMR(Autonomous Mobile Robot), IDL(Interface Definition Language). 단자명(`IN0~IN5`·`SETUP`·`HOLD`·`DRIVE`·`RESET`·`SVON`·`LOCK_OFF` 등)은 도면 표기 리터럴이다.
 - **결정 기록**: [../../../docs/adr/ADR-008-gripper-stack-and-robot-gripping-structure.md](../../../docs/adr/ADR-008-gripper-stack-and-robot-gripping-structure.md) (Proposed)
+- **회사별 재배치 결정**: [docs/adr/ADR-005-multi-vendor-restructure.md](docs/adr/ADR-005-multi-vendor-restructure.md) (Accepted 2026-08-28) — SMC 스택은 `smc_lecp6/`, 공용은 `gripper_common/`(단계②), HITBOT `hitbot_zefg/`·SCHUNK `schunk_egu/` 는 후속 단계
 - **조사 정본**: [../../../../docs/analysis/gripper_tx_wiring_and_drive_2026-08-12.md](../../../../docs/analysis/gripper_tx_wiring_and_drive_2026-08-12.md) — 배선 8페이지 실물 열람 + legacy `tc_gripper` 전수 + 실기 로그 실측 (2026-08-12)
 - **참조 아키텍처**: [../../../docs/architecture/2026-07-24-hal-reference-and-roadmap.md](../../../docs/architecture/2026-07-24-hal-reference-and-roadmap.md) §1.1-1.2(계층·경계), §4(그리퍼 = 단일 계약 + 백엔드 2종)
 
@@ -12,25 +13,25 @@
 
 | 경로 | 역할 | 빌드 | 상태 |
 |---|---|---|---|
-| `gripper_hal/` | 포트 계약 3종 + 백엔드. **신호 이름·극성 규약의 소유자**(물리 비트 인덱스는 config 소유) | plain CMake | ✅ **M0 — 계약 헤더 4종 + 의미 검증 통과**(승격은 외부 리뷰 후) |
-| `gripper_hal/include/gripper_hal/` | `types.hpp` · `command_port.hpp` · `feedback_port.hpp` · `magazine_port.hpp` | — | ✅ 작성 |
-| `gripper_hal/impl/` | **Tx(4호기) 백엔드** — ROS-free 심 `IStationIoClient` 위의 어댑터(스테이션 직접 접근 없음) | — | ✅ **M1 — 포트 3종 + 신호맵, 단위 12종 통과** |
-| `gripper_motion/` | 순수 시퀀스 FSM — 알람리셋 → 서보ON → **원점복귀** → 스텝 → BUSY 감시 → 완료판정 + 인터록 (ROS-free) | plain CMake | ✅ **M2 — 전이표 + 시나리오 15종 통과** |
+| `smc_lecp6/hal/` | 포트 계약 3종 + 백엔드. **신호 이름·극성 규약의 소유자**(물리 비트 인덱스는 config 소유) | plain CMake | ✅ **M0 — 계약 헤더 4종 + 의미 검증 통과**(승격은 외부 리뷰 후) |
+| `smc_lecp6/hal/include/gripper_hal/` | `types.hpp` · `command_port.hpp` · `feedback_port.hpp` · `magazine_port.hpp` | — | ✅ 작성 |
+| `smc_lecp6/hal/impl/` | **Tx(4호기) 백엔드** — ROS-free 심 `IStationIoClient` 위의 어댑터(스테이션 직접 접근 없음) | — | ✅ **M1 — 포트 3종 + 신호맵, 단위 12종 통과** |
+| `smc_lecp6/motion/` | 순수 시퀀스 FSM — 알람리셋 → 서보ON → **원점복귀** → 스텝 → BUSY 감시 → 완료판정 + 인터록 (ROS-free) | plain CMake | ✅ **M2 — 전이표 + 시나리오 15종 통과** |
 | `gripper_ros/` | 얇은 조립 — LifecycleNode + `GripperCommand.action` + config 로드 | ament | 액션 IDL·config 스키마만 작성(노드는 M4) |
 | `gripper_ros/config/` | `gripper_stack.yaml` — 프로파일→스텝 표·신호 비트맵·코봇 브리지·타임아웃·인터록 | — | ✅ M0 스키마 |
-| `gripper_sim/` | LECP6 병렬 I/O 플랜트 + 포트 어댑터 + SIL 하니스 | plain CMake | ✅ **M3 — S1~S7 통과** |
+| `smc_lecp6/sim/` | LECP6 병렬 I/O 플랜트 + 포트 어댑터 + SIL 하니스 | plain CMake | ✅ **M3 — S1~S7 통과** |
 | `checks/` | `⟦CI⟧` 게이트 — ros-free · no-blocking · io-single-master · vendor-sealed · contract-freeze | — | `gripper-io-single-master.sh` ✅ (나머지는 해당 계층 착수 시) |
 | `docs/` | [migration-plan(SSOT)](docs/2026-08-12-migration-plan.md) · [인벤토리](docs/code_review/gripper_hal/2026-08-12.md) · [함수표 집계](docs/functions-index.md) · 수정 이력 | — | ✅ 작성 |
 
 의존 방향 (게이트로 강제 예정):
 
 ```
-gripper_ros ──▶ gripper_motion ──▶ gripper_hal ──▶ [impl/remote_io 어댑터] ──▶ remote_io_ros 서비스 ──▶ 스테이션
-gripper_sim ──▶ {gripper_motion, gripper_hal}          # ROS-free
+gripper_ros ──▶ smc_lecp6/motion ──▶ smc_lecp6/hal ──▶ [impl/remote_io 어댑터] ──▶ remote_io_ros 서비스 ──▶ 스테이션
+smc_lecp6/sim ──▶ {smc_lecp6/motion, smc_lecp6/hal}          # ROS-free
 ```
 
 **자체 Modbus 클라이언트 금지** — 원격 IO 스테이션의 유일 쓰기 마스터는 `remote_io_ros` 노드다(사용자 결정 2026-08-12, ADR-008 Q7). 그리퍼는 그 서비스의 클라이언트일 뿐이다
-([ADR-001 개정](../../Sensors/PIO/docs/adr/ADR-001-moma-io-ownership.md)). `gripper_hal/impl/remote_io/` 밖에서
+([ADR-001 개정](../../Sensors/PIO/docs/adr/ADR-001-moma-io-ownership.md)). `smc_lecp6/hal/impl/remote_io/` 밖에서
 소켓·modbus 심볼이 보이면 `⟦CI:gripper-io-single-master⟧` 로 실패시킨다.
 
 ## 대상 하드웨어 (4호기 Tx — 1차 source: 도면 실물 열람 ✓)
@@ -49,7 +50,7 @@ Rx(1,2호기)는 **SCHUNK EGU 60-EI-M-B / Modbus RTU** 로 백엔드만 다르�
 
 ## 신호 ↔ 코드 인덱스 ↔ Modbus (이식 기준표)
 
-신호 **이름**은 `gripper_hal/types.hpp`, **비트 인덱스**는 `gripper_ros/config/gripper_stack.yaml` 이 소유한다(코드 하드코딩 금지). 상세·근거는 조사 정본 §2.5.
+신호 **이름**은 `smc_lecp6/hal/include/gripper_hal/types.hpp`, **비트 인덱스**는 `gripper_ros/config/gripper_stack.yaml` 이 소유한다(코드 하드코딩 금지). 상세·근거는 조사 정본 §2.5.
 
 | 신호 | 도면 주소 | legacy 인덱스 | Modbus 홀딩 레지스터·비트 |
 |---|---|---|---|
