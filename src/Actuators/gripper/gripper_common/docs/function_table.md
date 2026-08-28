@@ -11,16 +11,16 @@
 
 | 함수/타입 | 위치(파일:줄) | 입력 | 출력 | 비고 |
 |---|---|---|---|---|
-| `TimePoint` | types.hpp:14 | — | `using` (steady_clock::time_point) | 시각 별칭 |
-| `Duration` | types.hpp:15 | — | `using` (milliseconds) | 기간 별칭 |
-| `HalError` | types.hpp:19-30 | — | enum class | HAL 공통 오류 등급 8종(`kIndeterminate` 포함) |
-| `Result<T>` | types.hpp:34-79 | `T` 또는 `HalError` | `Result<T>` | 접근자 가드형 결과(`[[nodiscard]]`), `err(kNone)` 은 `kProtocol` 로 승격 |
-| `Result<void>` | types.hpp:82-112 | `HalError` | `Result<void>` | 값 없는 연산용 특수화, 승격 규약 동일 |
-| `SignalState` | types.hpp:151-156 | — | enum class | `kUnknown`/`kInactive`/`kActive` — stale 을 정상/이상으로 만들지 않는 3상태 |
-| `MagazineSnapshot` | types.hpp:226-233 | — | struct | `detected_1`·`detected_2`·`fresh`·`seq`·`stamp` |
-| `both_detected` | types.hpp:235-238 | `MagazineSnapshot` | bool | `fresh=false` 는 무조건 false |
-| `any_detected` | types.hpp:240-243 | `MagazineSnapshot` | bool | `fresh=false` 는 무조건 false |
-| `Health` | types.hpp:250-257 | — | struct | `link_up`·`snapshot_age`·`error_count`·`last_seq`·`last_error` |
+| `TimePoint` | types.hpp:13 | — | `using` (steady_clock::time_point) | 시각 별칭 |
+| `Duration` | types.hpp:14 | — | `using` (milliseconds) | 기간 별칭 |
+| `HalError` | types.hpp:18-29 | — | enum class | HAL 공통 오류 등급 9종(`kIndeterminate` 포함) |
+| `Result<T>` | types.hpp:33-78 | `T` 또는 `HalError` | `Result<T>` | 접근자 가드형 결과(`[[nodiscard]]`), `err(kNone)` 은 `kProtocol` 로 승격 |
+| `Result<void>` | types.hpp:81-111 | `HalError` | `Result<void>` | 값 없는 연산용 특수화, 승격 규약 동일 |
+| `SignalState` | types.hpp:113-118 | — | enum class | `kUnknown`/`kInactive`/`kActive` — stale 을 정상/이상으로 만들지 않는 3상태 |
+| `MagazineSnapshot` | types.hpp:120-127 | — | struct | `detected_1`·`detected_2`·`fresh`·`seq`·`stamp` |
+| `both_detected` | types.hpp:129-132 | `MagazineSnapshot` | bool | `fresh=false` 는 무조건 false |
+| `any_detected` | types.hpp:134-137 | `MagazineSnapshot` | bool | `fresh=false` 는 무조건 false |
+| `Health` | types.hpp:139-146 | — | struct | `link_up`·`snapshot_age`·`error_count`·`last_seq`·`last_error` |
 
 ## 검증 자산
 
