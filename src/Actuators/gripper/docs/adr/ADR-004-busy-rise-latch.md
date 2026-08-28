@@ -1,7 +1,7 @@
 # ADR(Architecture Decision Record) 2026-08-20 — BUSY 상승 래치 (`drive_hold` 보다 짧은 펄스)
 
 - 날짜: 2026-08-20 (KST, Korea Standard Time)
-- 관련: [ADR-002](ADR-002-already-at-target-completion.md)(본 ADR 이 supersede) · [ADR-003 성격의 우회 경로는 `originInterlock` 주석 참조](../../gripper_motion/src/gripper_fsm.cpp)
+- 관련: [ADR-002](ADR-002-already-at-target-completion.md)(본 ADR 이 supersede) · [ADR-003 성격의 우회 경로는 `originInterlock` 주석 참조](../../smc_lecp6/motion/src/gripper_fsm.cpp)
 - 대상: `gripper_motion/include/gripper_motion/gripper_fsm.hpp`(멤버 1개) · `gripper_motion/src/gripper_fsm.cpp`(`enter()`·`kWaitingBusyRise`) · `gripper_motion/test/gripper_fsm_test.cpp`
 
 ## Status

@@ -1,4 +1,4 @@
-// 그리퍼 HAL 공용 타입 — Result 에러 모나드, 신호 열거형, 스냅샷 구조체, 판정 헬퍼.
+// gripper_hal SMC 전용 계약 타입 — 스텝 범위, 제어/피드백 신호 열거, 피드백 스냅샷과 판정 헬퍼(공용 타입은 gripper_common/types.hpp).
 // 신호 이름·극성 규약의 소유자(물리 비트 인덱스는 config 소유). ROS-free.
 #ifndef GRIPPER_HAL_TYPES_HPP_
 #define GRIPPER_HAL_TYPES_HPP_

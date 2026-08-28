@@ -49,7 +49,7 @@
 | `IMagazineDetectPort::read` | magazine_port.hpp | — | Result<MagazineSnapshot> | gripper_common 으로 이관(2026-08-29) |
 | `alarm_state` / `emergency_stop_state` | types.hpp | FeedbackSnapshot | SignalState | **negative-true 극성** 적용 + stale 은 `kUnknown` |
 | `is_ready_for_drive` / `is_ready_for_origin` | types.hpp | FeedbackSnapshot | bool | 착수 조건 판정(DRIVE 는 SETON 요구, SETUP 은 미요구) |
-| `Result<T>` / `HalError` / `ControlLine` / `FeedbackSignal` | types.hpp | — | — | 계약 커널 |
+| `ControlLine` / `FeedbackSignal` | types.hpp | — | — | SMC 전용 계약 커널 |
 
 ## smc_lecp6/hal/impl (M1 — 원격 IO 백엔드)
 
@@ -76,3 +76,4 @@
 | 물리 **비트 인덱스** | `gripper_ros/config/gripper_stack.yaml` | 하드코딩 금지(drawer D03 선례) |
 | Modbus TCP 물리 접근 | `IOs/Remote_IO_Station` | 스테이션 단일 쓰기 마스터(ADR-001) |
 | 스텝의 속도·추력 값 | **SMC 컨트롤러 스텝 테이블**(우리 소유 아님) | ADR-008 C2-1 |
+| 공용 타입·MGZ 포트 | `gripper_common/include/gripper_common/` | ADR-005 D3 |

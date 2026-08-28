@@ -13,8 +13,9 @@
 
 | 경로 | 역할 | 빌드 | 상태 |
 |---|---|---|---|
-| `smc_lecp6/hal/` | 포트 계약 3종 + 백엔드. **신호 이름·극성 규약의 소유자**(물리 비트 인덱스는 config 소유) | plain CMake | ✅ **M0 — 계약 헤더 4종 + 의미 검증 통과**(승격은 외부 리뷰 후) |
-| `smc_lecp6/hal/include/gripper_hal/` | `types.hpp` · `command_port.hpp` · `feedback_port.hpp` · `magazine_port.hpp` | — | ✅ 작성 |
+| `gripper_common/` | 벤더 무관 공용 타입(`Result`/`HalError`/`Health`/`MagazineSnapshot`/`SignalState`) · MGZ 매거진 포트 소유(ADR-005 D3) | plain CMake(헤더 온리) | ✅ 단계② 신설 — 계약 테스트 1종 통과 |
+| `smc_lecp6/hal/` | 포트 계약 2종(command·feedback) — magazine 은 `gripper_common`. **신호 이름·극성 규약의 소유자**(물리 비트 인덱스는 config 소유) | plain CMake | ✅ **M0 — 계약 헤더 3종 + 의미 검증 통과**(승격은 외부 리뷰 후) |
+| `smc_lecp6/hal/include/gripper_hal/` | `types.hpp` · `command_port.hpp` · `feedback_port.hpp` | — | ✅ 작성 |
 | `smc_lecp6/hal/impl/` | **Tx(4호기) 백엔드** — ROS-free 심 `IStationIoClient` 위의 어댑터(스테이션 직접 접근 없음) | — | ✅ **M1 — 포트 3종 + 신호맵, 단위 12종 통과** |
 | `smc_lecp6/motion/` | 순수 시퀀스 FSM — 알람리셋 → 서보ON → **원점복귀** → 스텝 → BUSY 감시 → 완료판정 + 인터록 (ROS-free) | plain CMake | ✅ **M2 — 전이표 + 시나리오 15종 통과** |
 | `gripper_ros/` | 얇은 조립 — LifecycleNode + `GripperCommand.action` + config 로드 | ament | 액션 IDL·config 스키마만 작성(노드는 M4) |
@@ -28,6 +29,7 @@
 ```
 gripper_ros ──▶ smc_lecp6/motion ──▶ smc_lecp6/hal ──▶ [impl/remote_io 어댑터] ──▶ remote_io_ros 서비스 ──▶ 스테이션
 smc_lecp6/sim ──▶ {smc_lecp6/motion, smc_lecp6/hal}          # ROS-free
+{smc_lecp6/hal, smc_lecp6/motion, smc_lecp6/sim} ──▶ gripper_common   # ROS-free 공용 타입
 ```
 
 **자체 Modbus 클라이언트 금지** — 원격 IO 스테이션의 유일 쓰기 마스터는 `remote_io_ros` 노드다(사용자 결정 2026-08-12, ADR-008 Q7). 그리퍼는 그 서비스의 클라이언트일 뿐이다
