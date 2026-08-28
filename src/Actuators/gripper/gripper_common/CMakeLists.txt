@@ -4,7 +4,6 @@ project(gripper_common VERSION 0.1.0 LANGUAGES CXX)
 
 add_library(gripper_common_kernel INTERFACE)
 add_library(gripper_common::kernel ALIAS gripper_common_kernel)
-set_target_properties(gripper_common_kernel PROPERTIES EXPORT_NAME kernel)
 target_include_directories(gripper_common_kernel INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)

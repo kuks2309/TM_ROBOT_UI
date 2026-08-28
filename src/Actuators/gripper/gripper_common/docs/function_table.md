@@ -28,7 +28,7 @@
 
 | 심볼 | 위치 | 기능 |
 |---|---|---|
-| `main` | test/common_contract_check.cpp | `Result<void>`/`Result<T>` ok/err 의미·`kNone`→`kProtocol` 승격, `MagazineSnapshot` 헬퍼(fresh=false 전면 미검출), `Health` 기본값 검증 |
+| `main` | test/common_contract_check.cpp | `Result<void>`/`Result<T>` ok/err 의미·`kNone`→`kProtocol` 승격, `MagazineSnapshot` 헬퍼(fresh=false 전면 미검출), `Health` 기본값 검증 + `IMagazineDetectPort` 공개 표면 static_assert(추상 인터페이스·`read()`→`Result<MagazineSnapshot>`·`health()`→`Health`) |
 
 ## 소유 경계
 

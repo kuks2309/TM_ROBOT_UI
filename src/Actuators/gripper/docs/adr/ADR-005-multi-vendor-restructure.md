@@ -71,6 +71,7 @@ src/Actuators/gripper/
   - 구 ADR-008 원문 부재로 supersede 절차 불완전 ⚠ — 원문 이관 시 본 ADR 과 대조 필요. README 의 ADR-008·조사 정본·SMC 매뉴얼 링크가 dangling(이관 누락) — `references/smc/` 재확보 필요.
   - RS485 물리 경로(USB-RS485 컨버터·포트 장치명) 미정 ⚠ — Open Question.
   - Z-EFG-C35 근거 문서가 브로슈어(Product Manual 요약본) 1종뿐 — 상세 User Manual 확보 전 레지스터 맵 외 동작 단정 금지(추정 금지 원칙).
+  - 설치(install) export 미결합 — gripper_common·벤더 hal 은 add_subdirectory 소비 전용(빌드 인터페이스만). 설치 기반 배포 지원 여부는 단계③ 착수 전 결정(최종 리뷰 I5, 2026-08-29).
 
 ## Rollback
 

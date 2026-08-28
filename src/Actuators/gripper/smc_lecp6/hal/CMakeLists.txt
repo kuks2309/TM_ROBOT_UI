@@ -12,6 +12,7 @@ target_include_directories(gripper_hal_kernel INTERFACE
 target_compile_features(gripper_hal_kernel INTERFACE cxx_std_17)
 
 # 공용 타입(gripper_common)은 형제 패키지 — 헤더 경로만 소비(타깃 링크·export 결합 없음, ADR-005 D3)
+# 주의: 설치(install) export 는 단계③까지 불완전 — 본 스택은 add_subdirectory 소비 전용(ADR-005 Consequences 참조)
 target_include_directories(gripper_hal_kernel INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../gripper_common/include>)
 

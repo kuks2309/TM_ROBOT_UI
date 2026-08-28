@@ -1,9 +1,18 @@
 // gripper_common 계약 검증 — 벤더 무관 공용 타입의 의미 불변식 (hal contract_check 관례 승계)
+#include "gripper_common/magazine_port.hpp"
 #include "gripper_common/types.hpp"
 #include <cstdio>
 #include <type_traits>
 
 using namespace gripper::hal;
+
+// IMagazineDetectPort 공개 표면 — 추상 인터페이스 + read/health 반환형 고정 (컴파일 타임 검증)
+static_assert(std::is_abstract_v<IMagazineDetectPort>, "IMagazineDetectPort 는 추상 인터페이스여야 한다");
+static_assert(std::is_same_v<decltype(std::declval<IMagazineDetectPort &>().read()), Result<MagazineSnapshot>>,
+              "IMagazineDetectPort::read() 반환형은 Result<MagazineSnapshot> 이어야 한다");
+static_assert(std::is_same_v<decltype(std::declval<const IMagazineDetectPort &>().health()), Health>,
+              "IMagazineDetectPort::health() 반환형은 Health 여야 한다");
+
 static int fails = 0;
 #define CHECK(c)                                                                                                       \
     do                                                                                                                 \
