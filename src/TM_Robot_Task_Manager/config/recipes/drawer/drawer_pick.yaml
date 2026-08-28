@@ -1,0 +1,188 @@
+# Recipe: 드로어에서 집기
+# TM Task Manager Recipe File
+#
+# [무엇] 드로어 마커를 스캔해 기준을 잡고 드로어의 박스를 집은 뒤 공구 -Z 로 후퇴한다.
+#        빈 그리퍼로 시작하므로 스캔이 가능하다.
+#
+# [값 출처 — 섞어 쓰지 말 것]
+#   · 드로어(마커 좌표계 move_to_landmark_pose): 8/15 성공값 그대로
+#       offset (-10.585, -245.144, -142.222 집기 / 7.778 접근) · rx 179.96 / ry -0.06 / rz 89.938
+#       rz_only 프레임. 마커 X축은 팔레트 **긴 변** 방향이라 팔레트 평면 X축(짧은 변)과 90° 어긋난다.
+#       드로어 집기와 팔레트 놓기의 베이스 Rz 는 실제로 약 90° 차이가 난다(계산 확인) —
+#       박스는 드로어와 팔레트에서 90° 돌아간 방향으로 놓인다. 정상이다.
+#   · 팔레트(평면 좌표계 move_to_plane_pose): 2026-08-19 확정값
+#       offset (-0.81, 0.02, 157.292 집기 / 257.292 접근) · rx 180.0 / ry 0.0 / rz 90.0
+#       순환 총집본에서 가드 충돌 없이 통과한 조합. **offset_rz 를 -90.008 로 되돌리면
+#       박스를 든 채 내려갈 때 전 팔레트에서 가드와 충돌한다.**
+#
+# [알려진 한계] 그리퍼가 박스 양옆만 파지해 **앞뒤(평면 Y) 오차를 잡지 못한다.**
+#   최초 박스가 앞뒤로 치우쳐 있으면 그 편심이 그대로 유지된다. 팔레트별 앞뒤 여유(중심→벽):
+#     pallet5 98.047 < pallet2 98.284 < pallet3 98.288 < pallet1 98.296 < pallet4 98.364 < pallet0 98.398
+#   근본 해결은 팔레트별 앞뒤 티칭.
+#
+# [!! 안전 !!] 첫 이동은 Run 누른 시점의 자세에서 목표 자세로 맞춘 뒤 이동한다.
+#   반드시 팔레트·드로어 밖 안전한 높이에서 시작할 것. 첫 실행은 Step 으로.
+
+name: 드로어에서 집기
+description: 드로어 마커를 1샷 측정해 마커 좌표계로 드로어의 박스를 집고 공구 -Z 로 후퇴한다. 드로어 값은 8/15 성공값 그대로.
+version: '1.0'
+created: '2026-08-19'
+modified: '2026-08-19'
+jobs:
+- id: 1
+  type: recipe_info
+  name: Recipe 개요
+  params:
+    mode: execution
+    description: 드로어에서 박스를 집는다
+    author: jjh
+    version: '1.0'
+    vision_origin_check: none
+- id: 2
+  type: schunk_release
+  name: SCHUNK 그리퍼 놓기
+  caption: 집기 전 그리퍼 열기
+  params:
+    timeout: 15.0
+- id: 3
+  type: wait
+  name: 대기
+  caption: 그리퍼 동작 완료 대기
+  params:
+    duration: 2000
+- id: 4
+  type: move_to_point
+  name: 포인트 이동
+  caption: 드로어마커로 이동
+  params:
+    motion_type: tcp
+    X: 399.78
+    Y: 567.1
+    Z: 78.16
+    Rx: -180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 399.78
+    Y: 567.1
+    Z: 78.16
+    Rx: -180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 5
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  caption: 드로어마커_기준점_스캔
+  params:
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz_rx_ry_rz
+- id: 6
+  type: save_landmark_pose
+  name: Landmark 좌표 저장
+  caption: 드로어마커_저장
+  params:
+    save_path: data/landmark_pose
+    operator: jjh
+- id: 7
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 박스 위 접근 (집는 높이 +150mm)
+  params:
+    frame_mode: rz_only
+    landmark_source: latest_scan
+    source_path: data/landmark_pose
+    file_prefix: ''
+    average_count: 1
+    offset_x: -10.585
+    offset_y: -245.144
+    offset_z: 7.778
+    offset_rx: 179.96
+    offset_ry: -0.06
+    offset_rz: 89.938
+    tool_offset_x: 0.0
+    tool_offset_y: 0.0
+    tool_offset_z: 0.0
+    tool_offset_rx: 0.0
+    tool_offset_ry: 0.0
+    tool_offset_rz: 0.0
+    velocity: 20.0
+    max_radius_mm: 600.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+- id: 8
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 드로어에서 집기 (8/15 성공값)
+  params:
+    frame_mode: rz_only
+    landmark_source: latest_scan
+    source_path: data/landmark_pose
+    file_prefix: ''
+    average_count: 1
+    offset_x: -10.585
+    offset_y: -245.144
+    offset_z: -142.222
+    offset_rx: 179.96
+    offset_ry: -0.06
+    offset_rz: 89.938
+    tool_offset_x: 0.0
+    tool_offset_y: 0.0
+    tool_offset_z: 0.0
+    tool_offset_rx: 0.0
+    tool_offset_ry: 0.0
+    tool_offset_rz: 0.0
+    velocity: 8.0
+    max_radius_mm: 600.0
+    decel_zone_mm: 40.0
+    decel_velocity: 5.0
+- id: 9
+  type: schunk_grip
+  name: SCHUNK 그리퍼 파지
+  caption: 박스 파지
+  params:
+    timeout: 15.0
+- id: 10
+  type: wait
+  name: 대기
+  caption: 그리퍼 동작 완료 대기
+  params:
+    duration: 2000
+- id: 11
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 박스 들어올림 (집는 높이 +150mm)
+  params:
+    frame_mode: rz_only
+    landmark_source: latest_scan
+    source_path: data/landmark_pose
+    file_prefix: ''
+    average_count: 1
+    offset_x: -10.585
+    offset_y: -245.144
+    offset_z: 7.778
+    offset_rx: 179.96
+    offset_ry: -0.06
+    offset_rz: 89.938
+    tool_offset_x: 0.0
+    tool_offset_y: 0.0
+    tool_offset_z: 0.0
+    tool_offset_rx: 0.0
+    tool_offset_ry: 0.0
+    tool_offset_rz: 0.0
+    velocity: 8.0
+    max_radius_mm: 600.0
+    decel_zone_mm: 40.0
+    decel_velocity: 5.0
+- id: 12
+  type: move_linear
+  name: 직선 이동
+  caption: 공구 -Z 150mm 후퇴
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0

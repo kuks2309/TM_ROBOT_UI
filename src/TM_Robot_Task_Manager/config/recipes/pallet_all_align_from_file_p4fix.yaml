@@ -1,0 +1,256 @@
+# Recipe: 팔레트 0~5 저장데이터 정렬 (스캔 없음) — pallet4 정규화본
+# TM Task Manager Recipe File
+#
+# [원본] pallet_all_align_from_file.yaml (2026-08-19 21:31, 무수정 보존)
+#        백업: ~/backup_recipes_100cycle_20260824/
+#
+# [무엇을 고쳤나] pallet4 블록 2줄만.
+#     average_count      1     -> 10     (나머지 5개와 동일)
+#     rect_guard_enabled false -> true   (나머지 5개와 동일)
+#   원본은 pallet4 만 단발 측정 + 직사각형 검증 꺼짐이었다. 그 팔레트만 계측 잡음이
+#   그대로 들어가고 마커 배치 이상도 못 잡는 상태였다.
+#
+# [그 외는 전부 원본과 동일] 잡 18개, 순서, standoff 150mm, offset, 속도,
+#   move_linear 공구 -Z 150mm 후퇴 — 손대지 않았다.
+#
+# [!! 원본 성능에 대한 정확한 기록 !!]
+#   "100회 무사고" 는 부정확하다. 사용자 확인(2026-08-24):
+#     · 박스를 들고 100회 완주했다 (grip/release 잡이 없을 뿐, 사전에 물려둔 상태)
+#     · pallet5 는 그 100회 내내 가드와 접촉이 있었다
+#     · 나머지는 "대부분 나름 잘함" 수준
+#   무결점 완주가 아니므로 이 레시피를 무사고 기준선으로 인용하지 말 것.
+#   [!! 오해 주의 !!] 그리퍼 잡 0개 를 "무부하 주행" 으로 읽지 말 것. 박스 적재 상태였다.
+#
+# [왜 대체로 잘 돌았나] align_to_plane_normal 은 이미 정렬돼 있으면 회전을 생략한다.
+#   첫 정렬만 안전 높이에서 제자리 회전하고, 팔레트 안 하강에는 회전이 없다.
+#   이탈도 move_linear 공구 -Z 라 법선을 그대로 따라 빠진다.
+
+name: 팔레트 0~5 저장데이터 정렬 (스캔 없음) — pallet4 정규화본
+description: pallet0~5 의 저장된 plate_pose 를 불러와(마커 스캔 없이) 헤드를 평면 법선에 수직 정렬. 마커 탈거 등으로
+  재측정이 불가하고 플레이트가 움직이지 않았을 때만 사용.
+version: '1.0'
+created: '2026-08-14'
+modified: '2026-08-24'
+jobs:
+- id: 1
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: pallet0 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet0
+    file_prefix: pallet0_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 2
+  type: align_to_plane_normal
+  name: 평면 수직 정렬
+  caption: pallet0 평면 수직 정렬
+  params:
+    standoff_mm: 150.0
+    rz_mode: plane
+    velocity: 10.0
+    max_tilt_deg: 30.0
+    max_diagonal_diff_mm: 10.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+    offset_x: 0.02
+    offset_y: -0.81
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+- id: 3
+  type: move_linear
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0
+- id: 4
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: pallet1 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet1
+    file_prefix: pallet1_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 5
+  type: align_to_plane_normal
+  name: 평면 수직 정렬
+  caption: pallet1 평면 수직 정렬
+  params:
+    standoff_mm: 150.0
+    rz_mode: plane
+    offset_x: 0.02
+    offset_y: -0.81
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    velocity: 10.0
+    max_tilt_deg: 30.0
+    max_diagonal_diff_mm: 10.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+- id: 6
+  type: move_linear
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0
+- id: 7
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: pallet2 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet2
+    file_prefix: pallet2_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 8
+  type: align_to_plane_normal
+  name: 평면 수직 정렬
+  caption: pallet2 평면 수직 정렬
+  params:
+    standoff_mm: 150.0
+    rz_mode: keep
+    offset_x: 0.02
+    offset_y: -0.81
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    velocity: 10.0
+    max_tilt_deg: 30.0
+    max_diagonal_diff_mm: 10.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+- id: 9
+  type: move_linear
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0
+- id: 10
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: pallet3 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet3
+    file_prefix: pallet3_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 11
+  type: align_to_plane_normal
+  name: 평면 수직 정렬
+  caption: pallet3 평면 수직 정렬
+  params:
+    standoff_mm: 150.0
+    rz_mode: keep
+    offset_x: 0.02
+    offset_y: -0.81
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    velocity: 10.0
+    max_tilt_deg: 30.0
+    max_diagonal_diff_mm: 10.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+- id: 12
+  type: move_linear
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0
+- id: 13
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: pallet4 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet4
+    file_prefix: pallet4_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 14
+  type: align_to_plane_normal
+  name: 평면 수직 정렬
+  caption: pallet4 평면 수직 정렬
+  params:
+    standoff_mm: 150.0
+    rz_mode: keep
+    offset_x: 0.02
+    offset_y: -0.81
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    velocity: 10.0
+    max_tilt_deg: 30.0
+    max_diagonal_diff_mm: 10.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+- id: 15
+  type: move_linear
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0
+- id: 16
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: pallet5 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet5
+    file_prefix: pallet5_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 17
+  type: align_to_plane_normal
+  name: 평면 수직 정렬
+  caption: pallet5 평면 수직 정렬
+  params:
+    standoff_mm: 150.0
+    rz_mode: keep
+    offset_x: 0.02
+    offset_y: -0.81
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    velocity: 10.0
+    max_tilt_deg: 30.0
+    max_diagonal_diff_mm: 10.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+- id: 18
+  type: move_linear
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0

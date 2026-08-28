@@ -1,0 +1,20 @@
+# ⚠️ 미사용 파일 — 현재 이 워크스페이스의 어떤 코드도 이 파일을 읽지 않는다.
+#    (2026-08-10 확인: tm_task_manager 전체에서 modbus_mapping 참조 0건)
+#    로봇의 Modbus TCP(502) 도 현재 닫혀 있다. 향후 Modbus 를 쓸 때를 위해 남겨둔다.
+
+modbus:
+  host: "169.254.122.16"
+  port: 502
+  timeout: 3.0
+  unit_id: 1
+
+
+variables:
+  g_robot_command:
+    address: 7000
+    type: int16
+    access: read_write
+    description: "로봇 명령 (0: 대기, 1: 실행, 2: 정지)"
+
+
+

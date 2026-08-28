@@ -1,0 +1,116 @@
+
+name: 새 Recipe
+description: ''
+version: '1.0'
+created: '2026-02-09'
+modified: '2026-02-09'
+jobs:
+- id: 1
+  type: recipe_info
+  name: Recipe 개요
+  caption: Latch 인식
+  params:
+    mode: teaching
+    description: ''
+    author: ''
+    version: '1.0'
+- id: 2
+  type: move_to_point
+  name: 포인트 이동
+  params:
+    motion_type: tcp
+    X: 439.76
+    Y: 460.98
+    Z: -33.06
+    Rx: 180.0
+    Ry: 0.0
+    Rz: 180.0
+    velocity: 25.0
+- id: 3
+  type: move_to_point
+  name: 포인트 이동
+  params:
+    motion_type: tcp
+    X: 29.53
+    Y: 580.58
+    Z: -23.17
+    Rx: -180.0
+    Ry: 0.0
+    Rz: -180.0
+    velocity: 25.0
+- id: 4
+  type: wait
+  name: 대기
+  params:
+    duration: 1000
+- id: 5
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  params:
+    wait_after_command: 100
+    repeat_count: 3
+    outlier_method: none
+    analysis_target: xyz
+- id: 6
+  type: move_to_point
+  name: 포인트 이동
+  params:
+    motion_type: tcp
+    X: 29.47
+    Y: 580.56
+    Z: 16.83
+    Rx: -180.0
+    Ry: 0.0
+    Rz: -180.0
+    velocity: 25.0
+- id: 7
+  type: move_to_point
+  name: 포인트 이동
+  params:
+    motion_type: tcp
+    X: 29.54
+    Y: 670.6
+    Z: 16.79
+    Rx: -180.0
+    Ry: 0.0
+    Rz: -180.0
+    velocity: 25.0
+- id: 8
+  type: wait
+  name: 대기
+  params:
+    duration: 1000
+- id: 9
+  type: ai_inspection
+  name: AI 검사
+  params:
+    detection_task: jig_latch
+    runtime: pc
+    confidence_threshold: 0.7
+    angle_threshold: 15.0
+    timeout: 2000
+    wait_after_command: 100
+- id: 10
+  type: move_to_point
+  name: 포인트 이동
+  params:
+    motion_type: tcp
+    X: 29.47
+    Y: 580.56
+    Z: 16.83
+    Rx: -180.0
+    Ry: 0.0
+    Rz: 180.0
+    velocity: 25.0
+- id: 11
+  type: move_to_point
+  name: 포인트 이동
+  params:
+    motion_type: tcp
+    X: 439.76
+    Y: 460.98
+    Z: -33.06
+    Rx: -180.0
+    Ry: 0.0
+    Rz: 180.0
+    velocity: 25.0

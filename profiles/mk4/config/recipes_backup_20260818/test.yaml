@@ -1,0 +1,50 @@
+
+name: test
+description: ''
+version: '1.0'
+created: '2026-07-09'
+modified: '2026-07-09'
+jobs:
+- id: 1
+  type: wait
+  name: wait
+  params:
+    duration: 1000
+- id: 2
+  type: move_to_point
+  name: move_to_point
+  params:
+    motion_type: tcp
+    X: -906.8
+    Y: -53.99
+    Z: 250
+    Rx: -177.58
+    Ry: 0.23
+    Rz: 9.79
+    velocity: 25
+  robot_base:
+    X: -906.8
+    Y: -53.99
+    Z: 250
+    Rx: -177.58
+    Ry: 0.23
+    Rz: 9.79
+- id: 3
+  type: go_home
+  name: go_home
+  params:
+    motion_type: tcp
+    X: -906.8
+    Y: -53.99
+    Z: 304.03
+    Rx: -177.58
+    Ry: 0.23
+    Rz: 9.79
+    velocity: 20
+  robot_base:
+    X: -906.8
+    Y: -53.99
+    Z: 304.03
+    Rx: -177.58
+    Ry: 0.23
+    Rz: 9.79

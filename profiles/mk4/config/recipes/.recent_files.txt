@@ -1,0 +1,4 @@
+~/Projects/jjh/tm-robot-4/src/TM_Robot_Task_Manager/config/recipes/pallet_ring_odd_pick_place.yaml
+~/Projects/jjh/tm-robot-4/src/TM_Robot_Task_Manager/config/recipes/pallet_ring_even_pick_place.yaml
+~/Projects/jjh/tm-robot-4/src/TM_Robot_Task_Manager/config/recipes/drawer_place.yaml
+~/Projects/jjh/tm-robot-4/src/TM_Robot_Task_Manager/config/recipes/drawer_pick.yaml

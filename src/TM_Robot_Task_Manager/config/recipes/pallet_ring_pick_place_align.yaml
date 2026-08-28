@@ -1,0 +1,1055 @@
+# Recipe: 팔레트 순환 이송 — align_to_plane_normal 방식 (0→1→2→3→4→5→0)
+# TM Task Manager Recipe File
+#
+# [목적] 현행 ring(move_to_plane_pose 방식)과 동일 조건에서 접근 방식만 바꿔 비교한다.
+#
+# [근거] 박스를 들고 돈 실측 비교 (2026-08-24 사용자 확인):
+#     align 방식 + 단일 오프셋      → 대부분 양호, p5 만 접촉
+#     move_to_plane_pose + 단일 오프셋 → p0·p1 만 깨끗
+#   같은 단일 오프셋 조건에서 align 이 더 많은 팔레트를 커버했다.
+#
+# [기각된 설명] "align 은 오프셋이 공구 좌표계라 유리하다" — 검증 결과 기각.
+#   두 티칭값(p0·p5)을 공구계로 환산해도 차이가 1.752mm 로 평면계 차이(1.750mm)와 같다.
+#   MK2 는 plate rz 가 89.58~90.01° 로 거의 같아 좌표계를 바꿔도 값이 안 모인다.
+#
+# [남은 가설] rz 강제 여부.
+#   move_to_plane_pose 는 공구 rz 를 (plate_rz + offset_rz) 로 매 팔레트 강제한다.
+#   그런데 plate rz 는 팔레트마다 0.42° 흩어져 있다(같은 프레임 위이므로 계측오차).
+#   align 은 rz_mode 로 그 강제를 피한다. 100회본은 pallet0·1 만 'plane',
+#   나머지는 'keep' 이었다 — 처음 한 번만 평면에서 rz 를 잡고 그 뒤로는 유지하는 패턴.
+#   본 레시피는 그 패턴을 그대로 따른다(첫 정렬만 plane, 이후 전부 keep).
+#
+# [원본에서 가져온 것]
+#   align/move_linear 파라미터 = pallet_all_align_from_file.yaml (100회본) 그대로
+#   공구 오프셋 (0.02, -0.81) = 100회본과 동일. p0 티칭값을 공구계로 환산한 값과 일치.
+#   높이 157.292(파지) / 177.292(접근) = 현행 ring 과 동일
+#   인터록 slot 배정 = 현행 ring 과 동일
+#
+# [현행 ring 과 다른 점]
+#   · move_to_plane_pose → align_to_plane_normal (평면계 XY 지정 → 공구계 오프셋)
+#   · 이탈이 move_linear 공구 -Z 150mm (100회본 방식). 407.292 상승 잡 없음.
+#   · 인터록 on_mismatch 를 전부 stop 으로 했다 — 시험용이므로 이상 시 건너뛰지 말고 정지.
+#
+# [!! 안전 !!]
+#   · 시작 전 pallet0 에 박스, pallet1~5 는 비어 있어야 한다.
+#   · 첫 align 이 Run 누른 시점의 TCP 위치에서 제자리 회전한다 —
+#     반드시 팔레트 밖 안전한 높이에서 시작할 것.
+#   · **첫 실행은 반드시 Step 으로.**
+
+name: 팔레트 순환 이송 — align 방식 (0→1→2→3→4→5→0)
+description: align_to_plane_normal 기반 순환 이송. 현행 ring(move_to_plane_pose)과 비교용. 공구 오프셋 단일값(0.02,-0.81), 첫 정렬만 rz_mode=plane 이후 keep.
+version: '1.0'
+created: '2026-08-24'
+modified: '2026-08-24'
+jobs:
+- id: 1
+  name: Recipe 개요
+  params:
+    author: jjh
+    description: align_to_plane_normal 기반 팔레트 순환 이송 (비교시험용)
+    mode: execution
+    version: '1.0'
+    vision_origin_check: none
+  type: recipe_info
+# ───── 사이클 1/6 : pallet0 집기 → pallet1 놓기 ─────
+- caption: P0→P1 · 인터록 — pallet0 에 박스가 있어야 집는다
+  id: 2
+  name: 매거진 재고 확인
+  params:
+    expect: present
+    on_mismatch: stop
+    skip_count: 0
+    slot: 0
+    timeout: 3.0
+  type: check_magazine
+- caption: P0→P1 · 집기 전 그리퍼 열기
+  id: 3
+  name: SCHUNK 그리퍼 놓기
+  params:
+    timeout: 15.0
+  type: schunk_release
+- caption: P0→P1 · 그리퍼 동작 완료 대기
+  id: 4
+  name: 대기
+  params:
+    duration: 2000
+  type: wait
+- caption: P0→P1 · pallet0 저장 데이터 불러오기
+  id: 5
+  name: Plate Pose 불러오기
+  params:
+    average_count: 10
+    file_prefix: pallet0_cali
+    max_angle_error_deg: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_side_diff_mm: 1.0
+    rect_guard_enabled: true
+    source_path: data/plate_pose_calc/pallet0
+  type: load_plate_pose
+- caption: P0→P1 · pallet0 위 접근 (파지면 +20mm)
+  id: 6
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: plane
+    standoff_mm: 177.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P0→P1 · pallet0 에서 집기
+  id: 7
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: keep
+    standoff_mm: 157.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P0→P1 · 박스 파지
+  id: 8
+  name: SCHUNK 그리퍼 파지
+  params:
+    timeout: 15.0
+  type: schunk_grip
+- caption: P0→P1 · 그리퍼 동작 완료 대기
+  id: 9
+  name: 대기
+  params:
+    duration: 2000
+  type: wait
+- caption: P0→P1 · pallet0 이탈 — 공구 -Z 150mm
+  id: 10
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0
+  type: move_linear
+- caption: P0→P1 · 인터록 — pallet1 가 비어 있어야 놓는다
+  id: 11
+  name: 매거진 재고 확인
+  params:
+    expect: empty
+    on_mismatch: stop
+    skip_count: 0
+    slot: 1
+    timeout: 3.0
+  type: check_magazine
+- caption: P0→P1 · pallet1 저장 데이터 불러오기
+  id: 12
+  name: Plate Pose 불러오기
+  params:
+    average_count: 10
+    file_prefix: pallet1_cali
+    max_angle_error_deg: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_side_diff_mm: 1.0
+    rect_guard_enabled: true
+    source_path: data/plate_pose_calc/pallet1
+  type: load_plate_pose
+- caption: P0→P1 · pallet1 위 접근 (파지면 +20mm)
+  id: 13
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: keep
+    standoff_mm: 177.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P0→P1 · pallet1 에 놓기
+  id: 14
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: keep
+    standoff_mm: 157.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P0→P1 · 박스 놓기
+  id: 15
+  name: SCHUNK 그리퍼 놓기
+  params:
+    timeout: 15.0
+  type: schunk_release
+- caption: P0→P1 · 그리퍼 동작 완료 대기
+  id: 16
+  name: 대기
+  params:
+    duration: 2000
+  type: wait
+- caption: P0→P1 · pallet1 이탈 — 공구 -Z 150mm
+  id: 17
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0
+  type: move_linear
+# ───── 사이클 2/6 : pallet1 집기 → pallet2 놓기 ─────
+- caption: P1→P2 · 인터록 — pallet1 에 박스가 있어야 집는다
+  id: 18
+  name: 매거진 재고 확인
+  params:
+    expect: present
+    on_mismatch: stop
+    skip_count: 0
+    slot: 1
+    timeout: 3.0
+  type: check_magazine
+- caption: P1→P2 · 집기 전 그리퍼 열기
+  id: 19
+  name: SCHUNK 그리퍼 놓기
+  params:
+    timeout: 15.0
+  type: schunk_release
+- caption: P1→P2 · 그리퍼 동작 완료 대기
+  id: 20
+  name: 대기
+  params:
+    duration: 2000
+  type: wait
+- caption: P1→P2 · pallet1 저장 데이터 불러오기
+  id: 21
+  name: Plate Pose 불러오기
+  params:
+    average_count: 10
+    file_prefix: pallet1_cali
+    max_angle_error_deg: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_side_diff_mm: 1.0
+    rect_guard_enabled: true
+    source_path: data/plate_pose_calc/pallet1
+  type: load_plate_pose
+- caption: P1→P2 · pallet1 위 접근 (파지면 +20mm)
+  id: 22
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: keep
+    standoff_mm: 177.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P1→P2 · pallet1 에서 집기
+  id: 23
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: keep
+    standoff_mm: 157.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P1→P2 · 박스 파지
+  id: 24
+  name: SCHUNK 그리퍼 파지
+  params:
+    timeout: 15.0
+  type: schunk_grip
+- caption: P1→P2 · 그리퍼 동작 완료 대기
+  id: 25
+  name: 대기
+  params:
+    duration: 2000
+  type: wait
+- caption: P1→P2 · pallet1 이탈 — 공구 -Z 150mm
+  id: 26
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0
+  type: move_linear
+- caption: P1→P2 · 인터록 — pallet2 가 비어 있어야 놓는다
+  id: 27
+  name: 매거진 재고 확인
+  params:
+    expect: empty
+    on_mismatch: stop
+    skip_count: 0
+    slot: 2
+    timeout: 3.0
+  type: check_magazine
+- caption: P1→P2 · pallet2 저장 데이터 불러오기
+  id: 28
+  name: Plate Pose 불러오기
+  params:
+    average_count: 10
+    file_prefix: pallet2_cali
+    max_angle_error_deg: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_side_diff_mm: 1.0
+    rect_guard_enabled: true
+    source_path: data/plate_pose_calc/pallet2
+  type: load_plate_pose
+- caption: P1→P2 · pallet2 위 접근 (파지면 +20mm)
+  id: 29
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: keep
+    standoff_mm: 177.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P1→P2 · pallet2 에 놓기
+  id: 30
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: keep
+    standoff_mm: 157.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P1→P2 · 박스 놓기
+  id: 31
+  name: SCHUNK 그리퍼 놓기
+  params:
+    timeout: 15.0
+  type: schunk_release
+- caption: P1→P2 · 그리퍼 동작 완료 대기
+  id: 32
+  name: 대기
+  params:
+    duration: 2000
+  type: wait
+- caption: P1→P2 · pallet2 이탈 — 공구 -Z 150mm
+  id: 33
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0
+  type: move_linear
+# ───── 사이클 3/6 : pallet2 집기 → pallet3 놓기 ─────
+- caption: P2→P3 · 인터록 — pallet2 에 박스가 있어야 집는다
+  id: 34
+  name: 매거진 재고 확인
+  params:
+    expect: present
+    on_mismatch: stop
+    skip_count: 0
+    slot: 2
+    timeout: 3.0
+  type: check_magazine
+- caption: P2→P3 · 집기 전 그리퍼 열기
+  id: 35
+  name: SCHUNK 그리퍼 놓기
+  params:
+    timeout: 15.0
+  type: schunk_release
+- caption: P2→P3 · 그리퍼 동작 완료 대기
+  id: 36
+  name: 대기
+  params:
+    duration: 2000
+  type: wait
+- caption: P2→P3 · pallet2 저장 데이터 불러오기
+  id: 37
+  name: Plate Pose 불러오기
+  params:
+    average_count: 10
+    file_prefix: pallet2_cali
+    max_angle_error_deg: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_side_diff_mm: 1.0
+    rect_guard_enabled: true
+    source_path: data/plate_pose_calc/pallet2
+  type: load_plate_pose
+- caption: P2→P3 · pallet2 위 접근 (파지면 +20mm)
+  id: 38
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: keep
+    standoff_mm: 177.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P2→P3 · pallet2 에서 집기
+  id: 39
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: keep
+    standoff_mm: 157.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P2→P3 · 박스 파지
+  id: 40
+  name: SCHUNK 그리퍼 파지
+  params:
+    timeout: 15.0
+  type: schunk_grip
+- caption: P2→P3 · 그리퍼 동작 완료 대기
+  id: 41
+  name: 대기
+  params:
+    duration: 2000
+  type: wait
+- caption: P2→P3 · pallet2 이탈 — 공구 -Z 150mm
+  id: 42
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0
+  type: move_linear
+- caption: P2→P3 · 인터록 — pallet3 가 비어 있어야 놓는다
+  id: 43
+  name: 매거진 재고 확인
+  params:
+    expect: empty
+    on_mismatch: stop
+    skip_count: 0
+    slot: 3
+    timeout: 3.0
+  type: check_magazine
+- caption: P2→P3 · pallet3 저장 데이터 불러오기
+  id: 44
+  name: Plate Pose 불러오기
+  params:
+    average_count: 10
+    file_prefix: pallet3_cali
+    max_angle_error_deg: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_side_diff_mm: 1.0
+    rect_guard_enabled: true
+    source_path: data/plate_pose_calc/pallet3
+  type: load_plate_pose
+- caption: P2→P3 · pallet3 위 접근 (파지면 +20mm)
+  id: 45
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: keep
+    standoff_mm: 177.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P2→P3 · pallet3 에 놓기
+  id: 46
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: keep
+    standoff_mm: 157.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P2→P3 · 박스 놓기
+  id: 47
+  name: SCHUNK 그리퍼 놓기
+  params:
+    timeout: 15.0
+  type: schunk_release
+- caption: P2→P3 · 그리퍼 동작 완료 대기
+  id: 48
+  name: 대기
+  params:
+    duration: 2000
+  type: wait
+- caption: P2→P3 · pallet3 이탈 — 공구 -Z 150mm
+  id: 49
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0
+  type: move_linear
+# ───── 사이클 4/6 : pallet3 집기 → pallet4 놓기 ─────
+- caption: P3→P4 · 인터록 — pallet3 에 박스가 있어야 집는다
+  id: 50
+  name: 매거진 재고 확인
+  params:
+    expect: present
+    on_mismatch: stop
+    skip_count: 0
+    slot: 3
+    timeout: 3.0
+  type: check_magazine
+- caption: P3→P4 · 집기 전 그리퍼 열기
+  id: 51
+  name: SCHUNK 그리퍼 놓기
+  params:
+    timeout: 15.0
+  type: schunk_release
+- caption: P3→P4 · 그리퍼 동작 완료 대기
+  id: 52
+  name: 대기
+  params:
+    duration: 2000
+  type: wait
+- caption: P3→P4 · pallet3 저장 데이터 불러오기
+  id: 53
+  name: Plate Pose 불러오기
+  params:
+    average_count: 10
+    file_prefix: pallet3_cali
+    max_angle_error_deg: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_side_diff_mm: 1.0
+    rect_guard_enabled: true
+    source_path: data/plate_pose_calc/pallet3
+  type: load_plate_pose
+- caption: P3→P4 · pallet3 위 접근 (파지면 +20mm)
+  id: 54
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: keep
+    standoff_mm: 177.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P3→P4 · pallet3 에서 집기
+  id: 55
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: keep
+    standoff_mm: 157.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P3→P4 · 박스 파지
+  id: 56
+  name: SCHUNK 그리퍼 파지
+  params:
+    timeout: 15.0
+  type: schunk_grip
+- caption: P3→P4 · 그리퍼 동작 완료 대기
+  id: 57
+  name: 대기
+  params:
+    duration: 2000
+  type: wait
+- caption: P3→P4 · pallet3 이탈 — 공구 -Z 150mm
+  id: 58
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0
+  type: move_linear
+- caption: P3→P4 · 인터록 — pallet4 가 비어 있어야 놓는다
+  id: 59
+  name: 매거진 재고 확인
+  params:
+    expect: empty
+    on_mismatch: stop
+    skip_count: 0
+    slot: 4
+    timeout: 3.0
+  type: check_magazine
+- caption: P3→P4 · pallet4 저장 데이터 불러오기
+  id: 60
+  name: Plate Pose 불러오기
+  params:
+    average_count: 10
+    file_prefix: pallet4_cali
+    max_angle_error_deg: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_side_diff_mm: 1.0
+    rect_guard_enabled: true
+    source_path: data/plate_pose_calc/pallet4
+  type: load_plate_pose
+- caption: P3→P4 · pallet4 위 접근 (파지면 +20mm)
+  id: 61
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: keep
+    standoff_mm: 177.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P3→P4 · pallet4 에 놓기
+  id: 62
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: keep
+    standoff_mm: 157.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P3→P4 · 박스 놓기
+  id: 63
+  name: SCHUNK 그리퍼 놓기
+  params:
+    timeout: 15.0
+  type: schunk_release
+- caption: P3→P4 · 그리퍼 동작 완료 대기
+  id: 64
+  name: 대기
+  params:
+    duration: 2000
+  type: wait
+- caption: P3→P4 · pallet4 이탈 — 공구 -Z 150mm
+  id: 65
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0
+  type: move_linear
+# ───── 사이클 5/6 : pallet4 집기 → pallet5 놓기 ─────
+- caption: P4→P5 · 인터록 — pallet4 에 박스가 있어야 집는다
+  id: 66
+  name: 매거진 재고 확인
+  params:
+    expect: present
+    on_mismatch: stop
+    skip_count: 0
+    slot: 4
+    timeout: 3.0
+  type: check_magazine
+- caption: P4→P5 · 집기 전 그리퍼 열기
+  id: 67
+  name: SCHUNK 그리퍼 놓기
+  params:
+    timeout: 15.0
+  type: schunk_release
+- caption: P4→P5 · 그리퍼 동작 완료 대기
+  id: 68
+  name: 대기
+  params:
+    duration: 2000
+  type: wait
+- caption: P4→P5 · pallet4 저장 데이터 불러오기
+  id: 69
+  name: Plate Pose 불러오기
+  params:
+    average_count: 10
+    file_prefix: pallet4_cali
+    max_angle_error_deg: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_side_diff_mm: 1.0
+    rect_guard_enabled: true
+    source_path: data/plate_pose_calc/pallet4
+  type: load_plate_pose
+- caption: P4→P5 · pallet4 위 접근 (파지면 +20mm)
+  id: 70
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: keep
+    standoff_mm: 177.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P4→P5 · pallet4 에서 집기
+  id: 71
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: keep
+    standoff_mm: 157.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P4→P5 · 박스 파지
+  id: 72
+  name: SCHUNK 그리퍼 파지
+  params:
+    timeout: 15.0
+  type: schunk_grip
+- caption: P4→P5 · 그리퍼 동작 완료 대기
+  id: 73
+  name: 대기
+  params:
+    duration: 2000
+  type: wait
+- caption: P4→P5 · pallet4 이탈 — 공구 -Z 150mm
+  id: 74
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0
+  type: move_linear
+- caption: P4→P5 · 인터록 — pallet5 가 비어 있어야 놓는다
+  id: 75
+  name: 매거진 재고 확인
+  params:
+    expect: empty
+    on_mismatch: stop
+    skip_count: 0
+    slot: 5
+    timeout: 3.0
+  type: check_magazine
+- caption: P4→P5 · pallet5 저장 데이터 불러오기
+  id: 76
+  name: Plate Pose 불러오기
+  params:
+    average_count: 10
+    file_prefix: pallet5_cali
+    max_angle_error_deg: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_side_diff_mm: 1.0
+    rect_guard_enabled: true
+    source_path: data/plate_pose_calc/pallet5
+  type: load_plate_pose
+- caption: P4→P5 · pallet5 위 접근 (파지면 +20mm)
+  id: 77
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: keep
+    standoff_mm: 177.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P4→P5 · pallet5 에 놓기
+  id: 78
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: keep
+    standoff_mm: 157.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P4→P5 · 박스 놓기
+  id: 79
+  name: SCHUNK 그리퍼 놓기
+  params:
+    timeout: 15.0
+  type: schunk_release
+- caption: P4→P5 · 그리퍼 동작 완료 대기
+  id: 80
+  name: 대기
+  params:
+    duration: 2000
+  type: wait
+- caption: P4→P5 · pallet5 이탈 — 공구 -Z 150mm
+  id: 81
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0
+  type: move_linear
+# ───── 사이클 6/6 : pallet5 집기 → pallet0 놓기 ─────
+- caption: P5→P0 · 인터록 — pallet5 에 박스가 있어야 집는다
+  id: 82
+  name: 매거진 재고 확인
+  params:
+    expect: present
+    on_mismatch: stop
+    skip_count: 0
+    slot: 5
+    timeout: 3.0
+  type: check_magazine
+- caption: P5→P0 · 집기 전 그리퍼 열기
+  id: 83
+  name: SCHUNK 그리퍼 놓기
+  params:
+    timeout: 15.0
+  type: schunk_release
+- caption: P5→P0 · 그리퍼 동작 완료 대기
+  id: 84
+  name: 대기
+  params:
+    duration: 2000
+  type: wait
+- caption: P5→P0 · pallet5 저장 데이터 불러오기
+  id: 85
+  name: Plate Pose 불러오기
+  params:
+    average_count: 10
+    file_prefix: pallet5_cali
+    max_angle_error_deg: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_side_diff_mm: 1.0
+    rect_guard_enabled: true
+    source_path: data/plate_pose_calc/pallet5
+  type: load_plate_pose
+- caption: P5→P0 · pallet5 위 접근 (파지면 +20mm)
+  id: 86
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: keep
+    standoff_mm: 177.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P5→P0 · pallet5 에서 집기
+  id: 87
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: keep
+    standoff_mm: 157.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P5→P0 · 박스 파지
+  id: 88
+  name: SCHUNK 그리퍼 파지
+  params:
+    timeout: 15.0
+  type: schunk_grip
+- caption: P5→P0 · 그리퍼 동작 완료 대기
+  id: 89
+  name: 대기
+  params:
+    duration: 2000
+  type: wait
+- caption: P5→P0 · pallet5 이탈 — 공구 -Z 150mm
+  id: 90
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0
+  type: move_linear
+- caption: P5→P0 · 인터록 — pallet0 가 비어 있어야 놓는다
+  id: 91
+  name: 매거진 재고 확인
+  params:
+    expect: empty
+    on_mismatch: stop
+    skip_count: 0
+    slot: 0
+    timeout: 3.0
+  type: check_magazine
+- caption: P5→P0 · pallet0 저장 데이터 불러오기
+  id: 92
+  name: Plate Pose 불러오기
+  params:
+    average_count: 10
+    file_prefix: pallet0_cali
+    max_angle_error_deg: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_side_diff_mm: 1.0
+    rect_guard_enabled: true
+    source_path: data/plate_pose_calc/pallet0
+  type: load_plate_pose
+- caption: P5→P0 · pallet0 위 접근 (파지면 +20mm)
+  id: 93
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: keep
+    standoff_mm: 177.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P5→P0 · pallet0 에 놓기
+  id: 94
+  name: 평면 수직 정렬
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    max_diagonal_diff_mm: 10.0
+    max_tilt_deg: 30.0
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    offset_x: 0.02
+    offset_y: -0.81
+    rz_mode: keep
+    standoff_mm: 157.292
+    velocity: 10.0
+  type: align_to_plane_normal
+- caption: P5→P0 · 박스 놓기
+  id: 95
+  name: SCHUNK 그리퍼 놓기
+  params:
+    timeout: 15.0
+  type: schunk_release
+- caption: P5→P0 · 그리퍼 동작 완료 대기
+  id: 96
+  name: 대기
+  params:
+    duration: 2000
+  type: wait
+- caption: P5→P0 · pallet0 이탈 — 공구 -Z 150mm
+  id: 97
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0
+  type: move_linear

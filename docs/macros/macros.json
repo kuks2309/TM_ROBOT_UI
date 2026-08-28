@@ -1,0 +1,353 @@
+{
+  "macros": {
+    "pallet_capture_marker": {
+      "summary": "비고정식 팔레트의 위치 마커를 측정해 칠판과 파일에 남긴다. 실행 시점에 이 마커를 다시 찍어 팔레트가 어디로 옮겨졌는지 알아낸다.",
+      "category": "Calibration",
+      "params": {
+        "repeat_count": {
+          "type": "int",
+          "default": 10,
+          "min": 1,
+          "max": 30,
+          "description": "반복 측정 횟수"
+        },
+        "outlier_method": {
+          "type": "choice",
+          "default": "3sigma",
+          "choices": [
+            "none",
+            "iqr",
+            "3sigma"
+          ],
+          "description": "Outlier 제거 방법"
+        },
+        "wait_after_command": {
+          "type": "int",
+          "default": 0,
+          "step": 100,
+          "description": "스캔 명령 후 대기 (ms)"
+        }
+      },
+      "requires": [],
+      "produces": [
+        "position_marker_pose",
+        "marker_view_tcp"
+      ]
+    },
+    "pallet_capture_teach": {
+      "summary": "지금 로봇이 서 있는 자세를 평면 좌표계 상대값으로 환산해 티칭 슬롯에 담는다. 절대좌표가 아니라 상대값이라 팔레트를 옮겨도 재사용된다.",
+      "category": "Calibration",
+      "params": {
+        "slot": {
+          "type": "choice",
+          "default": "pick",
+          "choices": [
+            "approach",
+            "pick",
+            "place"
+          ],
+          "description": "이 자세를 담을 슬롯"
+        }
+      },
+      "requires": [
+        "plate_pose"
+      ],
+      "produces": [
+        "teach_poses"
+      ]
+    },
+    "pallet_center_approach": {
+      "summary": "측정한 평면의 중심 위 standoff 높이로, 팔레트에 정렬해 이동한다. 공구 면이 평면과 평행해지고(기울기 추종) 공구 회전이 팔레트 긴 변에 맞는다.",
+      "category": "Calibration",
+      "params": {
+        "standoff_mm": {
+          "type": "float",
+          "default": 150.0,
+          "min": 1.0,
+          "description": "평면에서 띄울 거리 (mm)"
+        },
+        "rz_mode": {
+          "type": "choice",
+          "default": "plane",
+          "choices": [
+            "plane",
+            "keep"
+          ],
+          "description": "plane=팔레트 긴 변에 회전 정렬(기본) · keep=현재 공구 회전 유지. 기울기는 두 경우 모두 평면을 따른다"
+        },
+        "velocity": {
+          "type": "float",
+          "default": 20.0,
+          "min": 1.0,
+          "max": 100.0,
+          "description": "이동 속도 (%)"
+        }
+      },
+      "requires": [
+        "plate_pose"
+      ],
+      "produces": [
+        "approach_pose"
+      ]
+    },
+    "pallet_emit_recipes": {
+      "summary": "측정한 평면과 티칭 자세로 픽앤플레이스 레시피를 발행한다. 고정식은 절대좌표, 비고정식은 마커 기준 상대좌표로 낸다.",
+      "category": "Calibration",
+      "params": {
+        "pallet_name": {
+          "type": "str",
+          "default": "",
+          "description": "팔레트 이름 — 레시피 파일명이 된다"
+        },
+        "mount": {
+          "type": "choice",
+          "default": "fixed",
+          "choices": [
+            "fixed",
+            "floating"
+          ],
+          "description": "fixed=고정식 · floating=비고정식(위치 마커 기준)"
+        },
+        "pitch_x": {
+          "type": "float",
+          "default": 0.0,
+          "description": "마커 가로 간격 (mm)"
+        },
+        "pitch_y": {
+          "type": "float",
+          "default": 0.0,
+          "description": "마커 세로 간격 (mm)"
+        },
+        "trim_x": {
+          "type": "float",
+          "default": 0.0,
+          "description": "마지막 지점 X 보정 (mm)"
+        },
+        "trim_y": {
+          "type": "float",
+          "default": 0.0,
+          "description": "마지막 지점 Y 보정 (mm)"
+        },
+        "operator": {
+          "type": "str",
+          "default": "",
+          "description": "작업자 이름"
+        },
+        "overwrite": {
+          "type": "bool",
+          "default": false,
+          "description": "같은 이름의 레시피가 있으면 덮어쓴다"
+        }
+      },
+      "requires": [
+        "plate_pose",
+        "teach_poses"
+      ],
+      "produces": [
+        "recipe_paths"
+      ]
+    },
+    "pallet_load_measurements": {
+      "summary": "이미 저장된 측정 파일 여러 개를 골라 outlier 제거 후 평균내 평면을 만든다. 로봇을 움직이지 않으므로 4점 측정을 건너뛰고 바로 티칭으로 갈 수 있다.",
+      "category": "Calibration",
+      "params": {
+        "source_path": {
+          "type": "dirpath",
+          "default": "data/plate_pose_calc",
+          "description": "측정 파일 폴더 (상대경로는 패키지 루트 기준)"
+        },
+        "file_prefix": {
+          "type": "str",
+          "default": "",
+          "description": "파일명 접두어 (비우면 폴더 전체)"
+        },
+        "max_files": {
+          "type": "int",
+          "default": 5,
+          "min": 0,
+          "max": 100,
+          "description": "최신 파일 몇 개를 쓸지 (0=전부). file_paths 를 주면 무시"
+        },
+        "outlier_method": {
+          "type": "choice",
+          "default": "iqr",
+          "choices": [
+            "none",
+            "iqr",
+            "3sigma"
+          ],
+          "description": "파일 간 outlier 제거 방법"
+        },
+        "file_paths": {
+          "type": "list",
+          "default": null,
+          "description": "쓸 파일을 직접 지정 (화면에서 고른 목록). 주면 source_path 검색을 건너뛴다"
+        }
+      },
+      "requires": [],
+      "produces": [
+        "plate_pose",
+        "plate_marks",
+        "measurement_sources"
+      ]
+    },
+    "pallet_scan_4corners": {
+      "summary": "1사분면 마커에서 시작해 마커 간격만큼 이동하며 꼭짓점 4개를 측정하고 평면(plate) pose 를 계산한다. 시작 자세는 사용자가 조그로 맞춰 둔 것을 쓴다.",
+      "category": "Calibration",
+      "params": {
+        "pitch_x": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "description": "마커 가로 간격 (mm) — 팔레트 고유값"
+        },
+        "pitch_y": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "description": "마커 세로 간격 (mm) — 팔레트 고유값"
+        },
+        "trim_x": {
+          "type": "float",
+          "default": 0.0,
+          "description": "마지막 지점 X 보정 (mm) — 마커 부착 편차 흡수"
+        },
+        "trim_y": {
+          "type": "float",
+          "default": 0.0,
+          "description": "마지막 지점 Y 보정 (mm) — 마커 부착 편차 흡수"
+        },
+        "velocity": {
+          "type": "float",
+          "default": 25.0,
+          "min": 1.0,
+          "max": 100.0,
+          "description": "꼭짓점 사이 이동 속도 (%)"
+        },
+        "repeat_count": {
+          "type": "int",
+          "default": 10,
+          "min": 1,
+          "max": 30,
+          "description": "지점당 반복 측정 횟수"
+        },
+        "outlier_method": {
+          "type": "choice",
+          "default": "3sigma",
+          "choices": [
+            "none",
+            "iqr",
+            "3sigma"
+          ],
+          "description": "Outlier 제거 방법"
+        },
+        "wait_after_command": {
+          "type": "int",
+          "default": 0,
+          "step": 100,
+          "description": "스캔 명령 후 대기 (ms)"
+        }
+      },
+      "requires": [],
+      "produces": [
+        "plate_pose",
+        "plate_marks",
+        "scan_start_tcp"
+      ]
+    },
+    "vision_origin_check": {
+      "summary": "학습된 TCP 자세로 복귀해 랜드마크를 재측정하고 6축 편차를 판정한다. 허용범위를 벗어나면 알람 콜백을 발화하고 실패로 끝난다.",
+      "category": "Calibration",
+      "params": {
+        "move_to_reference": {
+          "type": "bool",
+          "default": true,
+          "description": "학습된 TCP 자세로 이동 후 측정"
+        },
+        "velocity": {
+          "type": "float",
+          "default": 20.0,
+          "description": "기준 위치 이동 속도 (%)"
+        },
+        "repeat_count": {
+          "type": "int",
+          "default": 5,
+          "min": 1,
+          "max": 20,
+          "description": "반복 측정 횟수"
+        },
+        "outlier_method": {
+          "type": "choice",
+          "default": "iqr",
+          "choices": [
+            "none",
+            "iqr",
+            "3sigma"
+          ],
+          "description": "Outlier 제거 방법"
+        },
+        "wait_after_command": {
+          "type": "int",
+          "default": 100,
+          "step": 100,
+          "description": "명령 후 대기 시간 (ms)"
+        }
+      },
+      "requires": [
+        "config:taught_origin"
+      ],
+      "produces": [
+        "origin_check_result"
+      ]
+    },
+    "wait": {
+      "summary": "정해진 시간만큼 대기한다. 실행 정지 요청이 오면 즉시 중단한다.",
+      "category": "Control",
+      "params": {
+        "duration": {
+          "type": "int",
+          "default": 1000,
+          "min": 0,
+          "description": "대기 시간 (ms)"
+        }
+      },
+      "requires": [],
+      "produces": []
+    }
+  },
+  "jobs_using_macros": {
+    "settled_origin_check": {
+      "name": "Settled Origin Check",
+      "category": "Calibration",
+      "macros": [
+        {
+          "use": "wait",
+          "bind": {
+            "duration": "settle_ms"
+          }
+        },
+        {
+          "use": "vision_origin_check"
+        }
+      ]
+    },
+    "vision_origin_check": {
+      "name": "Vision Origin Check",
+      "category": "Calibration",
+      "macros": [
+        {
+          "use": "vision_origin_check"
+        }
+      ]
+    },
+    "wait": {
+      "name": "대기",
+      "category": "Control",
+      "macros": [
+        {
+          "use": "wait"
+        }
+      ]
+    }
+  }
+}

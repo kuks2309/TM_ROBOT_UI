@@ -1,0 +1,117 @@
+# Recipe: 새 Recipe
+# TM Task Manager Recipe File
+
+name: 새 Recipe
+description: ''
+version: '1.0'
+created: '2026-08-13'
+modified: '2026-08-19'
+jobs:
+- id: 1
+  type: smc_grip
+  name: SMC 그리퍼 파지
+  params:
+    timeout: 30.0
+    bypass_interlock: true
+    verify_skip: true
+- id: 2
+  type: move_to_point
+  name: 포인트 이동
+  caption: 1사분면 마커로 이동
+  params:
+    motion_type: tcp
+    X: 304.22
+    Y: 68.97
+    Z: -65.82
+    Rx: 180.0
+    Ry: 0.0
+    Rz: 90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 304.22
+    Y: 68.97
+    Z: -65.82
+    Rx: 180.0
+    Ry: 0.0
+    Rz: 90.0
+- id: 3
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: 1사분면_scan
+  params:
+    jig_number: 4
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz
+- id: 4
+  type: move_linear
+  name: 직선 이동
+  caption: 2사분면 마커로 이동
+  params:
+    offset X: -140.0
+    offset Y: 0.0
+    offset Z: 0.0
+    velocity: 50.0
+- id: 5
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: 2사분면_scan
+  params:
+    jig_number: 2
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz
+- id: 6
+  type: move_linear
+  name: 직선 이동
+  caption: 3사분면 마커로 이동
+  params:
+    offset X: 0.0
+    offset Y: 200.0
+    offset Z: 0.0
+    velocity: 50.0
+- id: 7
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: 3사분면_scan
+  params:
+    jig_number: 1
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz
+- id: 8
+  type: move_linear
+  name: 직선 이동
+  caption: 4사분면 마커로 이동
+  params:
+    offset X: 140.0
+    offset Y: -30.0
+    offset Z: 0.0
+    velocity: 50.0
+- id: 9
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: 4사분면_scan
+  params:
+    jig_number: 3
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz
+- id: 10
+  type: calculate_plate_pose
+  name: Plate Pose 계산
+  caption: pallet_plate_pose_calc
+  params:
+    operator: jjh
+    save_path: data/plate_pose_calc/pallet2
+    rect_guard_enabled: false
+- id: 11
+  type: smc_release
+  name: SMC 그리퍼 놓기
+  params:
+    timeout: 30.0

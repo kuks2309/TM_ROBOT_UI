@@ -1,0 +1,155 @@
+# Recipe: 드로어에서 집기 (MK4) — 단 무관
+#
+# [선행 필수] drawer_marker_scan_high|mid|low 중 하나를 **먼저** 돌려야 한다.
+#   이 레시피는 스스로 마커를 찍지 않고 data/landmark_pose/drawer/ 의 저장본을 읽는다.
+#   저장본이 30분을 넘으면 [거부]하고 멈춘다(max_age_min) — 드로어는 여닫히면
+#   마커가 움직이므로(실측 y 509.9~557.0, 47mm 폭) 낡은 값은 조용히 쓰면 안 된다.
+#
+# [왜 단 구분이 없나] 파지 상대좌표는 마커 기준이라 3단이 전부 같다 — 실제로 기존
+#   drawer_pick_high/mid/low 의 offset 이 세 파일 모두 -2.797 / -240.266 / -130.397 로 동일했다.
+#   단 구분은 스캔 레시피가 이미 흡수했다.
+#
+# [들어올림이 공구 -Z 직선인 이유 — 2026-08-22]
+#   마커 프레임 Z 상승은 «수직» 으로 올라간다(rz_only 는 Z 를 세워 두므로). 그리퍼가 기울어
+#   달려 있으면 박스가 그 기울기만큼 비스듬한 채 수직으로 뽑혀 가드에 스쳤다.
+#   move_linear 는 Move_Line("TPP", ...) 로 **공구 좌표계** 상대 이동이고 회전 델타가 0 이라,
+#   자세를 유지한 채 들어간 길로 그대로 나온다.
+#
+# [자세 값] 2026-08-22 드로어 재티칭본. 왕복 오차 0.0005mm. tool_offset_* 는 전부 0.
+#
+# [!! 안전 !!] 첫 실행은 반드시 Step 으로.
+
+name: 드로어에서 집기 (MK4)
+description: drawer_marker_scan 이 남긴 마커 저장본을 읽어, 그 좌표계 상대좌표로 드로어의 박스를 집는다. 단(상/중/하) 구분 없음.
+version: '3.0'
+created: '2026-08-23'
+modified: '2026-08-23'
+jobs:
+- id: 1
+  type: recipe_info
+  name: Recipe 개요
+  params:
+    mode: execution
+    description: 저장된 드로어 마커 기준으로 박스를 집는다
+    author: jjh
+    version: '3.0'
+    vision_origin_check: none
+- id: 2
+  type: move_to_point
+  name: 포인트 이동
+  caption: 안전위치
+  params:
+    motion_type: tcp
+    X: -16.35
+    Y: 660.56
+    Z: 359.34
+    Rx: 179.44
+    Ry: 0.05
+    Rz: -90.77
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: -16.35
+    Y: 660.56
+    Z: 359.34
+    Rx: 179.44
+    Ry: 0.05
+    Rz: -90.77
+- id: 3
+  type: smc_release
+  name: SMC 그리퍼 놓기
+  caption: 집기 전 그리퍼 열기
+  params:
+    timeout: 30.0
+- id: 4
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 파지 높이 +20mm 위로 접근 (L자, 여기서 1회 정지)
+  params:
+    frame_mode: rz_only
+    landmark_source: file
+    source_path: data/landmark_pose/drawer
+    file_prefix: drawer_marker_scan
+    average_count: 1
+    max_age_min: 30.0
+    offset_x: -2.797
+    offset_y: -240.266
+    offset_z: -110.39699999999999
+    offset_rx: 179.44
+    offset_ry: 0.08
+    offset_rz: 89.469
+    tool_offset_x: 0.0
+    tool_offset_y: 0.0
+    tool_offset_z: 0.0
+    tool_offset_rx: 0.0
+    tool_offset_ry: 0.0
+    tool_offset_rz: 0.0
+    velocity: 20.0
+    max_radius_mm: 600.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+- id: 5
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 드로어에서 집기 — 법선 직선 20mm @3%
+  params:
+    frame_mode: rz_only
+    landmark_source: file
+    source_path: data/landmark_pose/drawer
+    file_prefix: drawer_marker_scan
+    average_count: 1
+    max_age_min: 30.0
+    offset_x: -2.797
+    offset_y: -240.266
+    offset_z: -130.397
+    offset_rx: 179.44
+    offset_ry: 0.08
+    offset_rz: 89.469
+    tool_offset_x: 0.0
+    tool_offset_y: 0.0
+    tool_offset_z: 0.0
+    tool_offset_rx: 0.0
+    tool_offset_ry: 0.0
+    tool_offset_rz: 0.0
+    velocity: 3.0
+    max_radius_mm: 600.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 6
+  type: smc_grip
+  name: SMC 그리퍼 파지
+  caption: 박스 파지
+  params:
+    timeout: 30.0
+    bypass_interlock: false
+    verify_skip: false
+- id: 7
+  type: move_linear
+  name: 직선 이동
+  caption: 박스 들어올림 — 공구 -Z 150mm (자세 유지 직선)
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0
+- id: 8
+  type: move_to_point
+  name: 포인트 이동
+  caption: 안전위치 복귀
+  params:
+    motion_type: tcp
+    X: -16.35
+    Y: 660.56
+    Z: 359.34
+    Rx: 179.44
+    Ry: 0.05
+    Rz: -90.77
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: -16.35
+    Y: 660.56
+    Z: 359.34
+    Rx: 179.44
+    Ry: 0.05
+    Rz: -90.77

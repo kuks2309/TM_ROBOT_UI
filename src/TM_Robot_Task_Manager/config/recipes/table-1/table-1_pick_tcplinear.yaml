@@ -1,0 +1,120 @@
+name: table-1 집기 [TCP linear 시험본]
+description: table-1 위치 마커 좌표계로 박스를 집는다 (비고정식). table-1_marker_scan 을 먼저 실행해야 한다 /
+  접촉·이탈을 공구 -Z 직선(Move_Line TPP)으로 바꾼 시험본. 원본과 나란히 두고 비교한다.
+version: '1.0'
+created: '2026-08-24'
+modified: '2026-08-24'
+jobs:
+- id: 1
+  type: recipe_info
+  name: Recipe 개요
+  params:
+    mode: execution
+    description: table-1 에서 박스를 집는다 (비고정식)
+    author: jjh
+    version: '1.0'
+    vision_origin_check: none
+- id: 2
+  type: schunk_release
+  name: SCHUNK 그리퍼 놓기
+  caption: 집기 전 그리퍼 열기
+  params:
+    timeout: 15.0
+- id: 3
+  type: wait
+  name: 대기
+  caption: 그리퍼 동작 완료 대기
+  params:
+    duration: 2000
+- id: 4
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 상공 진입 (+250mm)
+  params:
+    frame_mode: rz_only
+    offset_x: 5.678
+    offset_y: 270.314
+    offset_z: 405.29
+    offset_rx: -179.179
+    offset_ry: -0.232
+    offset_rz: -91.245
+    landmark_source: file
+    source_path: data/landmark_pose/table-1
+    file_prefix: table-1_marker_scan
+    average_count: 1
+    max_age_min: 30.0
+    tool_offset_x: 0.0
+    tool_offset_y: 0.0
+    tool_offset_z: 0.0
+    tool_offset_rx: 0.0
+    tool_offset_ry: 0.0
+    tool_offset_rz: 0.0
+    velocity: 20.0
+    max_radius_mm: 587.2
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+- id: 5
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 마커 기준 접근 — 파지면 +20mm 위
+  params:
+    frame_mode: rz_only
+    offset_x: 5.678
+    offset_y: 270.314
+    offset_z: 175.29
+    offset_rx: -179.179
+    offset_ry: -0.232
+    offset_rz: -91.245
+    landmark_source: file
+    source_path: data/landmark_pose/table-1
+    file_prefix: table-1_marker_scan
+    average_count: 1
+    max_age_min: 30.0
+    tool_offset_x: 0.0
+    tool_offset_y: 0.0
+    tool_offset_z: 0.0
+    tool_offset_rx: 0.0
+    tool_offset_ry: 0.0
+    tool_offset_rz: 0.0
+    velocity: 20.0
+    max_radius_mm: 587.2
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+- id: 6
+  type: move_linear
+  name: 직선 이동
+  caption: 파지면으로 하강 — 공구 -Z 직선 20mm
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: 20.0
+    velocity: 10.0
+- id: 7
+  type: schunk_grip
+  name: SCHUNK 그리퍼 파지
+  params:
+    timeout: 15.0
+- id: 8
+  type: wait
+  name: 대기
+  caption: 그리퍼 동작 완료 대기
+  params:
+    duration: 2000
+- id: 9
+  type: move_linear
+  name: 직선 이동
+  caption: 근접 이탈 — 공구 -Z 직선 20mm
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -20.0
+    velocity: 10.0
+- id: 10
+  type: move_linear
+  name: 직선 이동
+  caption: 최종 이탈 — 공구 -Z 직선 230mm
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -230.0
+    velocity: 50.0

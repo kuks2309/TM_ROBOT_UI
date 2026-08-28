@@ -1,0 +1,659 @@
+# 고정 마커 반복 측정 레시피 (오차 누적·프레임 휨 계측 원시 데이터 수집)
+# ⚠️ move_to_point 의 X/Y/Z/Rx/Ry/Rz 는 플레이스홀더 — 실제 마커 관측 자세로 교체하거나 GUI 에서 티칭할 것.
+# 후퇴자세(AWAY)는 관측자세 Z+120mm — 충돌 없는지 확인 후 사용.
+name: marker_error_calibration
+description: 고정 마커를 같은 TCP 자세로 N회 이동·측정해 오차 누적/프레임 휨 계측용 원시 데이터를 모은다. ⚠️ move_to_point
+  좌표는 실제 마커 관측 자세로 교체(또는 GUI 티칭) 필요. 분석은 저장 YAML을 오프라인 스크립트로.
+version: '1.0'
+created: '2026-08-17'
+modified: '2026-08-17'
+jobs:
+- id: 1
+  type: recipe_info
+  name: Recipe 개요
+  params:
+    mode: execution
+    description: 고정 마커 반복 측정(오차 누적·프레임 휨 계측용 원시 데이터 수집)
+    author: jjh
+    version: '1.0'
+    vision_origin_check: none
+- id: 2
+  type: move_to_point
+  name: 포인트 이동
+  caption: 01_후퇴
+  params:
+    motion_type: tcp
+    X: 854.36
+    Y: 293.99
+    Z: -107.16999999999999
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 854.36
+    Y: 293.99
+    Z: -107.16999999999999
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 3
+  type: move_to_point
+  name: 포인트 이동
+  caption: 01_관측자세
+  params:
+    motion_type: tcp
+    X: 854.36
+    Y: 293.99
+    Z: -227.17
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 854.36
+    Y: 293.99
+    Z: -227.17
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 4
+  type: wait
+  name: 대기
+  caption: 01_정착
+  params:
+    duration: 500
+- id: 5
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  caption: 01_스캔
+  params:
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz_rx_ry_rz
+- id: 6
+  type: save_landmark_pose
+  name: Landmark 좌표 저장
+  caption: 01_저장
+  params:
+    save_path: data/calibration/marker_error
+    operator: jjh
+- id: 7
+  type: move_to_point
+  name: 포인트 이동
+  caption: 02_후퇴
+  params:
+    motion_type: tcp
+    X: 854.36
+    Y: 293.99
+    Z: -107.16999999999999
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 854.36
+    Y: 293.99
+    Z: -107.16999999999999
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 8
+  type: move_to_point
+  name: 포인트 이동
+  caption: 02_관측자세
+  params:
+    motion_type: tcp
+    X: 854.36
+    Y: 293.99
+    Z: -227.17
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 854.36
+    Y: 293.99
+    Z: -227.17
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 9
+  type: wait
+  name: 대기
+  caption: 02_정착
+  params:
+    duration: 500
+- id: 10
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  caption: 02_스캔
+  params:
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz_rx_ry_rz
+- id: 11
+  type: save_landmark_pose
+  name: Landmark 좌표 저장
+  caption: 02_저장
+  params:
+    save_path: data/calibration/marker_error
+    operator: jjh
+- id: 12
+  type: move_to_point
+  name: 포인트 이동
+  caption: 03_후퇴
+  params:
+    motion_type: tcp
+    X: 854.36
+    Y: 293.99
+    Z: -107.16999999999999
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 854.36
+    Y: 293.99
+    Z: -107.16999999999999
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 13
+  type: move_to_point
+  name: 포인트 이동
+  caption: 03_관측자세
+  params:
+    motion_type: tcp
+    X: 854.36
+    Y: 293.99
+    Z: -227.17
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 854.36
+    Y: 293.99
+    Z: -227.17
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 14
+  type: wait
+  name: 대기
+  caption: 03_정착
+  params:
+    duration: 500
+- id: 15
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  caption: 03_스캔
+  params:
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz_rx_ry_rz
+- id: 16
+  type: save_landmark_pose
+  name: Landmark 좌표 저장
+  caption: 03_저장
+  params:
+    save_path: data/calibration/marker_error
+    operator: jjh
+- id: 17
+  type: move_to_point
+  name: 포인트 이동
+  caption: 04_후퇴
+  params:
+    motion_type: tcp
+    X: 854.36
+    Y: 293.99
+    Z: -107.16999999999999
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 854.36
+    Y: 293.99
+    Z: -107.16999999999999
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 18
+  type: move_to_point
+  name: 포인트 이동
+  caption: 04_관측자세
+  params:
+    motion_type: tcp
+    X: 854.36
+    Y: 293.99
+    Z: -227.17
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 854.36
+    Y: 293.99
+    Z: -227.17
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 19
+  type: wait
+  name: 대기
+  caption: 04_정착
+  params:
+    duration: 500
+- id: 20
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  caption: 04_스캔
+  params:
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz_rx_ry_rz
+- id: 21
+  type: save_landmark_pose
+  name: Landmark 좌표 저장
+  caption: 04_저장
+  params:
+    save_path: data/calibration/marker_error
+    operator: jjh
+- id: 22
+  type: move_to_point
+  name: 포인트 이동
+  caption: 05_후퇴
+  params:
+    motion_type: tcp
+    X: 854.36
+    Y: 293.99
+    Z: -107.16999999999999
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 854.36
+    Y: 293.99
+    Z: -107.16999999999999
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 23
+  type: move_to_point
+  name: 포인트 이동
+  caption: 05_관측자세
+  params:
+    motion_type: tcp
+    X: 854.36
+    Y: 293.99
+    Z: -227.17
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 854.36
+    Y: 293.99
+    Z: -227.17
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 24
+  type: wait
+  name: 대기
+  caption: 05_정착
+  params:
+    duration: 500
+- id: 25
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  caption: 05_스캔
+  params:
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz_rx_ry_rz
+- id: 26
+  type: save_landmark_pose
+  name: Landmark 좌표 저장
+  caption: 05_저장
+  params:
+    save_path: data/calibration/marker_error
+    operator: jjh
+- id: 27
+  type: move_to_point
+  name: 포인트 이동
+  caption: 06_후퇴
+  params:
+    motion_type: tcp
+    X: 854.36
+    Y: 293.99
+    Z: -107.16999999999999
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 854.36
+    Y: 293.99
+    Z: -107.16999999999999
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 28
+  type: move_to_point
+  name: 포인트 이동
+  caption: 06_관측자세
+  params:
+    motion_type: tcp
+    X: 854.36
+    Y: 293.99
+    Z: -227.17
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 854.36
+    Y: 293.99
+    Z: -227.17
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 29
+  type: wait
+  name: 대기
+  caption: 06_정착
+  params:
+    duration: 500
+- id: 30
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  caption: 06_스캔
+  params:
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz_rx_ry_rz
+- id: 31
+  type: save_landmark_pose
+  name: Landmark 좌표 저장
+  caption: 06_저장
+  params:
+    save_path: data/calibration/marker_error
+    operator: jjh
+- id: 32
+  type: move_to_point
+  name: 포인트 이동
+  caption: 07_후퇴
+  params:
+    motion_type: tcp
+    X: 854.36
+    Y: 293.99
+    Z: -107.16999999999999
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 854.36
+    Y: 293.99
+    Z: -107.16999999999999
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 33
+  type: move_to_point
+  name: 포인트 이동
+  caption: 07_관측자세
+  params:
+    motion_type: tcp
+    X: 854.36
+    Y: 293.99
+    Z: -227.17
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 854.36
+    Y: 293.99
+    Z: -227.17
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 34
+  type: wait
+  name: 대기
+  caption: 07_정착
+  params:
+    duration: 500
+- id: 35
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  caption: 07_스캔
+  params:
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz_rx_ry_rz
+- id: 36
+  type: save_landmark_pose
+  name: Landmark 좌표 저장
+  caption: 07_저장
+  params:
+    save_path: data/calibration/marker_error
+    operator: jjh
+- id: 37
+  type: move_to_point
+  name: 포인트 이동
+  caption: 08_후퇴
+  params:
+    motion_type: tcp
+    X: 854.36
+    Y: 293.99
+    Z: -107.16999999999999
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 854.36
+    Y: 293.99
+    Z: -107.16999999999999
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 38
+  type: move_to_point
+  name: 포인트 이동
+  caption: 08_관측자세
+  params:
+    motion_type: tcp
+    X: 854.36
+    Y: 293.99
+    Z: -227.17
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 854.36
+    Y: 293.99
+    Z: -227.17
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 39
+  type: wait
+  name: 대기
+  caption: 08_정착
+  params:
+    duration: 500
+- id: 40
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  caption: 08_스캔
+  params:
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz_rx_ry_rz
+- id: 41
+  type: save_landmark_pose
+  name: Landmark 좌표 저장
+  caption: 08_저장
+  params:
+    save_path: data/calibration/marker_error
+    operator: jjh
+- id: 42
+  type: move_to_point
+  name: 포인트 이동
+  caption: 09_후퇴
+  params:
+    motion_type: tcp
+    X: 854.36
+    Y: 293.99
+    Z: -107.16999999999999
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 854.36
+    Y: 293.99
+    Z: -107.16999999999999
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 43
+  type: move_to_point
+  name: 포인트 이동
+  caption: 09_관측자세
+  params:
+    motion_type: tcp
+    X: 854.36
+    Y: 293.99
+    Z: -227.17
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 854.36
+    Y: 293.99
+    Z: -227.17
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 44
+  type: wait
+  name: 대기
+  caption: 09_정착
+  params:
+    duration: 500
+- id: 45
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  caption: 09_스캔
+  params:
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz_rx_ry_rz
+- id: 46
+  type: save_landmark_pose
+  name: Landmark 좌표 저장
+  caption: 09_저장
+  params:
+    save_path: data/calibration/marker_error
+    operator: jjh
+- id: 47
+  type: move_to_point
+  name: 포인트 이동
+  caption: 10_후퇴
+  params:
+    motion_type: tcp
+    X: 854.36
+    Y: 293.99
+    Z: -107.16999999999999
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 854.36
+    Y: 293.99
+    Z: -107.16999999999999
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 48
+  type: move_to_point
+  name: 포인트 이동
+  caption: 10_관측자세
+  params:
+    motion_type: tcp
+    X: 854.36
+    Y: 293.99
+    Z: -227.17
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 854.36
+    Y: 293.99
+    Z: -227.17
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 49
+  type: wait
+  name: 대기
+  caption: 10_정착
+  params:
+    duration: 500
+- id: 50
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  caption: 10_스캔
+  params:
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz_rx_ry_rz
+- id: 51
+  type: save_landmark_pose
+  name: Landmark 좌표 저장
+  caption: 10_저장
+  params:
+    save_path: data/calibration/marker_error
+    operator: jjh

@@ -1,0 +1,282 @@
+# Recipe: Pallet 0 4-Marker Calibration
+# TM Task Manager Recipe File
+#
+# [프로토타입 포함] move_to_jig_landmark 는 검증 전 프로토타입 task 입니다.
+#
+# 흐름:
+#   1) 사용자가 티칭한 고소 1개 자세로 이동 (job 2 좌표만 직접 수정)
+#   2) 그 자세에서 Jig1~4 를 각 5회 촬영 (3sigma) -> 마커 좌표 획득
+#   3) 각 마커 좌표 + 오프셋 위치로 자동 이동 -> 각 10회 촬영 (3sigma)
+#   4) Plate Pose 계산
+#
+# 오프셋(offset x/y/z) = 마커 좌표 기준 접근 위치. 카메라 offset 보정을 여기에 넣는다.
+#   - x/y: 카메라-TCP 편차 보정값 (임시 0.0)
+#   - z:   마커에서 띄울 촬영 높이 (임시 120.0)
+name: Pallet 0 4-Marker Calibration
+description: 팔레트 0번 4-마커 캘리브레이션 (고소 1자세 4마커 5회 촬영 -> 마커좌표 자동이동 근접 10회 촬영 -> Plate Pose 계산)
+version: '1.0'
+created: '2026-08-13'
+modified: '2026-08-13'
+jobs:
+- id: 1
+  type: recipe_info
+  name: Recipe 개요
+  caption: pallet0_4marker_calibration
+  params:
+    mode: execution
+    description: 고소 1개 자세에서 Jig1~4 를 5회씩 촬영해 마커 좌표를 얻고, 그 좌표를 기준으로 각 마커에 자동 접근해 10회씩 재촬영한 뒤 Plate Pose 를 계산한다 (move_to_jig_landmark 는 프로토타입)
+    author: ''
+    version: '1.0'
+    vision_origin_check: none
+
+# ── 1) 고소 촬영 자세 (사용자 직접 티칭 좌표) ────────
+- id: 2
+  type: move_to_point
+  name: 포인트 이동
+  caption: high_view_pose
+  params:
+    motion_type: tcp
+    X: 100.0
+    Y: 800.0
+    Z: 400.0
+    Rx: -180.0
+    Ry: 0.0
+    Rz: 90.0
+    velocity: 30.0
+    decomposed_tcp: true
+- id: 3
+  type: wait
+  name: 대기
+  caption: settle
+  params:
+    duration: 500
+
+# ── 2) 고소 자세에서 Jig1~4 각 5회 촬영 (3sigma) ────
+- id: 4
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: high_scan_Jig1
+  params:
+    jig_number: 1
+    wait_after_command: 100
+    repeat_count: 5
+    outlier_method: 3sigma
+    analysis_target: xyz
+- id: 5
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: high_scan_Jig2
+  params:
+    jig_number: 2
+    wait_after_command: 100
+    repeat_count: 5
+    outlier_method: 3sigma
+    analysis_target: xyz
+- id: 6
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: high_scan_Jig3
+  params:
+    jig_number: 3
+    wait_after_command: 100
+    repeat_count: 5
+    outlier_method: 3sigma
+    analysis_target: xyz
+- id: 7
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: high_scan_Jig4
+  params:
+    jig_number: 4
+    wait_after_command: 100
+    repeat_count: 5
+    outlier_method: 3sigma
+    analysis_target: xyz
+
+# ── 3) Jig1 근접 (마커 좌표 자동 이동 + 10회 촬영) ──
+- id: 8
+  type: move_to_jig_landmark
+  name: '[프로토타입] Jig Landmark 이동'
+  caption: near_Jig1_approach
+  params:
+    jig_number: 1
+    offset:
+      x: 0.0
+      y: 0.0
+      z: 120.0
+    velocity: 20.0
+    decomposed_tcp: true
+- id: 9
+  type: wait
+  name: 대기
+  caption: stable wait
+  params:
+    duration: 500
+- id: 10
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: near_scan_Jig1
+  params:
+    jig_number: 1
+    wait_after_command: 100
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz_rx_ry_rz
+- id: 11
+  type: move_to_jig_landmark
+  name: '[프로토타입] Jig Landmark 이동'
+  caption: near_Jig1_retreat
+  params:
+    jig_number: 1
+    offset:
+      x: 0.0
+      y: 0.0
+      z: 300.0
+    velocity: 20.0
+    decomposed_tcp: true
+
+# ── 4) Jig2 근접 ────────────────────────────────────
+- id: 12
+  type: move_to_jig_landmark
+  name: '[프로토타입] Jig Landmark 이동'
+  caption: near_Jig2_approach
+  params:
+    jig_number: 2
+    offset:
+      x: 0.0
+      y: 0.0
+      z: 120.0
+    velocity: 20.0
+    decomposed_tcp: true
+- id: 13
+  type: wait
+  name: 대기
+  caption: stable wait
+  params:
+    duration: 500
+- id: 14
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: near_scan_Jig2
+  params:
+    jig_number: 2
+    wait_after_command: 100
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz_rx_ry_rz
+- id: 15
+  type: move_to_jig_landmark
+  name: '[프로토타입] Jig Landmark 이동'
+  caption: near_Jig2_retreat
+  params:
+    jig_number: 2
+    offset:
+      x: 0.0
+      y: 0.0
+      z: 300.0
+    velocity: 20.0
+    decomposed_tcp: true
+
+# ── 5) Jig3 근접 ────────────────────────────────────
+- id: 16
+  type: move_to_jig_landmark
+  name: '[프로토타입] Jig Landmark 이동'
+  caption: near_Jig3_approach
+  params:
+    jig_number: 3
+    offset:
+      x: 0.0
+      y: 0.0
+      z: 120.0
+    velocity: 20.0
+    decomposed_tcp: true
+- id: 17
+  type: wait
+  name: 대기
+  caption: stable wait
+  params:
+    duration: 500
+- id: 18
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: near_scan_Jig3
+  params:
+    jig_number: 3
+    wait_after_command: 100
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz_rx_ry_rz
+- id: 19
+  type: move_to_jig_landmark
+  name: '[프로토타입] Jig Landmark 이동'
+  caption: near_Jig3_retreat
+  params:
+    jig_number: 3
+    offset:
+      x: 0.0
+      y: 0.0
+      z: 300.0
+    velocity: 20.0
+    decomposed_tcp: true
+
+# ── 6) Jig4 근접 ────────────────────────────────────
+- id: 20
+  type: move_to_jig_landmark
+  name: '[프로토타입] Jig Landmark 이동'
+  caption: near_Jig4_approach
+  params:
+    jig_number: 4
+    offset:
+      x: 0.0
+      y: 0.0
+      z: 120.0
+    velocity: 20.0
+    decomposed_tcp: true
+- id: 21
+  type: wait
+  name: 대기
+  caption: stable wait
+  params:
+    duration: 500
+- id: 22
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: near_scan_Jig4
+  params:
+    jig_number: 4
+    wait_after_command: 100
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz_rx_ry_rz
+- id: 23
+  type: move_to_jig_landmark
+  name: '[프로토타입] Jig Landmark 이동'
+  caption: near_Jig4_retreat
+  params:
+    jig_number: 4
+    offset:
+      x: 0.0
+      y: 0.0
+      z: 300.0
+    velocity: 20.0
+    decomposed_tcp: true
+
+# ── 7) 복귀 및 Plate Pose 계산 ──────────────────────
+- id: 24
+  type: move_to_point
+  name: 포인트 이동
+  caption: high_view_pose
+  params:
+    motion_type: tcp
+    X: 100.0
+    Y: 800.0
+    Z: 400.0
+    Rx: -180.0
+    Ry: 0.0
+    Rz: 90.0
+    velocity: 30.0
+    decomposed_tcp: true
+- id: 25
+  type: calculate_plate_pose
+  name: Plate Pose 계산
+  caption: pallet0_plate_pose

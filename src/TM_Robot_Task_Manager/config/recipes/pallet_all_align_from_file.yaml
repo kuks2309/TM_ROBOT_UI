@@ -1,0 +1,232 @@
+# Recipe: pallet0 저장데이터 정렬 (스캔 없음)
+# TM Task Manager Recipe File
+
+name: 팔레트 0~5 저장데이터 정렬 (스캔 없음)
+description: pallet0~5 의 저장된 plate_pose 를 불러와(마커 스캔 없이) 헤드를 평면 법선에 수직 정렬. 마커 탈거 등으로
+  재측정이 불가하고 플레이트가 움직이지 않았을 때만 사용.
+version: '1.0'
+created: '2026-08-14'
+modified: '2026-08-15'
+jobs:
+- id: 1
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: pallet0 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet0
+    file_prefix: pallet0_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 2
+  type: align_to_plane_normal
+  name: 평면 수직 정렬
+  caption: pallet0 평면 수직 정렬
+  params:
+    standoff_mm: 150.0
+    rz_mode: plane
+    velocity: 10.0
+    max_tilt_deg: 30.0
+    max_diagonal_diff_mm: 10.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+    offset_x: 0.02
+    offset_y: -0.81
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+- id: 3
+  type: move_linear
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0
+- id: 4
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: pallet1 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet1
+    file_prefix: pallet1_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 5
+  type: align_to_plane_normal
+  name: 평면 수직 정렬
+  caption: pallet1 평면 수직 정렬
+  params:
+    standoff_mm: 150.0
+    rz_mode: plane
+    offset_x: 0.02
+    offset_y: -0.81
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    velocity: 10.0
+    max_tilt_deg: 30.0
+    max_diagonal_diff_mm: 10.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+- id: 6
+  type: move_linear
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0
+- id: 7
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: pallet2 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet2
+    file_prefix: pallet2_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 8
+  type: align_to_plane_normal
+  name: 평면 수직 정렬
+  caption: pallet2 평면 수직 정렬
+  params:
+    standoff_mm: 150.0
+    rz_mode: keep
+    offset_x: 0.02
+    offset_y: -0.81
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    velocity: 10.0
+    max_tilt_deg: 30.0
+    max_diagonal_diff_mm: 10.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+- id: 9
+  type: move_linear
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0
+- id: 10
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: pallet3 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet3
+    file_prefix: pallet3_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 11
+  type: align_to_plane_normal
+  name: 평면 수직 정렬
+  caption: pallet3 평면 수직 정렬
+  params:
+    standoff_mm: 150.0
+    rz_mode: keep
+    offset_x: 0.02
+    offset_y: -0.81
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    velocity: 10.0
+    max_tilt_deg: 30.0
+    max_diagonal_diff_mm: 10.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+- id: 12
+  type: move_linear
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0
+- id: 13
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: pallet4 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet4
+    file_prefix: pallet4_cali
+    average_count: 1
+    rect_guard_enabled: false
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 14
+  type: align_to_plane_normal
+  name: 평면 수직 정렬
+  caption: pallet4 평면 수직 정렬
+  params:
+    standoff_mm: 150.0
+    rz_mode: keep
+    offset_x: 0.02
+    offset_y: -0.81
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    velocity: 10.0
+    max_tilt_deg: 30.0
+    max_diagonal_diff_mm: 10.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+- id: 15
+  type: move_linear
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0
+- id: 16
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: pallet5 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet5
+    file_prefix: pallet5_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 17
+  type: align_to_plane_normal
+  name: 평면 수직 정렬
+  caption: pallet5 평면 수직 정렬
+  params:
+    standoff_mm: 150.0
+    rz_mode: keep
+    offset_x: 0.02
+    offset_y: -0.81
+    offset_rx: 0.0
+    offset_ry: 0.0
+    offset_rz: 0.0
+    velocity: 10.0
+    max_tilt_deg: 30.0
+    max_diagonal_diff_mm: 10.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+- id: 18
+  type: move_linear
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -150.0
+    velocity: 50.0

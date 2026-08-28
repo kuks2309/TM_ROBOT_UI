@@ -1,0 +1,102 @@
+
+name: 새 Recipe
+description: ''
+version: '1.0'
+created: '2025-12-23'
+modified: '2026-01-12'
+jobs:
+- id: 1
+  type: go_home
+  name: HOME 이동
+  caption: Home 이동
+  params:
+    motion_type: tcp
+    X: 462.14
+    Y: -212.72
+    Z: -114.05
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -180.0
+    velocity: 20.0
+- id: 2
+  type: wait
+  name: 대기
+  params:
+    duration: 5000
+- id: 3
+  type: move_to_point
+  name: 포인트 이동
+  caption: AR position_waypoint1
+  params:
+    motion_type: tcp
+    X: 470.32
+    Y: 514.72
+    Z: 57.43
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -180.0
+    velocity: 50.0
+- id: 4
+  type: move_to_point
+  name: 포인트 이동
+  caption: AR_Position_Far
+  params:
+    motion_type: tcp
+    X: -9.73
+    Y: 694.64
+    Z: -3.1
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -180.0
+    velocity: 40.0
+- id: 5
+  type: wait
+  name: 대기
+  caption: 대기 100ms
+  params:
+    duration: 100
+- id: 6
+  type: move_to_point
+  name: 포인트 이동
+  caption: AR_Position_Near
+  params:
+    motion_type: tcp
+    X: 0.29
+    Y: 704.55
+    Z: -33.15
+    Rx: -180.0
+    Ry: 0.0
+    Rz: -180.0
+    velocity: 25.0
+- id: 7
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  caption: TM mark detection
+  params:
+    wait_after_command: 0.5
+- id: 8
+  type: move_to_point
+  name: 포인트 이동
+  params:
+    motion_type: tcp
+    X: 360.32
+    Y: 704.61
+    Z: -33.14
+    Rx: -180.0
+    Ry: 0.0
+    Rz: 180.0
+    velocity: 25.0
+- id: 9
+  type: measure_point
+  name: 측정점
+  caption: 측정점종료
+  params:
+    point_type: end
+    motion_type: tcp
+    X: 570.32
+    Y: 514.72
+    Z: 57.43
+    Rx: 180.0
+    Ry: 0.0
+    Rz: 180.0
+    velocity: 25.0

@@ -1,0 +1,13 @@
+enabled: false
+margin_mm: 20.0
+
+allowed_boxes: []
+
+keep_out_boxes: []
+
+keep_out_auto_stop: true
+
+tool:
+  enabled: true
+  radius_mm: 45.0
+  length_mm: null

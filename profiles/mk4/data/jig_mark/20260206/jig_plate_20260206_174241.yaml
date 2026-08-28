@@ -1,0 +1,137 @@
+ar_tags:
+  pick_offset:
+    x: 0.0
+    y: 0.0
+    z: -50.0
+  place_offset:
+    x: 0.0
+    y: 0.0
+    z: -50.0
+  target_id: 0
+coordinate_definitions:
+  current: robot_base
+  jig_landmark:
+    scan_data:
+      landmark:
+        rx: -179.86
+        ry: -0.3
+        rz: 178.87
+        x: 80.23
+        y: 1032.38
+        z: -153.64
+      tcp_pose:
+        rx: -179.86
+        ry: -0.3
+        rz: 178.87
+        x: 80.23
+        y: 1032.38
+        z: -153.64
+    tool_pose:
+      rx: -179.86
+      ry: -0.3
+      rz: 178.87
+      x: 80.23
+      y: 1032.38
+      z: -153.64
+    type: single_landmark
+  jig_plate:
+    scan_data:
+    - landmark:
+        rx: -179.6
+        ry: 0.13
+        rz: 179.07
+        x: -47.68
+        y: 865.38
+        z: -154.02
+      tcp_pose:
+        rx: -179.6
+        ry: 0.13
+        rz: 179.07
+        x: -47.68
+        y: 865.38
+        z: -154.02
+    - landmark:
+        rx: -179.65
+        ry: 0.43
+        rz: 178.91
+        x: -45.99
+        y: 1058.15
+        z: -154.0
+      tcp_pose:
+        rx: -179.65
+        ry: 0.43
+        rz: 178.91
+        x: -45.99
+        y: 1058.15
+        z: -154.0
+    - landmark:
+        rx: -179.8
+        ry: -0.39
+        rz: 179.67
+        x: 75.78
+        y: 865.07
+        z: -154.18
+      tcp_pose:
+        rx: -179.8
+        ry: -0.39
+        rz: 179.67
+        x: 75.78
+        y: 865.07
+        z: -154.18
+    - landmark:
+        rx: -179.81
+        ry: -0.27
+        rz: 178.69
+        x: 78.45
+        y: 1057.1
+        z: -153.9
+      tcp_pose:
+        rx: -179.81
+        ry: -0.27
+        rz: 178.69
+        x: 78.45
+        y: 1057.1
+        z: -153.9
+    tool_pose:
+      rx: -179.81
+      ry: -0.27
+      rz: 178.69
+      x: 78.45
+      y: 1057.1
+      z: -153.9
+    type: multi_landmark
+  robot_base:
+    scan_data: null
+    tool_pose:
+      rx: -180.0
+      ry: 0.0
+      rz: -180.0
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    type: fixed
+positions:
+  ar_search:
+    description: AR 태그 검색을 위한 위치
+    type: joint
+    values:
+    - 0.0
+    - -20.0
+    - 100.0
+    - 0.0
+    - 90.0
+    - 0.0
+  home:
+    description: 기본 홈 위치
+    type: joint
+    values:
+    - 0.0
+    - -30.0
+    - 120.0
+    - 0.0
+    - 90.0
+    - 0.0
+robot:
+  ip: 169.254.183.219
+settings:
+  use_tmflow_home: false

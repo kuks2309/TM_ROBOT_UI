@@ -1,0 +1,11 @@
+operator: jjh
+recipe: marker_origin_learn
+task_caption: 측정값 파일 저장 (이력 보관)
+saved_at: '2026-08-23 14:40:06'
+landmark:
+  x: 219.418
+  y: 257.417
+  z: 2.068
+  rx: -179.718
+  ry: 0.245
+  rz: 90.594

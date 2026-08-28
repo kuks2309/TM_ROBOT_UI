@@ -1,0 +1,13 @@
+# request hybrid pio id (6 digits)
+# response result: SUCCESS = 1, ERROR = 2
+
+
+string id
+---
+int32 result
+
+bool serial_connect_error
+bool illegal_packet
+bool checksum_error
+bool setting_error
+string data

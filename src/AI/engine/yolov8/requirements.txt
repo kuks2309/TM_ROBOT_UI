@@ -1,0 +1,18 @@
+# YOLOv8 dependencies with pinned versions for reproducibility
+# Generated for CPU-only PyTorch (GPU CC 5.0 not supported in PyTorch 2.0+)
+
+# PyTorch CPU (from official CPU wheel index)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.0.0,<3.0.0
+torchvision>=0.15.0,<1.0.0
+
+# YOLOv8
+ultralytics>=8.0.0,<9.0.0
+
+# Computer Vision
+opencv-python-headless>=4.8.0
+
+# Utilities (pinned for stability)
+numpy>=1.24.0,<2.0.0
+Pillow>=9.0.0
+PyYAML>=6.0

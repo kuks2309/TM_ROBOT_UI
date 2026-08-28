@@ -1,0 +1,134 @@
+# Recipe: 드로어에 놓기 (MK2)
+#
+# [역할] drawer_pick 의 역순. 박스를 든 채 시작해 드로어의 같은 자리에 내려놓는다.
+#   기존 pallet_to_drawer_pick_place 의 드로어 구간(잡 15~19)을 그대로 떼어낸 것이며,
+#   오프셋이 집기와 완전히 동일하다 — 원본에서도 같은 값이었다.
+#
+# [선행 필수] drawer_marker_scan 을 «먼저» 돌려야 한다. 저장본이 30분을 넘으면
+#   [거부]하고 멈춘다(max_age_min).
+#
+# [이 레시피의 존재 이유] 드로어에서 집고 → 팔레트 작업을 하고 → 다시 드로어에 놓는
+#   흐름에서, 중간 레시피가 메모리의 마커를 덮어써도 이쪽은 파일을 읽어 살아남는다.
+#
+# [!! 안전 !!] 시작 시 그리퍼가 박스를 «쥐고 있어야» 한다. 빈 손으로 돌리면 job 6 이
+#   허공에서 열릴 뿐이나, 박스를 든 줄 알고 다음 공정이 이어지면 위험하다.
+#
+# [값 출처] 기존 drawer/drawer_pick.yaml · drawer/pallet_to_drawer_pick_place.yaml 의
+#   MK2 티칭값 그대로다. 집기와 놓기의 오프셋이 실제로 동일하다(둘 다 -142.222 / 접근 7.778).
+#   MK4 에서 넘어온 숫자는 **하나도 없다** — 구조만 MK4 의 분할 방식을 따랐다.
+#
+# [그리퍼 뒤 wait 2000ms 를 왜 두는가] SCHUNK 서비스는 `received=True`(수신 확인)만
+#   돌려주고 개폐 완료를 보증하지 않는다. 이 대기를 빼면 그리퍼가 아직 움직이는 중에
+#   로봇이 이동한다. MK4 는 액션이 결과까지 블로킹해서 이 대기가 없다 — 따라 하지 말 것.
+#
+# [!! 안전 !!] 첫 이동은 Run 누른 시점의 자세에서 목표 자세로 맞춘 뒤 이동한다.
+#   반드시 팔레트·드로어 밖 안전한 높이에서 시작할 것. 첫 실행은 Step 으로.
+
+name: 드로어에 놓기 (MK2)
+description: drawer_marker_scan 이 남긴 마커 저장본을 읽어, 그 좌표계 상대좌표로 박스를 드로어에 내려놓는다.
+version: '1.0'
+created: '2026-08-23'
+modified: '2026-08-23'
+jobs:
+- id: 1
+  type: recipe_info
+  name: Recipe 개요
+  params:
+    mode: execution
+    description: 저장된 드로어 마커 기준으로 박스를 내려놓는다
+    author: jjh
+    version: '1.0'
+    vision_origin_check: none
+- id: 2
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 드로어 위 접근 (놓는 높이 +150mm)
+  params:
+    frame_mode: rz_only
+    landmark_source: file
+    source_path: data/landmark_pose/drawer
+    file_prefix: drawer_marker_scan
+    average_count: 1
+    max_age_min: 30.0
+    offset_x: -10.585
+    offset_y: -245.144
+    offset_z: 7.778
+    offset_rx: 179.96
+    offset_ry: -0.06
+    offset_rz: 89.938
+    tool_offset_x: 0.0
+    tool_offset_y: 0.0
+    tool_offset_z: 0.0
+    tool_offset_rx: 0.0
+    tool_offset_ry: 0.0
+    tool_offset_rz: 0.0
+    velocity: 20.0
+    max_radius_mm: 600.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+- id: 3
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 드로어에 놓기 (티칭값 그대로)
+  params:
+    frame_mode: rz_only
+    landmark_source: file
+    source_path: data/landmark_pose/drawer
+    file_prefix: drawer_marker_scan
+    average_count: 1
+    max_age_min: 30.0
+    offset_x: -10.585
+    offset_y: -245.144
+    offset_z: -142.222
+    offset_rx: 179.96
+    offset_ry: -0.06
+    offset_rz: 89.938
+    tool_offset_x: 0.0
+    tool_offset_y: 0.0
+    tool_offset_z: 0.0
+    tool_offset_rx: 0.0
+    tool_offset_ry: 0.0
+    tool_offset_rz: 0.0
+    velocity: 8.0
+    max_radius_mm: 600.0
+    decel_zone_mm: 40.0
+    decel_velocity: 5.0
+- id: 4
+  type: schunk_release
+  name: SCHUNK 그리퍼 놓기
+  caption: 박스 놓기
+  params:
+    timeout: 15.0
+- id: 5
+  type: wait
+  name: 대기
+  caption: 그리퍼 동작 완료 대기
+  params:
+    duration: 2000
+- id: 6
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 드로어에서 빠짐 (놓는 높이 +150mm)
+  params:
+    frame_mode: rz_only
+    landmark_source: file
+    source_path: data/landmark_pose/drawer
+    file_prefix: drawer_marker_scan
+    average_count: 1
+    max_age_min: 30.0
+    offset_x: -10.585
+    offset_y: -245.144
+    offset_z: 7.778
+    offset_rx: 179.96
+    offset_ry: -0.06
+    offset_rz: 89.938
+    tool_offset_x: 0.0
+    tool_offset_y: 0.0
+    tool_offset_z: 0.0
+    tool_offset_rx: 0.0
+    tool_offset_ry: 0.0
+    tool_offset_rz: 0.0
+    velocity: 20.0
+    max_radius_mm: 600.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0

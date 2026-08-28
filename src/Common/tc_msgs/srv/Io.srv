@@ -1,0 +1,6 @@
+int32[] indices
+int32[] states
+---
+bool received
+int32[] indices_resp
+int32[] states_resp

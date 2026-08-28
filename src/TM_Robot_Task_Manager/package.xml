@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>tm_task_manager</name>
+  <version>0.1.0</version>
+  <description>TM Robot Task Manager with Qt5 GUI for AR tag based pallet pickup</description>
+  <maintainer email="user@example.com">User</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>cv_bridge</depend>
+  <depend>tm_msgs</depend>
+  <!-- SMC 전동 그리퍼 태스크(smc_*)용 GripperCommand 액션. 미빌드 시 방어적 비활성 -->
+  <exec_depend>gripper_ros</exec_depend>
+  <!-- SCHUNK 그리퍼(schunk_*)·거리레이저(read_distance)용 tc_msgs 서비스. 미소싱 시 방어적 비활성 -->
+  <exec_depend>tc_msgs</exec_depend>
+  <!-- 매거진 재고 확인(check_magazine) 태스크용 MagazineState. 미소싱 시 방어적 비활성.
+       MK4 쪽에만 있던 선언을 합집합으로 가져왔다 — Sensors/Magazine_Detect 는 두 기계
+       모두에 같은 내용(11/11 파일 바이트 동일)으로 들어 있다. -->
+  <exec_depend>magazine_detect</exec_depend>
+
+  <exec_depend>python3-pyqt5</exec_depend>
+  <exec_depend>python3-opencv</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+  <test_depend>python3-pytest</test_depend>
+  <test_depend>python3-pytest-mock</test_depend>
+  <test_depend>python3-pytest-cov</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

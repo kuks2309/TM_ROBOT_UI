@@ -1,0 +1,29 @@
+# Recipe: 새 Recipe
+# TM Task Manager Recipe File
+
+name: 새 Recipe
+description: ''
+version: '1.0'
+created: '2026-08-20'
+modified: '2026-08-20'
+jobs:
+- id: 1
+  type: move_to_point
+  name: 포인트 이동
+  params:
+    motion_type: tcp
+    X: 85.95
+    Y: -365.0
+    Z: 466.11
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: false
+  robot_base:
+    X: 85.95
+    Y: -365.0
+    Z: 466.11
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0

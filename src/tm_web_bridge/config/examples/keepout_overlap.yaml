@@ -1,0 +1,22 @@
+enabled: true
+margin_mm: 20.0
+
+allowed_boxes:
+  - name: cell
+    min: [-900, -900, -200]
+    max: [900, 900, 1300]
+
+keep_out_boxes:
+  - name: A
+    min: [-300, -300, 0]
+    max: [300, 300, 600]
+  - name: B
+    min: [100, 100, 300]
+    max: [700, 700, 900]
+
+keep_out_auto_stop: true
+
+tool:
+  enabled: true
+  radius_mm: 45.0
+  length_mm: null

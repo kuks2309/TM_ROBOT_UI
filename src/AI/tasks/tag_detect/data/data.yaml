@@ -1,0 +1,6 @@
+train: /home/amap/TM_Robot_ros2_ws/src/AI/tasks/tag_detect/data/train/images
+val: /home/amap/TM_Robot_ros2_ws/src/AI/tasks/tag_detect/data/valid/images
+test: /home/amap/TM_Robot_ros2_ws/src/AI/tasks/tag_detect/data/test/images
+
+nc: 1
+names: ['tag']

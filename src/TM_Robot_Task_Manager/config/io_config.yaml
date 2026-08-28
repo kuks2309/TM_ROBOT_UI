@@ -1,0 +1,6 @@
+
+gripper:
+  module: 1
+  grip_pin: 0
+  release_pin: 1
+

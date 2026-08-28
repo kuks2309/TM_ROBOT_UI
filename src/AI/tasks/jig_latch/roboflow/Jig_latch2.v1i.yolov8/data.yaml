@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 1
+names: ['jig_latch']
+
+roboflow:
+  workspace: roboticsk
+  project: jig_latch2
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/roboticsk/jig_latch2/dataset/1

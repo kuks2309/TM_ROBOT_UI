@@ -1,0 +1,8 @@
+# wirte to modbus with modbus slave_id, address, and value of address 
+int32 slave_id
+int32 address
+int32 value
+
+---
+
+bool result

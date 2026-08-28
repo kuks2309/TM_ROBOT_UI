@@ -1,0 +1,57 @@
+# Recipe: 새 Recipe
+# TM Task Manager Recipe File
+
+name: 새 Recipe
+description: ''
+version: '1.0'
+created: '2026-08-13'
+modified: '2026-08-13'
+jobs:
+- id: 1
+  type: recipe_info
+  name: Recipe 개요
+  caption: 로봇의 기준점 확인
+  params:
+    mode: execution
+    description: 로봇이 충돌 또는 오작동시 프레임 틀어짐 등을 감지하기위한 로봇 기준점 확인
+    author: ''
+    version: '1.0'
+    vision_origin_check: none
+- id: 2
+  type: move_to_point
+  name: 포인트 이동
+  caption: robot_reference_point
+  params:
+    motion_type: tcp
+    X: 217.44
+    Y: 265.9
+    Z: 240.77
+    Rx: -180.0
+    Ry: 0.0
+    Rz: 90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 217.44
+    Y: 265.9
+    Z: 240.77
+    Rx: -180.0
+    Ry: 0.0
+    Rz: 90.0
+- id: 3
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  caption: robot_reference_point_scan
+  params:
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz_rx_ry_rz
+reference:
+  tm_jig_landmark:
+    X: 12.11
+    Y: 708.6
+    Z: -35.31
+    Rx: 179.24
+    Ry: 0.44
+    Rz: 178.86

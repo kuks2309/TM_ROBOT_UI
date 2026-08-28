@@ -1,0 +1,149 @@
+# Recipe: table-1 집기
+# TM Task Manager Recipe File
+
+name: table-1 집기
+description: table-1 위치 마커 좌표계로 박스를 집는다 (비고정식). table-1_marker_scan 을 먼저 실행해야 한다
+version: '1.0'
+created: '2026-08-24'
+modified: '2026-08-25'
+jobs:
+- id: 1
+  type: recipe_info
+  name: Recipe 개요
+  params:
+    mode: execution
+    description: table-1 에서 박스를 집는다 (비고정식)
+    author: jjh
+    version: '1.0'
+    vision_origin_check: none
+- id: 2
+  type: schunk_release
+  name: SCHUNK 그리퍼 놓기
+  caption: 집기 전 그리퍼 열기
+  params:
+    timeout: 15.0
+- id: 3
+  type: wait
+  name: 대기
+  caption: 그리퍼 동작 완료 대기
+  params:
+    duration: 2000
+- id: 4
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 마커 기준 접근 — 파지면 +20mm 위
+  params:
+    frame_mode: rz_only
+    offset_x: 5.68
+    offset_y: 270.31
+    offset_z: 175.29
+    offset_rx: -179.18
+    offset_ry: -0.23
+    offset_rz: -91.25
+    landmark_source: file
+    source_path: data/landmark_pose/table-1
+    file_prefix: table-1_marker_scan
+    average_count: 1
+    max_age_min: 30.0
+    tool_offset_x: -0.55
+    tool_offset_y: 0.3
+    tool_offset_z: 1.94
+    tool_offset_rx: 0.0
+    tool_offset_ry: 0.0
+    tool_offset_rz: 0.0
+    velocity: 20.0
+    max_radius_mm: 420.3
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+- id: 5
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 집기 (티칭값) — 직선 20mm @3%
+  params:
+    frame_mode: rz_only
+    offset_x: 5.68
+    offset_y: 270.31
+    offset_z: 155.29
+    offset_rx: -179.18
+    offset_ry: -0.23
+    offset_rz: -91.25
+    landmark_source: file
+    source_path: data/landmark_pose/table-1
+    file_prefix: table-1_marker_scan
+    average_count: 1
+    max_age_min: 30.0
+    tool_offset_x: -0.48
+    tool_offset_y: 0.01
+    tool_offset_z: 1.94
+    tool_offset_rx: 0.0
+    tool_offset_ry: 0.0
+    tool_offset_rz: 0.0
+    velocity: 3.0
+    max_radius_mm: 420.3
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 6
+  type: schunk_grip
+  name: SCHUNK 그리퍼 파지
+  params:
+    timeout: 15.0
+- id: 7
+  type: wait
+  name: 대기
+  caption: 그리퍼 동작 완료 대기
+  params:
+    duration: 2000
+- id: 8
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 들어올림 — 직선 20mm @3%
+  params:
+    frame_mode: rz_only
+    offset_x: 5.68
+    offset_y: 270.31
+    offset_z: 175.29
+    offset_rx: -179.18
+    offset_ry: -0.23
+    offset_rz: -91.25
+    landmark_source: file
+    source_path: data/landmark_pose/table-1
+    file_prefix: table-1_marker_scan
+    average_count: 1
+    max_age_min: 30.0
+    tool_offset_x: -0.56
+    tool_offset_y: 0.31
+    tool_offset_z: 1.94
+    tool_offset_rx: 0.0
+    tool_offset_ry: 0.0
+    tool_offset_rz: 0.0
+    velocity: 3.0
+    max_radius_mm: 420.3
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 9
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 들어올림 — 직선 230mm @20%
+  params:
+    frame_mode: rz_only
+    offset_x: 5.68
+    offset_y: 270.31
+    offset_z: 405.29
+    offset_rx: -179.18
+    offset_ry: -0.23
+    offset_rz: -91.25
+    landmark_source: file
+    source_path: data/landmark_pose/table-1
+    file_prefix: table-1_marker_scan
+    average_count: 1
+    max_age_min: 30.0
+    tool_offset_x: 0.0
+    tool_offset_y: 0.0
+    tool_offset_z: 0.0
+    tool_offset_rx: 0.0
+    tool_offset_ry: 0.0
+    tool_offset_rz: 0.0
+    velocity: 20.0
+    max_radius_mm: 420.3
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0

@@ -1,0 +1,56 @@
+operator: jjh
+recipe: pallet2_cali
+task_caption: pallet_plate_pose_calc
+saved_at: '2026-08-19 11:34:52'
+plate_pose:
+  x: 393.663
+  y: 3.126
+  z: -296.862
+  rx: 0.388
+  ry: 1.485
+  rz: 90.499
+landmarks:
+  jig1:
+    x: 491.229
+    y: 71.764
+    z: -297.3455
+    rx: -177.56
+    ry: -0.583
+    rz: 90.098
+    measured_at: '2026-08-19 11:34:52'
+  jig2:
+    x: 492.019
+    y: -66.154
+    z: -297.3426
+    rx: 179.886
+    ry: -0.265
+    rz: 90.059
+    measured_at: '2026-08-19 11:34:42'
+  jig3:
+    x: 294.897
+    y: 72.321
+    z: -296.1944
+    rx: -179.748
+    ry: -0.266
+    rz: 90.171
+    measured_at: '2026-08-19 11:34:23'
+  jig4:
+    x: 296.506
+    y: -65.426
+    z: -296.5655
+    rx: -179.816
+    ry: -0.429
+    rz: 90.045
+    measured_at: '2026-08-19 11:34:31'
+corrected:
+  by: fix_cali.py (2026-08-20)
+  wrist_rz: 90.0
+  bias_tool:
+  - 0.02728
+  - -0.00163
+  jig_order_from_original:
+  - 3
+  - 1
+  - 4
+  - 2
+  note: 손목 고정 편향 제거 + jig 번호를 홀수 규칙(X=긴 변)으로 통일

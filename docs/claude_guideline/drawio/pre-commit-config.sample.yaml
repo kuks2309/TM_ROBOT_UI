@@ -1,0 +1,14 @@
+# .pre-commit-config.yaml — drawio 번들 로컬 강제
+# 설치: pip install pre-commit && pre-commit install
+#
+# Layer A(기하 린트)만 건다. Layer B(렌더 시각 검토)는 사람·모델의 눈이 필요해
+# 커밋 훅으로 강제할 수 없다 — drawio.md 의 2단 루프 중 절반만 기계가 지킨다.
+repos:
+  - repo: local
+    hooks:
+      - id: drawio-lint
+        name: drawio 기하·스타일 린트 (L1~L11)
+        entry: docs/claude_guideline/drawio/checks/drawio-lint.sh
+        language: system
+        files: \.drawio$
+        pass_filenames: false

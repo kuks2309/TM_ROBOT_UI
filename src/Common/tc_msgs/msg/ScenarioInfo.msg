@@ -1,0 +1,2 @@
+uint8 task_type
+uint8 equip_type

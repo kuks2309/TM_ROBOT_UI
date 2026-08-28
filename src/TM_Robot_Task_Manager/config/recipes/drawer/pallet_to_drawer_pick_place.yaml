@@ -1,0 +1,300 @@
+# Recipe: 드로어 스캔 → 팔레트에서 박스 집기 → 드로어에 올리기
+# TM Task Manager Recipe File
+#
+# [모든 값이 실측·티칭에서 나왔다 — 추정 없음]
+#
+#   드로어 쪽 offset_* 는 2026-08-15 '팔레트 티칭1' 에서 티칭한 자세를
+#   그때 스캔된 마커(reference: 209.116, 532.935, 11.842, Rz -179.448) 기준
+#   rz_only 좌표계로 역산한 값이다:
+#
+#     티칭 TCP (217.34, 778.17, -130.38, Rx 179.96, Ry -0.06, Rz -89.51)
+#       → offset (-10.585, -245.144, -142.222), (rx 179.960, ry -0.060, rz 89.938)
+#
+#   교차검증 3건 (세 데이터가 서로 맞음):
+#     · 티칭 XY vs 실측 팔레트 중심(-8.537, -243.566) → dX -2.05, dY -1.58 mm
+#     · 티칭 Z  vs 실측 팔레트 바닥(-294.779)        → 바닥 위 152.6 mm
+#     · offset_rz = +89.938°
+#         마커 X축은 팔레트 **긴 변** 방향이다. 그리퍼는 거기서 90° 돌아간다.
+#         pallet0~5 에서 성공한 평면 좌표계 값은 offset_rz = -90.008 인데,
+#         평면 X축은 **짧은 변** 이라 두 축이 90° 어긋난다 →
+#         +89.938(마커 기준) 과 -90.008(평면 기준) 은 같은 물리 방향이다.
+#
+# [offset_z 부호와 기준]
+#   rz_only 프레임의 Z 축은 로봇 베이스 Z 와 같은 축이다. 기준은 마커.
+#   **양수 = 위, 음수 = 아래.**
+#     offset_z =  -142.222  → 티칭한 놓는 높이 (팔레트 바닥 위 152.6mm)
+#     offset_z =  -294.779  → 팔레트 바닥면
+#     offset_z =    +7.778  → 집는 높이에서 150mm 위 (접근·들어올림용)
+#
+# [offset_* 와 tool_offset_* 는 다른 것]
+#   offset_*      = 목표를 어디에 둘지 (마커 좌표계)
+#   tool_offset_* = 그리퍼가 어떻게 잘못 달렸는지 (공구 좌표계, 6축)
+#   '현재위치 입력' 은 tool_offset_* 만 채운다. 목표는 안 건드린다.
+#
+# [마커 좌표계 유효성 — 2026-08-15 실측]
+#   드로어를 4 자세로 옮겨 19 회 측정. rz_only 기준 마커→팔레트 상대 위치가
+#   자세 사이에서 1.1mm 이내 재현(18회 산포 X ±0.187 / Y ±0.433 / Z ±0.309 mm).
+#   같은 데이터를 full 프레임으로 보면 범위가 45 / 102 / 139mm 로 터진다.
+#
+# [!! 안전 !!]
+#   조그는 정지/일시정지 확인 후에만. 레시피 실행 중 조그는 CommandGate 대상이
+#   아니라(ADR 2026-08-15 수동 명령 게이트) 실행 중간에 끼어들 수 있다.
+#   첫 실행은 Step 으로. 박스 크기에 따라 Job 12 접근 높이를 더 올릴 것.
+
+name: 팔레트 → 드로어 (박스 이송)
+description: 드로어 마커를 1샷 측정해 기준을 잡고, 팔레트 평면 좌표계로 박스를 집어 마커 좌표계로 드로어에 올린다.
+version: '1.0'
+created: '2026-08-15'
+modified: '2026-08-15'
+jobs:
+- id: 1
+  name: Recipe 개요
+  params:
+    author: jjh
+    description: 팔레트에서 박스를 집어 드로어에 올린다
+    mode: execution
+    version: '1.0'
+    vision_origin_check: none
+  type: recipe_info
+- caption: 시작 자세 저장
+  id: 2
+  name: 현재 자세 저장
+  params:
+    key: start
+  type: save_pose
+- id: 3
+  name: SCHUNK 그리퍼 놓기
+  params:
+    timeout: 15.0
+  type: schunk_release
+- caption: 그리퍼 동작 완료 대기
+  id: 4
+  name: 대기
+  params:
+    duration: 2000
+  type: wait
+- caption: 드로어마커로 이동
+  id: 5
+  name: 포인트 이동
+  params:
+    Rx: -180.0
+    Ry: 0.0
+    Rz: -90.0
+    X: 399.78
+    Y: 567.1
+    Z: 78.16
+    decomposed_tcp: true
+    motion_type: tcp
+    velocity: 25.0
+  robot_base:
+    Rx: -180.0
+    Ry: 0.0
+    Rz: -90.0
+    X: 399.78
+    Y: 567.1
+    Z: 78.16
+  type: move_to_point
+- caption: 드로어마커_기준점_스캔
+  id: 6
+  name: TM Landmark 스캔
+  params:
+    analysis_target: xyz_rx_ry_rz
+    outlier_method: 3sigma
+    repeat_count: 10
+    wait_after_command: 0
+  type: scan_tm_landmark
+- caption: 드로어마커_저장
+  id: 7
+  name: Landmark 좌표 저장
+  params:
+    operator: jjh
+    save_path: data/landmark_pose
+  type: save_landmark_pose
+- caption: pallet0 평면
+  id: 8
+  name: Plate Pose 불러오기
+  params:
+    average_count: 10
+    file_prefix: pallet0_cali
+    max_angle_error_deg: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_side_diff_mm: 1.0
+    rect_guard_enabled: true
+    source_path: data/plate_pose_calc/pallet0
+  type: load_plate_pose
+- caption: 팔레트 위 접근 (집는 높이 +100mm) — 파지면 +20mm 위 (L자, 하강 정지 1회)
+  id: 9
+  name: 평면 좌표계 이동
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 0.0
+    max_radius_mm: 200.0
+    max_tilt_deg: 30.0
+    offset_rx: 179.673
+    offset_ry: -0.058
+    offset_rz: -90.008
+    offset_x: 2.582
+    offset_y: 1.524
+    offset_z: 176.292
+    velocity: 20.0
+  type: move_to_plane_pose
+- caption: 팔레트에서 집기 (pallet0~5 성공값) — 법선 직선 20mm @3%
+  id: 10
+  name: 평면 좌표계 이동
+  params:
+    decel_velocity: 3.0
+    decel_zone_mm: 0.0
+    max_radius_mm: 200.0
+    max_tilt_deg: 30.0
+    offset_rx: 179.673
+    offset_ry: -0.058
+    offset_rz: -90.008
+    offset_x: 2.582
+    offset_y: 1.524
+    offset_z: 156.292
+    velocity: 3.0
+    straight_path: true
+  type: move_to_plane_pose
+- id: 11
+  name: SCHUNK 그리퍼 파지
+  params:
+    timeout: 15.0
+  type: schunk_grip
+- caption: 그리퍼 동작 완료 대기
+  id: 12
+  name: 대기
+  params:
+    duration: 2000
+  type: wait
+- caption: 팔레트에서 들어올림 — 법선 직선 20mm @3% (상승 정지 1회)
+  id: 13
+  name: 평면 좌표계 이동
+  params:
+    decel_velocity: 3.0
+    decel_zone_mm: 0.0
+    max_radius_mm: 200.0
+    max_tilt_deg: 30.0
+    offset_rx: 179.673
+    offset_ry: -0.058
+    offset_rz: -90.008
+    offset_x: 2.582
+    offset_y: 1.524
+    offset_z: 176.292
+    velocity: 3.0
+    straight_path: true
+  type: move_to_plane_pose
+- caption: 팔레트에서 들어올림 — 법선 직선 80mm @20%
+  id: 14
+  name: 평면 좌표계 이동
+  params:
+    decel_velocity: 3.0
+    decel_zone_mm: 0.0
+    max_radius_mm: 200.0
+    max_tilt_deg: 30.0
+    offset_rx: 179.673
+    offset_ry: -0.058
+    offset_rz: -90.008
+    offset_x: 2.582
+    offset_y: 1.524
+    offset_z: 256.292
+    velocity: 20.0
+    straight_path: true
+  type: move_to_plane_pose
+- caption: 드로어 위 접근 (놓는 높이 +150mm)
+  id: 15
+  name: 마커 좌표계 이동
+  params:
+    average_count: 1
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    file_prefix: ''
+    frame_mode: rz_only
+    landmark_source: latest_scan
+    max_radius_mm: 600.0
+    offset_rx: 179.96
+    offset_ry: -0.06
+    offset_rz: 89.938
+    offset_x: -10.585
+    offset_y: -245.144
+    offset_z: 7.778
+    source_path: data/landmark_pose
+    tool_offset_rx: 0.0
+    tool_offset_ry: 0.0
+    tool_offset_rz: 0.0
+    tool_offset_x: 0.0
+    tool_offset_y: 0.0
+    tool_offset_z: 0.0
+    velocity: 20.0
+  type: move_to_landmark_pose
+- caption: 드로어에 놓기 (티칭값 그대로)
+  id: 16
+  name: 마커 좌표계 이동
+  params:
+    average_count: 1
+    decel_velocity: 5.0
+    decel_zone_mm: 40.0
+    file_prefix: ''
+    frame_mode: rz_only
+    landmark_source: latest_scan
+    max_radius_mm: 600.0
+    offset_rx: 179.96
+    offset_ry: -0.06
+    offset_rz: 89.938
+    offset_x: -10.585
+    offset_y: -245.144
+    offset_z: -142.222
+    source_path: data/landmark_pose
+    tool_offset_rx: 0.0
+    tool_offset_ry: 0.0
+    tool_offset_rz: 0.0
+    tool_offset_x: 0.0
+    tool_offset_y: 0.0
+    tool_offset_z: 0.0
+    velocity: 8.0
+  type: move_to_landmark_pose
+- id: 17
+  name: SCHUNK 그리퍼 놓기
+  params:
+    timeout: 15.0
+  type: schunk_release
+- caption: 그리퍼 동작 완료 대기
+  id: 18
+  name: 대기
+  params:
+    duration: 2000
+  type: wait
+- caption: 드로어에서 빠짐 (놓는 높이 +150mm)
+  id: 19
+  name: 마커 좌표계 이동
+  params:
+    average_count: 1
+    decel_velocity: 5.0
+    decel_zone_mm: 40.0
+    file_prefix: ''
+    frame_mode: rz_only
+    landmark_source: latest_scan
+    max_radius_mm: 600.0
+    offset_rx: 179.96
+    offset_ry: -0.06
+    offset_rz: 89.938
+    offset_x: -10.585
+    offset_y: -245.144
+    offset_z: 7.778
+    source_path: data/landmark_pose
+    tool_offset_rx: 0.0
+    tool_offset_ry: 0.0
+    tool_offset_rz: 0.0
+    tool_offset_x: 0.0
+    tool_offset_y: 0.0
+    tool_offset_z: 0.0
+    velocity: 20.0
+  type: move_to_landmark_pose
+- caption: 시작 자세 복귀
+  id: 20
+  name: 저장 자세 복귀
+  params:
+    decel_velocity: 10.0
+    decel_zone_mm: 40.0
+    key: start
+    velocity: 20.0
+  type: move_to_saved_pose

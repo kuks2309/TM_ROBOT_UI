@@ -1,0 +1,450 @@
+#!/usr/bin/env bash
+# GUI 풀스택 실행 숏컷 (tm-robot-uni — MK2·MK4 공용)
+# 실행 위치: tm-robot-uni/
+#
+#   ./run              → PyQt Task Manager 풀스택 기동 (정밀 테스트/핸드아이/AI 검출 포함)
+#   ./run stop         → 정지
+#   ./run web          → 웹 GUI 스택 기동 (vite + rosbridge + web_bridge)
+#   ./run web status   → 웹 스택 상태
+#
+# PyQt 와 웹 GUI 는 tm_task_manager 서비스 계층을 공유하지만 프론트엔드가 다릅니다.
+# 정밀 테스트·핸드아이·AI 검출·조이스틱 탭은 PyQt 쪽에만 있습니다.
+
+set -o pipefail
+
+# 이 스크립트는 MK2 워크스페이스(TM_Robot_MK2_ros2_ws) 안에 있습니다.
+# 어디서 호출하든 워크스페이스 루트를 cwd 로 잡고 실행합니다.
+WS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$WS" || exit 1
+
+# ── 로봇 IP 결정 ──────────────────────────────────────────────────────────
+# MK2·MK4 의 robot_ip 를 **둘 다** 두드려 5890(SCT, 명령 채널)이 열린 쪽을 쓴다.
+# 둘 중 하나에는 붙는다는 전제(2026-08-27). ROS 를 소싱하지 않아도 돌게 yaml 만 읽는다.
+resolve_robot_ip() {
+  python3 - "$WS" <<'PYEOF' 2>/dev/null
+import os, socket, sys, glob
+try:
+    import yaml
+except Exception:
+    sys.exit(1)
+ws = sys.argv[1]
+d = os.path.join(ws, 'src/TM_Robot_Task_Manager/config/robots')
+fixed = (os.environ.get('TM_ROBOT_ID') or '').strip()
+active = os.path.join(d, 'active.txt')
+if not fixed and os.path.isfile(active):
+    try:
+        fixed = open(active, encoding='utf-8').read().strip().splitlines()[0].strip()
+    except Exception:
+        fixed = ''
+items = []
+for path in sorted(glob.glob(os.path.join(d, '*.yaml'))):
+    try:
+        data = yaml.safe_load(open(path, encoding='utf-8')) or {}
+    except Exception:
+        continue
+    rid, ip = data.get('id') or os.path.splitext(os.path.basename(path))[0], data.get('robot_ip')
+    if ip:
+        items.append((rid, str(ip)))
+items.sort(key=lambda t: (t[0] != fixed,))          # 확정 프로필을 앞으로
+for rid, ip in items:
+    s = socket.socket(); s.settimeout(1.0)
+    try:
+        if s.connect_ex((ip, 5890)) == 0:
+            print(ip); sys.exit(0)
+    except Exception:
+        pass
+    finally:
+        s.close()
+sys.exit(1)
+PYEOF
+}
+
+# 환경변수로 준 값이 최우선. 없으면 두 로봇을 두드려 응답하는 쪽.
+# 그래도 없으면 빈 값 → launch 파일이 자체 탐색으로 정한다.
+if [ -z "${ROBOT_IP:-}" ]; then
+  ROBOT_IP="$(resolve_robot_ip || true)"
+  if [ -n "$ROBOT_IP" ]; then
+    echo "· 응답한 로봇: $ROBOT_IP (5890)"
+  else
+    echo "· 두 로봇 모두 무응답 — launch 자체 탐색에 맡깁니다"
+  fi
+fi
+
+# 그리퍼·거리센서(SCHUNK)는 LGIT 워크스페이스 소속이지만 이 GUI 의 Task 가 쓰므로
+# 이 스택의 일부로 취급한다 — ./run 이 함께 정지·기동한다.
+# MK2 의 SCHUNK 그리퍼·거리센서 워크스페이스. MK4(SMC)에는 없으므로
+# 이 경로가 없으면 아래 로직이 알아서 건너뛴다.
+EE_WS="${EE_WS:-$HOME/LGIT_Paju_C6_RxCobot_0125_ws}"
+
+# DDS 디스커버리 설정 — tm_driver 와 task_manager 가 서로 보이려면 반드시 같아야 합니다.
+# ROS_LOCALHOST_ONLY=1 인 셸에서 tm_driver 를 따로 띄우면 로봇과는 붙지만
+# /feedback_states 퍼블리셔가 GUI 쪽에 안 보입니다.
+export ROS_LOCALHOST_ONLY="${ROS_LOCALHOST_ONLY:-0}"
+export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-0}"
+
+source_ros() {
+  # shellcheck disable=SC1091
+  source /opt/ros/humble/setup.bash 2>/dev/null || true
+  # shellcheck disable=SC1091
+  source "$WS/install/setup.bash" 2>/dev/null || {
+    echo "✗ $WS/install/setup.bash 없음 — 먼저 colcon build 하세요." >&2
+    exit 1
+  }
+}
+
+# ── 소유권 판별 ───────────────────────────────────────────────────────────
+# 같은 PC 에 다른 워크스페이스(webgui_ws 등)의 동명 노드가 떠 있을 수 있습니다.
+# pgrep -f 는 cmdline 문자열만 보므로 워크스페이스를 구분하지 못해,
+# 예전 do_stop 의 `pkill -f tm_driver` 는 남의 드라이버까지 죽였습니다.
+# 우리 것 = 실행파일 경로가 $WS/install 아래거나, AMENT_PREFIX_PATH 가 $WS 를 가리키는 것.
+ours_pids() {
+  local pat="$1" pid cmd ament
+  for pid in $(pgrep -f "$pat" 2>/dev/null); do
+    [ "$pid" = "$$" ] && continue
+    cmd="$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null)"
+    case "$cmd" in
+      *"$WS/install/"*) echo "$pid"; continue ;;
+    esac
+    ament="$(tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | grep -m1 '^AMENT_PREFIX_PATH=')"
+    case "$ament" in
+      *"$WS/install"*) echo "$pid" ;;
+    esac
+  done
+}
+
+# 우리 워크스페이스 소속 프로세스만 종료 (TERM -> 3초 -> KILL)
+kill_ours() {
+  local label="$1" pat="$2" pids
+  pids="$(ours_pids "$pat" | sort -u | tr '\n' ' ')"
+  [ -z "${pids// /}" ] && return 0
+  echo "  · $label 정지: $pids"
+  kill $pids 2>/dev/null
+  for _ in 1 2 3; do
+    pids="$(ours_pids "$pat" | sort -u | tr '\n' ' ')"
+    [ -z "${pids// /}" ] && return 0
+    sleep 1
+  done
+  pids="$(ours_pids "$pat" | sort -u | tr '\n' ' ')"
+  [ -n "${pids// /}" ] && { echo "    강제 종료: $pids"; kill -9 $pids 2>/dev/null; }
+  return 0
+}
+
+# 이 GUI 스택에 속한 노드만 전부 정지. 다른 프로젝트 노드는 건드리지 않습니다.
+stop_ours() {
+  echo "=== 우리 스택 정지 (다른 프로젝트 노드는 보존) ==="
+  kill_ours "launch"             "task_manager.launch.py"
+  kill_ours "task_manager_node"  "tm_task_manager/task_manager_node"
+  kill_ours "카메라 브리지"      "tm_camera_bridge.py"
+  kill_ours "캘리브레이션 노드"  "camera_calibration_node"
+  kill_ours "tm_driver(우리 것)" "lib/tm_driver/tm_driver"
+  kill_ours "매거진 감지"        "lib/magazine_detect/magazine_detect_node"
+  kill_ours "SMC 그리퍼"         "lib/gripper_ros/gripper_node"
+  kill_ours "원격 IO"            "lib/remote_io_ros/remote_io_node"
+  stop_ee_stack
+  local foreign
+  foreign="$(pgrep -f 'lib/tm_driver/tm_driver' 2>/dev/null | tr '\n' ' ')"
+  [ -n "${foreign// /}" ] && echo "  ℹ 다른 워크스페이스 tm_driver 유지: $foreign (사전 점검에서 재사용/교체 판단)"
+  echo "  완료"
+}
+
+# ── 버퍼 매거진 감지 ────────────────────────────────────────────────────────
+# remote_io_node 의 io_resp 를 슬롯 0~5 재고로 바꿔 GUI·인터록 Task 에 준다.
+# 배선(di_bit)은 2026-08-23 실측본 magazine.mk2.yaml 이다 — 4호기 값과 «결과적으로»
+# 같지만 di_bit_count 는 64 로 다르다(2호기 스테이션은 DI 4워드).
+#
+# io_resp 가 없으면 «띄우지 않는다». 띄워 봐야 판정 불가만 쌓이고, 그 상태를 작업자가
+# «매거진이 다 비었다» 로 오해하면 인터록 판단이 정반대로 간다 — 차라리 없는 편이 낫다.
+start_magazine_detect() {
+  echo "=== 버퍼 매거진 감지 기동 ==="
+  local cfg="$WS/src/Sensors/Magazine_Detect/config/magazine.mk2.yaml"
+  if ! ros2 pkg prefix magazine_detect >/dev/null 2>&1; then
+    echo "  • magazine_detect 미빌드 — 매거진 재고·인터록 비활성"
+    return 0
+  fi
+  if [ ! -f "$cfg" ]; then
+    echo "  ✗ 설정 없음 ($cfg) — 배선을 모르는 채로 띄우지 않습니다"
+    return 0
+  fi
+  if ! timeout 5 ros2 topic list 2>/dev/null | grep -q '^/io_resp$'; then
+    echo "  ✗ /io_resp 없음 — remote_io_node 가 안 떠 있습니다."
+    echo "    매거진 재고를 읽지 못하므로 기동하지 않습니다."
+    echo "    (인터록이 든 레시피는 «판정 불가» 로 정지합니다 — 의도된 동작입니다)"
+    return 0
+  fi
+
+  setsid nohup ros2 run magazine_detect magazine_detect_node \
+    --ros-args --params-file "$cfg" \
+    > /tmp/tm_magazine.log 2>&1 < /dev/null &
+
+  for _ in $(seq 1 15); do
+    timeout 3 ros2 topic list 2>/dev/null | grep -q '^/magazine_detect_node/state$' && break
+    sleep 1
+  done
+  if timeout 3 ros2 topic list 2>/dev/null | grep -q '^/magazine_detect_node/state$'; then
+    echo "  ✓ /magazine_detect_node/state 준비됨 (로그: /tmp/tm_magazine.log)"
+  else
+    echo "  ✗ 상태 토픽 미등장 — /tmp/tm_magazine.log 확인"
+  fi
+}
+
+# ── 그리퍼·거리센서 스택 (LGIT 워크스페이스) ────────────────────────────────
+# end_effector_node 는 로거 5개가 먼저 떠 있어야 초기화가 끝난다.
+# 없으면 "Waiting for subscriber..." 로 무한 대기한다.
+# logger.launch.py 는 tm_driver 를 띄우지 않으므로 우리 드라이버와 충돌하지 않는다.
+ee_pids() {
+  pgrep -f "$EE_WS/install/.*/(end_effector_node|logger_[a-z]+_node)" 2>/dev/null
+  pgrep -f "tc_bringup.*logger.launch.py" 2>/dev/null
+}
+
+stop_ee_stack() {
+  local pids
+  pids="$(ee_pids | sort -u | tr '\n' ' ')"
+  [ -z "${pids// /}" ] && return 0
+  echo "  · 그리퍼 스택 정지: $pids"
+  kill $pids 2>/dev/null
+  sleep 2
+  pids="$(ee_pids | sort -u | tr '\n' ' ')"
+  [ -n "${pids// /}" ] && kill -9 $pids 2>/dev/null
+  return 0
+}
+
+# ── SMC 그리퍼 스택 (MK4) ──────────────────────────────────────────────────
+# 이 워크스페이스가 gripper_ros·remote_io_ros 를 직접 갖고 있는데 아무도 띄우지
+# 않아 «SMC 응답 없음» 이 났다(2026-08-27 실기). MK2 의 SCHUNK 는 별도
+# 워크스페이스(EE_WS)라 start_ee_stack 이 맡고, 이쪽은 여기서 맡는다.
+#
+# gripper_node 는 LifecycleNode 이고 launch 파일이 없다 — configure/activate 를
+# 직접 걸어야 액션 서버가 열린다. 그냥 run 만 하면 «떠 있는데 응답 없음» 이 된다.
+#
+# remote_io_node 는 그리퍼의 백엔드이자 /io_resp 발행자다. 이게 떠야
+# 버퍼 매거진 감지도 산다 — 그래서 start_magazine_detect 보다 **먼저** 부른다.
+start_smc_stack() {
+  echo ""
+  echo "=== SMC 그리퍼 스택 기동 (MK4) ==="
+
+  if [ ! -x "$WS/install/gripper_ros/lib/gripper_ros/gripper_node" ]; then
+    echo "  · gripper_ros 미빌드 — SMC 그리퍼 비활성 (MK2 는 정상)"
+    return 0
+  fi
+
+  (
+    source_ros
+
+    if [ -x "$WS/install/remote_io_ros/lib/remote_io_ros/remote_io_node" ]; then
+      if [ -n "$(ours_pids 'lib/remote_io_ros/remote_io_node')" ]; then
+        echo "  · remote_io_node 이미 실행 중"
+      else
+        setsid nohup ros2 run remote_io_ros remote_io_node \
+          > /tmp/tm_remote_io.log 2>&1 < /dev/null &
+        for _ in $(seq 1 20); do
+          timeout 3 ros2 topic list 2>/dev/null | grep -q '^/io_resp$' && break
+          sleep 1
+        done
+        if timeout 3 ros2 topic list 2>/dev/null | grep -q '^/io_resp$'; then
+          echo "  ✓ remote_io_node — /io_resp 준비됨"
+        else
+          echo "  ✗ /io_resp 미등장 — /tmp/tm_remote_io.log 확인"
+        fi
+      fi
+    else
+      echo "  · remote_io_ros 미빌드 — 그리퍼가 백엔드를 못 찾습니다"
+    fi
+
+    if [ -n "$(ours_pids 'lib/gripper_ros/gripper_node')" ]; then
+      echo "  · gripper_node 이미 실행 중"
+    else
+      local params="$WS/install/gripper_ros/share/gripper_ros/config/gripper_stack.yaml"
+      if [ -f "$params" ]; then
+        setsid nohup ros2 run gripper_ros gripper_node \
+          --ros-args --params-file "$params" \
+          > /tmp/tm_gripper.log 2>&1 < /dev/null &
+      else
+        echo "  ⚠ gripper_stack.yaml 없음 — 기본값으로 띄웁니다"
+        setsid nohup ros2 run gripper_ros gripper_node \
+          > /tmp/tm_gripper.log 2>&1 < /dev/null &
+      fi
+      for _ in $(seq 1 20); do
+        timeout 3 ros2 node list 2>/dev/null | grep -q '^/gripper_node$' && break
+        sleep 1
+      done
+    fi
+
+    # LifecycleNode → unconfigured 로 떠 있다. 액션 서버는 active 에서만 열린다.
+    if timeout 3 ros2 node list 2>/dev/null | grep -q '^/gripper_node$'; then
+      timeout 10 ros2 lifecycle set /gripper_node configure >/dev/null 2>&1
+      timeout 10 ros2 lifecycle set /gripper_node activate  >/dev/null 2>&1
+      local state
+      state="$(timeout 5 ros2 lifecycle get /gripper_node 2>/dev/null | head -1)"
+      case "$state" in
+        *active*) echo "  ✓ gripper_node active — /gripper_node/command 사용 가능" ;;
+        *)        echo "  ✗ gripper_node 상태: ${state:-불명} — /tmp/tm_gripper.log 확인" ;;
+      esac
+    else
+      echo "  ✗ gripper_node 미등장 — /tmp/tm_gripper.log 확인"
+    fi
+  )
+}
+
+start_ee_stack() {
+  echo "=== 그리퍼·거리센서 스택 기동 ==="
+  if [ ! -f "$EE_WS/install/setup.bash" ]; then
+    echo "  ✗ $EE_WS 없음 — SCHUNK 그리퍼 Task 비활성"
+    return 1
+  fi
+  ( # 서브셸: LGIT 환경이 우리 셸을 오염시키지 않게 격리
+    # shellcheck disable=SC1091
+    source /opt/ros/humble/setup.bash 2>/dev/null
+    # shellcheck disable=SC1091
+    source "$EE_WS/install/setup.bash" 2>/dev/null
+    export ROS_LOCALHOST_ONLY="$ROS_LOCALHOST_ONLY" ROS_DOMAIN_ID="$ROS_DOMAIN_ID"
+
+    setsid nohup ros2 launch tc_bringup logger.launch.py \
+      > /tmp/tm_ee_logger.log 2>&1 < /dev/null &
+    for _ in $(seq 1 25); do
+      [ "$(pgrep -cf "$EE_WS/install/.*/logger_[a-z]+_node")" -ge 5 ] && break
+      sleep 1
+    done
+    echo "  · 로거 $(pgrep -cf "$EE_WS/install/.*/logger_[a-z]+_node")/5 기동"
+
+    setsid nohup ros2 run tc_end_effector end_effector_node \
+      > /tmp/tm_ee_node.log 2>&1 < /dev/null &
+    for _ in $(seq 1 40); do
+      timeout 3 ros2 service list 2>/dev/null | grep -q '^/gripper_command$' && break
+      sleep 1
+    done
+    if timeout 3 ros2 service list 2>/dev/null | grep -q '^/gripper_command$'; then
+      echo "  ✓ /gripper_command 준비됨 (로그: /tmp/tm_ee_node.log)"
+    else
+      echo "  ✗ /gripper_command 미등장 — /tmp/tm_ee_node.log 확인"
+    fi
+  )
+}
+
+driver_pid() { pgrep -f 'lib/tm_driver/tm_driver' 2>/dev/null | head -1; }
+
+driver_ip() {
+  tr '\0' ' ' < "/proc/$1/cmdline" 2>/dev/null \
+    | grep -oE 'robot_ip:=[0-9.]+' | head -1 | sed 's/^robot_ip:=//'
+}
+
+# 실행 중인 프로세스의 환경변수 값 (없으면 기본값)
+proc_env() {
+  local pid="$1" key="$2" default="$3" val
+  val="$(tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null \
+    | grep -m1 "^$key=" | cut -d= -f2-)"
+  echo "${val:-$default}"
+}
+
+kill_driver() {
+  local pid="$1"
+  kill "$pid" 2>/dev/null
+  for _ in 1 2 3 4 5; do
+    kill -0 "$pid" 2>/dev/null || break
+    sleep 1
+  done
+  if kill -0 "$pid" 2>/dev/null; then
+    kill -9 "$pid" 2>/dev/null
+    sleep 1
+  fi
+  if [ -z "$(driver_pid)" ]; then
+    echo "    ✓ 종료 완료 — launch 가 새로 기동합니다"
+  else
+    echo "    ✗ 종료 실패 — 수동 확인 필요"
+  fi
+}
+
+# tm_driver 사전 점검 — 없으면 launch 가 기동,
+# IP 또는 DDS 디스커버리 설정이 다르면 종료 후 재기동
+preflight() {
+  echo "=== 사전 점검 ==="
+  echo "  · DDS: ROS_LOCALHOST_ONLY=$ROS_LOCALHOST_ONLY ROS_DOMAIN_ID=$ROS_DOMAIN_ID"
+
+  if ping -c1 -W1 "$ROBOT_IP" >/dev/null 2>&1; then
+    echo "  ✓ 로봇($ROBOT_IP) 응답"
+  else
+    echo "  ✗ 로봇($ROBOT_IP) 무응답 — 전원/케이블/IP 확인 필요"
+  fi
+
+  local tm_pids
+  tm_pids="$(pgrep -f 'lib/tm_task_manager/task_manager_node' 2>/dev/null | tr '\n' ' ')"
+  if [ -n "$tm_pids" ]; then
+    echo "  ! task_manager 이미 실행 중 ($tm_pids) — GUI 가 중복으로 뜹니다"
+    echo "    권장: ./run stop 후 다시 실행"
+  fi
+
+  local pid ip lho domain
+  pid="$(driver_pid)"
+
+  if [ -z "$pid" ]; then
+    echo "  • tm_driver 미실행 — launch 가 자동 기동 (robot_ip=$ROBOT_IP)"
+    return
+  fi
+
+  ip="$(driver_ip "$pid")"
+  lho="$(proc_env "$pid" ROS_LOCALHOST_ONLY 0)"
+  domain="$(proc_env "$pid" ROS_DOMAIN_ID 0)"
+
+  if [ "$ip" != "$ROBOT_IP" ]; then
+    echo "  ! tm_driver 가 다른 IP 로 실행 중 (pid=$pid, robot_ip=${ip:-불명})"
+    echo "    → 종료 후 $ROBOT_IP 로 재기동합니다"
+    kill_driver "$pid"
+    return
+  fi
+
+  # IP 가 같아도 DDS 설정이 다르면 토픽이 GUI 에 안 보입니다 — 재사용하면 안 됩니다.
+  if [ "$lho" != "$ROS_LOCALHOST_ONLY" ] || [ "$domain" != "$ROS_DOMAIN_ID" ]; then
+    echo "  ! tm_driver 가 다른 DDS 설정으로 실행 중 (pid=$pid)"
+    echo "      드라이버: ROS_LOCALHOST_ONLY=$lho ROS_DOMAIN_ID=$domain"
+    echo "      이 스택 : ROS_LOCALHOST_ONLY=$ROS_LOCALHOST_ONLY ROS_DOMAIN_ID=$ROS_DOMAIN_ID"
+    echo "    → 토픽이 GUI 에 보이지 않습니다. 종료 후 재기동합니다"
+    kill_driver "$pid"
+    return
+  fi
+
+  echo "  ✓ tm_driver 실행 중 (pid=$pid, robot_ip=$ip, LOCALHOST_ONLY=$lho, DOMAIN_ID=$domain) — 재사용"
+  driver_topic_check
+}
+
+# 드라이버가 ROS 그래프에 실제로 붙어 퍼블리시 중인지 확인
+driver_topic_check() {
+  local pubs
+  pubs="$(timeout 5 ros2 topic info /feedback_states 2>/dev/null \
+    | grep -oE 'Publisher count: [0-9]+' | grep -oE '[0-9]+$')"
+  if [ "${pubs:-0}" -ge 1 ]; then
+    echo "  ✓ /feedback_states 퍼블리셔 ${pubs}개 — ROS 브리지 정상"
+  else
+    echo "  ✗ /feedback_states 퍼블리셔 없음 — 드라이버가 ROS 그래프에 안 보입니다"
+    echo "    펜던트에서 TMflow Listen 노드 프로젝트가 Play 중인지 확인하세요"
+  fi
+}
+
+do_start() {
+  source_ros
+  stop_ours
+  echo ""
+  preflight
+  echo ""
+  start_ee_stack
+  start_smc_stack
+  echo ""
+  start_magazine_detect
+  echo ""
+  echo "=== PyQt Task Manager 기동 (robot_ip=$ROBOT_IP) ==="
+  echo "    로봇 펜던트에서 TMflow Listen 노드 프로젝트를 Play 해야 tm_driver 가 붙습니다."
+  echo ""
+  exec env PYTHONNOUSERSITE=1 DISPLAY="${DISPLAY:-:0}" \
+    ROS_LOCALHOST_ONLY="$ROS_LOCALHOST_ONLY" ROS_DOMAIN_ID="$ROS_DOMAIN_ID" \
+    ros2 launch tm_task_manager task_manager.launch.py ${ROBOT_IP:+robot_ip:=$ROBOT_IP}
+}
+
+do_stop() {
+  stop_ours
+}
+
+case "${1:-start}" in
+  start|"")  do_start ;;
+  stop)      do_stop ;;
+  check)     source_ros; preflight ;;
+  web)       shift; exec "$WS/scripts/web_gui.sh" "${1:-start}" ;;
+  *) echo "사용법: $0 {start|stop|check|web [start|stop|status|restart]}"; exit 1 ;;
+esac

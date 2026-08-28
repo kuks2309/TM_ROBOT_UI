@@ -1,0 +1,275 @@
+
+name: 새 Recipe (Runtime)
+description: TM Landmark 기준 상대좌표 실행 파일
+version: '1.0'
+created: '2026-01-05'
+modified: '2026-02-11'
+jobs:
+- id: 1
+  type: recipe_info
+  name: Recipe 개요
+  params:
+    mode: teaching
+    description: ''
+    author: ''
+    version: '1.0'
+  coordinate_mode: absolute
+- id: 2
+  type: move_to_point
+  name: 포인트 이동
+  caption: 시작점
+  params:
+    motion_type: tcp
+    X: 369.12
+    Y: 575.84
+    Z: -34.85
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -180.0
+    velocity: 50.0
+  robot_base:
+    X: 369.12
+    Y: 575.84
+    Z: -34.85
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -180.0
+  coordinate_mode: absolute
+- id: 3
+  type: gripper_close
+  name: 그리퍼 닫기
+  params:
+    delay: 3.0
+- id: 4
+  type: move_to_point
+  name: 포인트 이동
+  caption: WP1
+  params:
+    motion_type: tcp
+    X: 379.12
+    Y: 575.84
+    Z: -34.85
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -180.0
+    velocity: 50.0
+  robot_base:
+    X: 379.12
+    Y: 575.84
+    Z: -34.85
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -180.0
+  coordinate_mode: absolute
+- id: 5
+  type: measure_point
+  name: 측정점
+  caption: 측정점
+  params:
+    point_type: waypoint
+    motion_type: tcp
+    X: 27.57
+    Y: 584.74
+    Z: -35.44
+    Rx: 179.96
+    Ry: -0.01
+    Rz: -179.99
+    velocity: 70.0
+  robot_base:
+    X: 27.57
+    Y: 584.74
+    Z: -35.44
+    Rx: 179.96
+    Ry: -0.01
+    Rz: -179.99
+  coordinate_mode: absolute
+- id: 6
+  type: wait
+  name: 대기
+  params:
+    duration: 500
+  coordinate_mode: absolute
+- id: 7
+  type: find_landmark
+  name: Landmark 검색
+  caption: Landmark 검색
+  params:
+    grid_step: 30.0
+    grid_size: 3
+    scan_timeout: 500
+    velocity: 30.0
+    on_found: store_position
+    on_not_found: abort
+  coordinate_mode: absolute
+- id: 8
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  caption: Scan landmark
+  params:
+    wait_after_command: 100
+    repeat_count: 3
+  coordinate_mode: absolute
+- id: 9
+  type: move_to_point
+  name: 포인트 이동
+  caption: 회전
+  params:
+    motion_type: tcp
+    X: -8.73
+    Y: -151.78
+    Z: 1.74
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+  coordinate_mode: relative
+  original_absolute:
+    X: 30.56
+    Y: 576.74
+    Z: -35.43
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 10
+  type: line_move_to_point
+  name: 직선 포인트 이동
+  caption: 25mm 상승
+  params:
+    motion_type: tcp
+    X: -8.73
+    Y: -151.78
+    Z: 1.74
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: 25.0
+    velocity: 25.0
+  coordinate_mode: relative
+  original_absolute:
+    X: 30.56
+    Y: 576.74
+    Z: -35.43
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 11
+  type: line_move_to_point
+  name: 직선 포인트 이동
+  caption: 지그 방향 375mm
+  params:
+    motion_type: tcp
+    X: -8.73
+    Y: -152.07
+    Z: -23.26
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    offset X: 0.0
+    offset Y: 388.0
+    offset Z: 0.0
+    velocity: 25.0
+  coordinate_mode: relative
+  original_absolute:
+    X: 30.56
+    Y: 576.74
+    Z: -10.43
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 12
+  type: gripper_open
+  name: 그리퍼 열기
+  params:
+    delay: 3.0
+- id: 13
+  type: line_move_to_point
+  name: 직선 포인트 이동
+  caption: 173mm  하강
+  params:
+    motion_type: tcp
+    X: -0.32
+    Y: 239.76
+    Z: -27.7
+    Rx: 180.0
+    Ry: -0.02
+    Rz: -90.0
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -173.0
+    velocity: 25.0
+  coordinate_mode: relative
+  original_absolute:
+    X: 30.56
+    Y: 968.69
+    Z: -10.57
+    Rx: 180.0
+    Ry: -0.02
+    Rz: -90.0
+- id: 14
+  type: gripper_close
+  name: 그리퍼 닫기
+  params:
+    delay: 3.0
+  coordinate_mode: none
+- id: 15
+  type: gripper_open
+  name: 그리퍼 열기
+  params:
+    delay: 3.0
+  coordinate_mode: none
+- id: 16
+  type: line_move_to_point
+  name: 직선 포인트 이동
+  caption: 173mm 상승
+  params:
+    motion_type: tcp
+    X: -0.34
+    Y: 241.78
+    Z: 145.3
+    Rx: 180.0
+    Ry: -0.02
+    Rz: -90.0
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: 173.0
+    velocity: 25.0
+  coordinate_mode: relative
+  original_absolute:
+    X: 30.57
+    Y: 968.69
+    Z: -183.58
+    Rx: 180.0
+    Ry: -0.02
+    Rz: -90.0
+- id: 17
+  type: move_to_point
+  name: 포인트 이동
+  params:
+    motion_type: tcp
+    X: -8.73
+    Y: -152.07
+    Z: -23.26
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+  coordinate_mode: relative
+  original_absolute:
+    X: 30.56
+    Y: 576.74
+    Z: -10.43
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+master_file: gripper_test_jig.yaml
+master_modified: '2026-02-10'
+reference:
+  tm_jig_landmark:
+    X: 23.97864
+    Y: 699.4151
+    Z: -35.481808
+    Rx: -179.80170999999999
+    Ry: 0.059748928
+    Rz: 178.72105333333332

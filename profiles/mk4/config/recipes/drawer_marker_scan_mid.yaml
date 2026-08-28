@@ -1,0 +1,126 @@
+# Recipe: 드로어 마커 스캔 — 중간 (MK4)
+#
+# [역할] 드로어 마커를 10회 스캔·3sigma 평균내어 «파일로» 남긴다. 로봇은 물건을
+#   건드리지 않는다. 집기/놓기는 drawer_pick · drawer_place 가 이 파일을 읽어서 한다.
+#
+# [왜 나눴나] 드로어에서 집어 → 팔레트에 놓고 → 다시 드로어에 놓는 흐름에서, 중간에
+#   다른 레시피가 끼면 메모리의 latest_scan 은 보장되지 않는다(GUI 재시작·타 마커 스캔).
+#   파일로 남기면 레시피 경계를 넘어 살아남는다.
+#
+# [단이 바뀌면 이 파일만 바꾼다] 파지 상대좌표는 마커 기준이라 3단이 모두 같다.
+#   단마다 다른 것은 «마커를 보러 가는 자세» 하나뿐 — 그게 이 레시피다.
+#     상단  X 199.73  Y 567.02  Z  248.08
+#     중간  X 154.75  Y 567.01  Z    8.07   ← 추정
+#     하단  X 109.77  Y 567.01  Z -231.95
+#   간격 ΔZ 240.01mm · ΔX 44.98mm 로 균등하다. X 가 단마다 45mm 변하는 이유는 **미확인**.
+#
+# [이 단] 중간 — **추정값** — 실측 티칭 필요
+#
+# [촬영 전 그리퍼를 닫는 이유] 열린 손가락이 카메라 시야를 가려 마커 검출을 방해한다.
+#
+# [저장 위치] data/landmark_pose/drawer/  — drawer_cali 와 폴더를 나눈다.
+#   cali 는 손목 Rz 0.01 로 찍고 이쪽은 -89.99 다. MK4 는 카메라 벡터가 자세 의존적이라
+#   (실측 z 편차 4.8mm) 두 자세의 마커값이 어긋난다. 섞이면 파지가 그만큼 밀린다.
+
+name: 드로어 마커 스캔 — 중간 (MK4)
+description: 드로어(중간) 마커를 10회 스캔해 3sigma 평균을 파일로 남긴다. drawer_pick · drawer_place 가 이 파일을 읽는다.
+version: '3.0'
+created: '2026-08-23'
+modified: '2026-08-23'
+jobs:
+- id: 1
+  type: recipe_info
+  name: Recipe 개요
+  params:
+    mode: execution
+    description: 드로어(중간) 마커를 재서 파일로 남긴다
+    author: jjh
+    version: '3.0'
+    vision_origin_check: none
+- id: 2
+  type: move_to_point
+  name: 포인트 이동
+  caption: 안전위치
+  params:
+    motion_type: tcp
+    X: -16.35
+    Y: 660.56
+    Z: 359.34
+    Rx: 179.44
+    Ry: 0.05
+    Rz: -90.77
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: -16.35
+    Y: 660.56
+    Z: 359.34
+    Rx: 179.44
+    Ry: 0.05
+    Rz: -90.77
+- id: 3
+  type: smc_grip
+  name: SMC 그리퍼 파지
+  caption: 촬영 위해 그리퍼 닫기 (카메라 시야 확보)
+  params:
+    timeout: 30.0
+    bypass_interlock: true
+    verify_skip: true
+- id: 4
+  type: move_to_point
+  name: 포인트 이동
+  caption: 드로어마커로 이동
+  params:
+    motion_type: tcp
+    X: 154.75
+    Y: 567.01
+    Z: 8.07
+    Rx: -179.99
+    Ry: -0.01
+    Rz: -89.99
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 154.75
+    Y: 567.01
+    Z: 8.07
+    Rx: -179.99
+    Ry: -0.01
+    Rz: -89.99
+- id: 5
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  caption: 드로어마커_기준점_스캔 (10회 · 3sigma)
+  params:
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz_rx_ry_rz
+- id: 6
+  type: save_landmark_pose
+  name: Landmark 좌표 저장
+  caption: 드로어마커_저장
+  params:
+    save_path: data/landmark_pose/drawer
+    operator: jjh
+- id: 7
+  type: move_to_point
+  name: 포인트 이동
+  caption: 안전위치 복귀
+  params:
+    motion_type: tcp
+    X: -16.35
+    Y: 660.56
+    Z: 359.34
+    Rx: 179.44
+    Ry: 0.05
+    Rz: -90.77
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: -16.35
+    Y: 660.56
+    Z: 359.34
+    Rx: 179.44
+    Ry: 0.05
+    Rz: -90.77

@@ -1,0 +1,4 @@
+~/Project/jjh/TM_Robot_MK2_ros2_ws/src/TM_Robot_Task_Manager/config/recipes/pallet_ring_pick_place_azinterp_tcplinear.yaml
+~/Project/jjh/TM_Robot_MK2_ros2_ws/src/TM_Robot_Task_Manager/config/recipes/table-1/table-1_place.yaml
+~/Project/jjh/TM_Robot_MK2_ros2_ws/src/TM_Robot_Task_Manager/config/recipes/table-1/table-1_pick.yaml
+~/Project/jjh/TM_Robot_MK2_ros2_ws/src/TM_Robot_Task_Manager/config/recipes/table-1/table-1_marker_scan.yaml

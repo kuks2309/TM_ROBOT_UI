@@ -1,0 +1,819 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>HandEyeTestTab</class>
+ <widget class="QWidget" name="HandEyeTestTab">
+  <layout class="QVBoxLayout" name="verticalLayout_main">
+   <item>
+    <widget class="QScrollArea" name="scrollArea_handeye">
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <widget class="QWidget" name="scrollAreaWidgetContents">
+      <layout class="QVBoxLayout" name="verticalLayout_scroll">
+
+       <!-- 측정 위치 생성 -->
+       <item>
+        <widget class="QGroupBox" name="groupBox_positionGen">
+         <property name="title">
+          <string>측정 위치 생성</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_positionGen">
+          <!-- 기준 위치 -->
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_basePos">
+            <item>
+             <widget class="QPushButton" name="pushButton_readCurrentTcp">
+              <property name="text">
+               <string>현재 TCP 읽기</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_baseX">
+              <property name="text">
+               <string>X:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="doubleSpinBox_baseX">
+              <property name="minimum">
+               <double>-1000.000000000000000</double>
+              </property>
+              <property name="maximum">
+               <double>1000.000000000000000</double>
+              </property>
+              <property name="decimals">
+               <number>2</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_baseY">
+              <property name="text">
+               <string>Y:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="doubleSpinBox_baseY">
+              <property name="minimum">
+               <double>-1000.000000000000000</double>
+              </property>
+              <property name="maximum">
+               <double>1000.000000000000000</double>
+              </property>
+              <property name="decimals">
+               <number>2</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_baseZ">
+              <property name="text">
+               <string>Z:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="doubleSpinBox_baseZ">
+              <property name="minimum">
+               <double>-1000.000000000000000</double>
+              </property>
+              <property name="maximum">
+               <double>1000.000000000000000</double>
+              </property>
+              <property name="decimals">
+               <number>2</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_baseRx">
+              <property name="text">
+               <string>Rx:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="doubleSpinBox_baseRx">
+              <property name="minimum">
+               <double>-180.000000000000000</double>
+              </property>
+              <property name="maximum">
+               <double>180.000000000000000</double>
+              </property>
+              <property name="decimals">
+               <number>2</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_baseRy">
+              <property name="text">
+               <string>Ry:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="doubleSpinBox_baseRy">
+              <property name="minimum">
+               <double>-180.000000000000000</double>
+              </property>
+              <property name="maximum">
+               <double>180.000000000000000</double>
+              </property>
+              <property name="decimals">
+               <number>2</number>
+              </property>
+              <property name="value">
+               <double>90.000000000000000</double>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_baseRz">
+              <property name="text">
+               <string>Rz:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="doubleSpinBox_baseRz">
+              <property name="minimum">
+               <double>-180.000000000000000</double>
+              </property>
+              <property name="maximum">
+               <double>180.000000000000000</double>
+              </property>
+              <property name="decimals">
+               <number>2</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+
+          <!-- X/Y/Z 스텝 설정 -->
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_steps">
+            <item>
+             <widget class="QLabel" name="label_xStep">
+              <property name="text">
+               <string>X축:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="doubleSpinBox_xStep">
+              <property name="minimum">
+               <double>1.000000000000000</double>
+              </property>
+              <property name="maximum">
+               <double>500.000000000000000</double>
+              </property>
+              <property name="value">
+               <double>20.000000000000000</double>
+              </property>
+              <property name="suffix">
+               <string> mm</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_xCount">
+              <property name="text">
+               <string>x</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="spinBox_xCount">
+              <property name="minimum">
+               <number>1</number>
+              </property>
+              <property name="maximum">
+               <number>10</number>
+              </property>
+              <property name="value">
+               <number>2</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_xCountUnit">
+              <property name="text">
+               <string>개</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_x">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::Fixed</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_yStep">
+              <property name="text">
+               <string>Y축:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="doubleSpinBox_yStep">
+              <property name="minimum">
+               <double>1.000000000000000</double>
+              </property>
+              <property name="maximum">
+               <double>500.000000000000000</double>
+              </property>
+              <property name="value">
+               <double>20.000000000000000</double>
+              </property>
+              <property name="suffix">
+               <string> mm</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_yCount">
+              <property name="text">
+               <string>x</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="spinBox_yCount">
+              <property name="minimum">
+               <number>1</number>
+              </property>
+              <property name="maximum">
+               <number>10</number>
+              </property>
+              <property name="value">
+               <number>2</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_yCountUnit">
+              <property name="text">
+               <string>개</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_y">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::Fixed</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_zStep">
+              <property name="text">
+               <string>Z축:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="doubleSpinBox_zStep">
+              <property name="minimum">
+               <double>1.000000000000000</double>
+              </property>
+              <property name="maximum">
+               <double>500.000000000000000</double>
+              </property>
+              <property name="value">
+               <double>20.000000000000000</double>
+              </property>
+              <property name="suffix">
+               <string> mm</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_zCount">
+              <property name="text">
+               <string>x</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="spinBox_zCount">
+              <property name="minimum">
+               <number>1</number>
+              </property>
+              <property name="maximum">
+               <number>10</number>
+              </property>
+              <property name="value">
+               <number>2</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_zCountUnit">
+              <property name="text">
+               <string>개</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_steps">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+
+          <!-- 총 위치 및 생성 버튼 -->
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_genButtons">
+            <item>
+             <widget class="QLabel" name="label_totalPositions">
+              <property name="text">
+               <string>총 측정 위치: 50개 (5x5x2)</string>
+              </property>
+              <property name="styleSheet">
+               <string>font-weight: bold;</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_gen1">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_generatePositions">
+              <property name="text">
+               <string>위치 목록 생성</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_clearPositions">
+              <property name="text">
+               <string>위치 목록 초기화</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+
+       <!-- 측정 위치 목록 -->
+       <item>
+        <widget class="QGroupBox" name="groupBox_positionList">
+         <property name="title">
+          <string>측정 위치 목록</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_positionList">
+          <item>
+           <widget class="QTableWidget" name="tableWidget_positions">
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>150</height>
+             </size>
+            </property>
+            <property name="columnCount">
+             <number>7</number>
+            </property>
+            <column>
+             <property name="text">
+              <string>No.</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>X (mm)</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Y (mm)</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Z (mm)</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Rx (deg)</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Ry (deg)</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Rz (deg)</string>
+             </property>
+            </column>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_posListButtons">
+            <item>
+             <widget class="QPushButton" name="pushButton_addCurrentPos">
+              <property name="text">
+               <string>현재 TCP 추가</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_deleteSelectedPos">
+              <property name="text">
+               <string>선택 삭제</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_savePositions">
+              <property name="text">
+               <string>저장</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_loadPositions">
+              <property name="text">
+               <string>불러오기</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_posListButtons">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+
+       <!-- 테스트 설정 및 실행 -->
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_testControl">
+         <!-- 테스트 설정 -->
+         <item>
+          <widget class="QGroupBox" name="groupBox_testSettings">
+           <property name="title">
+            <string>테스트 설정</string>
+           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout_testSettings">
+            <item>
+             <widget class="QLabel" name="label_repeatCount">
+              <property name="text">
+               <string>위치당 반복:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="spinBox_repeatCount">
+              <property name="minimum">
+               <number>1</number>
+              </property>
+              <property name="maximum">
+               <number>100</number>
+              </property>
+              <property name="value">
+               <number>3</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_repeatUnit">
+              <property name="text">
+               <string>회</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_testSet1">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::Fixed</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_scanDelay">
+              <property name="text">
+               <string>스캔 대기:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="spinBox_scanDelay">
+              <property name="minimum">
+               <number>100</number>
+              </property>
+              <property name="maximum">
+               <number>5000</number>
+              </property>
+              <property name="value">
+               <number>500</number>
+              </property>
+              <property name="singleStep">
+               <number>100</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_scanDelayUnit">
+              <property name="text">
+               <string>ms</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+
+         <!-- 실행 제어 -->
+         <item>
+          <widget class="QGroupBox" name="groupBox_execControl">
+           <property name="title">
+            <string>실행 제어</string>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_execControl">
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_execButtons">
+              <item>
+               <widget class="QPushButton" name="pushButton_startTest">
+                <property name="text">
+                 <string>테스트 시작</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton_stopTest">
+                <property name="text">
+                 <string>중지</string>
+                </property>
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton_resetTest">
+                <property name="text">
+                 <string>초기화</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_progress">
+              <item>
+               <widget class="QLabel" name="label_progress">
+                <property name="text">
+                 <string>진행: 0/0 (0%)</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QProgressBar" name="progressBar_test">
+                <property name="value">
+                 <number>0</number>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+         </item>
+        </layout>
+       </item>
+
+       <!-- 측정 결과 -->
+       <item>
+        <widget class="QGroupBox" name="groupBox_results">
+         <property name="title">
+          <string>측정 결과</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_results">
+          <item>
+           <widget class="QTableWidget" name="tableWidget_measurements">
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>200</height>
+             </size>
+            </property>
+            <property name="columnCount">
+             <number>15</number>
+            </property>
+            <column>
+             <property name="text">
+              <string>No.</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Pos</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>성공</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Lm_X</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Lm_Y</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Lm_Z</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Lm_Rx</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Lm_Ry</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Lm_Rz</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>TCP_X</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>TCP_Y</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>TCP_Z</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>TCP_Rx</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>TCP_Ry</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>TCP_Rz</string>
+             </property>
+            </column>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_resultButtons">
+            <item>
+             <widget class="QPushButton" name="pushButton_exportCSV">
+              <property name="text">
+               <string>CSV 내보내기</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_openAnalyzer">
+              <property name="text">
+               <string>분석기 열기</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_resultButtons">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+
+       <!-- 위치별 통계 -->
+       <item>
+        <widget class="QGroupBox" name="groupBox_statistics">
+         <property name="title">
+          <string>위치별 통계 (Hand-Eye 오차 분석)</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_statistics">
+          <item>
+           <widget class="QTextEdit" name="textEdit_statistics">
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>100</height>
+             </size>
+            </property>
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+            <property name="placeholderText">
+             <string>테스트 완료 후 위치별 Landmark 편차가 표시됩니다.</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

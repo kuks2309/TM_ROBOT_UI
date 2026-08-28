@@ -1,0 +1,6 @@
+uint8 channel           # 1 z, 2 x
+float32 max_speed       # mm/s
+float32 acc             # mm/s^2
+float32 dec             # mm/s^2
+---
+bool is_success

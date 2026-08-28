@@ -1,0 +1,36 @@
+# Recipe: 새 Recipe
+# TM Task Manager Recipe File
+
+name: 새 Recipe
+description: ''
+version: '1.0'
+created: '2026-08-20'
+modified: '2026-08-20'
+jobs:
+- id: 1
+  type: smc_grip
+  name: SMC 그리퍼 파지
+  params:
+    timeout: 30.0
+    bypass_interlock: true
+    verify_skip: true
+- id: 2
+  type: move_to_point
+  name: 포인트 이동
+  params:
+    motion_type: tcp
+    X: 394.76
+    Y: 222.88
+    Z: -136.79
+    Rx: -179.54
+    Ry: 0.56
+    Rz: -0.34
+    velocity: 25.0
+    decomposed_tcp: false
+  robot_base:
+    X: 394.76
+    Y: 222.88
+    Z: -136.79
+    Rx: -179.54
+    Ry: 0.56
+    Rz: -0.34

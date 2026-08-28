@@ -1,0 +1,127 @@
+# Recipe: pallet0_cali_rz045
+# TM Task Manager Recipe File
+
+name: pallet0_cali_rz045
+description: 계측 편향 실험용. 원본 pallet0_cali 에서 Rz -45° 만 변경. 스캔 Z=-227.17 (작업거리 98.8mm),
+  Rz=-45.0°. move_linear 오프셋은 공구좌표(TPP)라 Rz 변경 시 경로 보존을 위해 역회전 보정함.
+version: '1.0'
+created: '2026-08-13'
+modified: '2026-08-24'
+jobs:
+- id: 1
+  type: schunk_grip
+  name: SCHUNK 그리퍼 파지
+  params:
+    timeout: 15.0
+- id: 2
+  type: wait
+  name: 대기
+  caption: 그리퍼 동작 완료 대기
+  params:
+    duration: 3000
+- id: 3
+  type: move_to_point
+  name: 포인트 이동
+  caption: 1사분면 마커로 이동
+  params:
+    motion_type: tcp
+    X: 621.29
+    Y: 230.41
+    Z: -227.06
+    Rx: -179.98
+    Ry: -0.02
+    Rz: 45.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 621.29
+    Y: 230.41
+    Z: -227.06
+    Rx: -179.98
+    Ry: -0.02
+    Rz: 45.0
+- id: 4
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: 1사분면_scan
+  params:
+    jig_number: 4
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz
+- id: 5
+  type: move_linear
+  name: 직선 이동
+  caption: 2사분면 마커로 이동
+  params:
+    offset X: 99.0
+    offset Y: -99.0
+    offset Z: 0.0
+    velocity: 50.0
+- id: 6
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: 2사분면_scan
+  params:
+    jig_number: 2
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz
+- id: 7
+  type: move_linear
+  name: 직선 이동
+  caption: 3사분면 마커로 이동
+  params:
+    offset X: 141.42
+    offset Y: 141.42
+    offset Z: 0.0
+    velocity: 50.0
+- id: 8
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: 3사분면_scan
+  params:
+    jig_number: 1
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz
+- id: 9
+  type: move_linear
+  name: 직선 이동
+  caption: 4사분면 마커로 이동
+  params:
+    offset X: -84.85
+    offset Y: 99.0
+    offset Z: 0.0
+    velocity: 50.0
+- id: 10
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: 4사분면_scan
+  params:
+    jig_number: 3
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz
+- id: 11
+  type: calculate_plate_pose
+  name: Plate Pose 계산
+  caption: pallet_plate_pose_calc
+  params:
+    operator: jjh
+    save_path: data/plate_pose_calc/pallet0
+- id: 12
+  type: schunk_release
+  name: SCHUNK 그리퍼 놓기
+  params:
+    timeout: 15.0
+- id: 13
+  type: wait
+  name: 대기
+  caption: 그리퍼 동작 완료 대기
+  params:
+    duration: 3000

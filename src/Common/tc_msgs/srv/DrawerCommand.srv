@@ -1,0 +1,5 @@
+string command              # open, close, pause, resume, estop, reset, home
+float32 z_start_position    # z_start  mm
+uint8 direction             # 1 left, 2 right
+---
+bool is_success

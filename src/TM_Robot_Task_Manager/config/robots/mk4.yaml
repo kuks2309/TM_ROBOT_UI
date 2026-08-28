@@ -1,0 +1,29 @@
+# MK4 로봇 프로필
+#
+# 근거:
+#   robot_ip   — launch/task_manager.launch.py 의 MK4 기본값 (169.254.122.16)
+#   gripper    — config/recipes 55개가 smc_grip 39 / smc_release 52 / smc_home 1 회 사용
+#                (schunk 잡은 0건)
+#   identify   — REMOTE_HOSTS.md(2026-08-20 실측)
+#
+# MK4 의 SMC 는 근접·위치 센서(BUSY·INP·SETON)로 완료를 판정한다.
+# 근거: Actuators/gripper/docs/adr/ADR-004-busy-rise-latch.md 의 /io_resp 50Hz 실측.
+id: mk4
+label: "MK4 (LG Paju C6 Tx)"
+
+robot_ip: "169.254.122.16"
+
+gripper:
+  id: smc
+  label: "SMC 전동 그리퍼"
+  # BUSY/INP 센서로 완료 판정 가능
+  verifies_completion: true
+
+identify:
+  ips:
+    - "192.168.44.78"
+    - "172.16.1.104"
+
+workspace:
+  # 로봇 본체에서의 원본 경로 (참고용 — 복수 Projects, 폴더명도 다름)
+  origin: "/home/tc/Projects/jjh/tm-robot-4"

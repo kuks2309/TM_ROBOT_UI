@@ -1,0 +1,151 @@
+from typing import Optional
+from PyQt5.QtCore import QObject, pyqtSignal
+from std_srvs.srv import Trigger
+
+
+class CameraCalibrationService(QObject):
+    status_changed = pyqtSignal(str)
+    chessboard_detected = pyqtSignal(bool, str)
+    image_captured = pyqtSignal(bool, str, int)
+    calibration_completed = pyqtSignal(bool, str)
+    calibration_saved = pyqtSignal(bool, str)
+    error_occurred = pyqtSignal(str)
+
+    def __init__(self, ros_node=None):
+        super().__init__()
+        self._ros_node = ros_node
+        self._captured_count = 0
+
+        self._detect_client = None
+        self._capture_client = None
+        self._run_client = None
+        self._save_client = None
+
+        if ros_node:
+            self._init_service_clients()
+
+    @property
+    def captured_count(self) -> int:
+        return self._captured_count
+
+    def reset_captured_count(self):
+        self._captured_count = 0
+
+    def _init_service_clients(self):
+        if not self._ros_node:
+            return
+
+        self._detect_client = self._ros_node.create_client(
+            Trigger, 'calibration/detect_chessboard')
+        self._capture_client = self._ros_node.create_client(
+            Trigger, 'calibration/capture_image')
+        self._run_client = self._ros_node.create_client(
+            Trigger, 'calibration/run_calibration')
+        self._save_client = self._ros_node.create_client(
+            Trigger, 'calibration/save_calibration')
+
+    def _check_service_available(self, client, service_name: str) -> bool:
+        if not client:
+            self.error_occurred.emit("Calibration 서비스가 초기화되지 않았습니다")
+            self.status_changed.emit("서비스 연결 실패")
+            return False
+
+        if not client.wait_for_service(timeout_sec=1.0):
+            self.error_occurred.emit(
+                f"Calibration 서비스를 찾을 수 없습니다. "
+                "camera_calibration_node가 실행 중인지 확인하세요."
+            )
+            self.status_changed.emit("서비스 연결 실패")
+            return False
+
+        return True
+
+
+    def detect_chessboard(self):
+        if not self._check_service_available(self._detect_client, "detect"):
+            return
+
+        self.status_changed.emit("Chessboard 인식 중...")
+        request = Trigger.Request()
+        future = self._detect_client.call_async(request)
+        future.add_done_callback(self._on_detect_done)
+
+    def capture_image(self):
+        if not self._check_service_available(self._capture_client, "capture"):
+            return
+
+        self.status_changed.emit("이미지 캡처 중...")
+        request = Trigger.Request()
+        future = self._capture_client.call_async(request)
+        future.add_done_callback(self._on_capture_done)
+
+    def run_calibration(self):
+        if not self._check_service_available(self._run_client, "calibration"):
+            return
+
+        self.status_changed.emit("캘리브레이션 실행 중...")
+        request = Trigger.Request()
+        future = self._run_client.call_async(request)
+        future.add_done_callback(self._on_run_done)
+
+    def save_calibration(self):
+        if not self._check_service_available(self._save_client, "save"):
+            return
+
+        self.status_changed.emit("결과 저장 중...")
+        request = Trigger.Request()
+        future = self._save_client.call_async(request)
+        future.add_done_callback(self._on_save_done)
+
+
+    def _on_detect_done(self, future):
+        try:
+            response = future.result()
+            self.chessboard_detected.emit(response.success, response.message)
+            if response.success:
+                self.status_changed.emit("Chessboard 인식 성공")
+            else:
+                self.status_changed.emit("Chessboard 인식 실패")
+        except Exception as e:
+            self.error_occurred.emit(f"Chessboard 인식 오류: {e}")
+            self.status_changed.emit("오류 발생")
+
+    def _on_capture_done(self, future):
+        try:
+            response = future.result()
+            if response.success:
+                self._captured_count += 1
+            self.image_captured.emit(
+                response.success, response.message, self._captured_count
+            )
+            if response.success:
+                self.status_changed.emit("이미지 캡처 완료")
+            else:
+                self.status_changed.emit("캡처 실패")
+        except Exception as e:
+            self.error_occurred.emit(f"이미지 캡처 오류: {e}")
+            self.status_changed.emit("오류 발생")
+
+    def _on_run_done(self, future):
+        try:
+            response = future.result()
+            self.calibration_completed.emit(response.success, response.message)
+            if response.success:
+                self.status_changed.emit("캘리브레이션 완료")
+            else:
+                self.status_changed.emit("캘리브레이션 실패")
+        except Exception as e:
+            self.error_occurred.emit(f"캘리브레이션 오류: {e}")
+            self.status_changed.emit("오류 발생")
+
+    def _on_save_done(self, future):
+        try:
+            response = future.result()
+            self.calibration_saved.emit(response.success, response.message)
+            if response.success:
+                self.status_changed.emit("저장 완료")
+            else:
+                self.status_changed.emit("저장 실패")
+        except Exception as e:
+            self.error_occurred.emit(f"저장 오류: {e}")
+            self.status_changed.emit("오류 발생")

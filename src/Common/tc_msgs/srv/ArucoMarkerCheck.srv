@@ -1,0 +1,6 @@
+bool aruco_marker_check
+int32 camera_index
+
+---
+int32[] marker_ids
+int32 detected

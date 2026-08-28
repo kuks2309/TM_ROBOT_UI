@@ -1,0 +1,21 @@
+# 4호기(Tx) 버퍼 매거진 감지 설정.
+#
+# di_bit 는 슬롯 번호 순서다 — 0 앞왼 · 1 뒤왼 · 2 앞중 · 3 뒤중 · 4 앞오 · 5 뒤오.
+# 앞/뒤가 교차하므로 도면 배선 일련번호(170PX17~22)와 4자리가 어긋난다.
+# 근거: 전장도면 시트 170(PDF p.57)·시트 183(p.63) 이미지 열람 + 레거시 슬롯 순서.
+magazine_detect_node:
+  ros__parameters:
+    # 슬롯 → DI 비트. 도면 주소 0x001A~0x001F = 비트 26~31.
+    di_bit: [26, 29, 27, 30, 28, 31]
+
+    # 원시 0 = 매거진 있음. 실기 실측 2026-08-22 + 레거시 task_operator.cpp:297-311.
+    detected_when_low: true
+
+    # 값이 바뀐 상태로 연속 N 프레임이어야 확정. io_resp 20ms 기준 50 = 1s(레거시와 같다).
+    debounce_ticks: 50
+
+    # remote_io_ros 의 io_di 비트 수. 범위 검증에만 쓴다.
+    di_bit_count: 80
+
+    # 이 시간 넘게 io_resp 가 없으면 stale. io_resp 는 읽기 성공 시에만 나온다.
+    stale_after_s: 1.0

@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>remote_io_hal</name>
+  <version>0.1.0</version>
+  <description>Remote IO Station (Crevis GL-9089) HAL contract kernel — ROS-free plain CMake (remote_io ADR-001, 사용자 승인 2026-07-31). Station port contract only in M0; M1 adds RemoteIoStationPort impl over comm::modbus_tcp (single-master, PIO ADR-001 rev).</description>
+  <maintainer email="drko0808@gmail.com">T-Robotics SW</maintainer>
+  <license>Proprietary</license>
+  <buildtool_depend>cmake</buildtool_depend>
+  <!-- comm::modbus_tcp 를 find_package(CONFIG) 로 소비 — colcon 빌드 순서 보장을 위해 명시
+       (tm-robot-4 이식: LGIT 원본은 사전 설치본에 의존해 선언이 없었음) -->
+  <build_depend>modbus_tcp</build_depend>
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>

@@ -1,0 +1,47 @@
+name: table-1_marker_scan
+description: table-1 위치 마커 스캔 — 픽/플레이스 전에 실행한다 (비고정식)
+version: '1.0'
+created: '2026-08-24'
+modified: '2026-08-24'
+jobs:
+- id: 1
+  type: schunk_release
+  name: SCHUNK 그리퍼 놓기
+  caption: 스캔 전 개방
+  params: {}
+- id: 2
+  type: wait
+  name: 대기
+  caption: 그리퍼 안정화
+  params:
+    duration: 2000
+- id: 3
+  type: move_to_point
+  name: 포인트 이동
+  caption: 위치 마커 촬영 자세
+  params:
+    motion_type: tcp
+    X: 114.378
+    Y: 628.21
+    Z: -187.942
+    Rx: 179.94
+    Ry: -0.24
+    Rz: -90.43
+    velocity: 25.0
+    decomposed_tcp: true
+- id: 4
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  caption: table-1_위치마커_스캔
+  params:
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz_rx_ry_rz
+- id: 5
+  type: save_landmark_pose
+  name: Landmark 좌표 저장
+  caption: table-1_위치마커_저장
+  params:
+    save_path: data/landmark_pose/table-1
+    operator: jjh

@@ -1,0 +1,45 @@
+# Recipe: 새 Recipe
+# TM Task Manager Recipe File
+
+name: 새 Recipe
+description: ''
+version: '1.0'
+created: '2026-08-10'
+modified: '2026-08-10'
+jobs:
+- id: 1
+  type: move_to_point
+  name: 포인트 이동
+  params:
+    motion_type: tcp
+    X: -268.28
+    Y: 188.46
+    Z: 47.41
+    Rx: -180.0
+    Ry: 0.0
+    Rz: 170.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: -268.28
+    Y: 188.46
+    Z: 47.41
+    Rx: -180.0
+    Ry: 0.0
+    Rz: 170.0
+- id: 2
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  params:
+    wait_after_command: 100
+    repeat_count: 6
+    outlier_method: iqr
+    analysis_target: xyz
+reference:
+  tm_jig_landmark:
+    X: 12.11
+    Y: 708.6
+    Z: -35.31
+    Rx: 179.24
+    Ry: 0.44
+    Rz: 178.86

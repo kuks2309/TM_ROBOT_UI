@@ -1,0 +1,11 @@
+operator: jjh
+recipe: drawer_to_pallet_pick_place
+task_caption: 드로어마커_저장
+saved_at: '2026-08-15 20:57:52'
+landmark:
+  x: 165.9
+  y: 547.471
+  z: 11.312
+  rx: -25.731
+  ry: 1.719
+  rz: -179.885

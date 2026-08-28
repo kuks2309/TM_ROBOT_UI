@@ -1,0 +1,8 @@
+
+find_landmark:
+  grid_step: 20.0
+  grid_size: 3
+  scan_timeout: 500
+  velocity: 30.0
+  on_found: store_position
+  on_not_found: abort

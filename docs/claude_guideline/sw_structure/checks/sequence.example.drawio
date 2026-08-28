@@ -1,0 +1,43 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="sequence-diagram" id="sq1">
+    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="Test" value="TestMicroBasic" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="60" y="40" width="140" height="400" as="geometry" />
+        </mxCell>
+        <mxCell id="Conn" value="Conn" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="320" y="40" width="140" height="400" as="geometry" />
+        </mxCell>
+        <mxCell id="Serial" value="serial.Serial" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="580" y="40" width="140" height="400" as="geometry" />
+        </mxCell>
+        <mxCell id="m1" value="vw(4, 2500)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;verticalAlign=bottom;endArrow=block;exitX=0.5;exitY=0.2;exitDx=0;exitDy=0;entryX=0.5;entryY=0.2;entryDx=0;entryDy=0;" edge="1" parent="1" source="Test" target="Conn">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="m2" value="write(!VAR 4 2500)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;verticalAlign=bottom;endArrow=block;exitX=0.5;exitY=0.3;exitDx=0;exitDy=0;entryX=0.5;entryY=0.3;entryDx=0;entryDy=0;" edge="1" parent="1" source="Conn" target="Serial">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="m3" value="+" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;verticalAlign=bottom;endArrow=open;dashed=1;exitX=0.5;exitY=0.4;exitDx=0;exitDy=0;entryX=0.5;entryY=0.4;entryDx=0;entryDy=0;" edge="1" parent="1" source="Serial" target="Conn">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="m4" value="True" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;verticalAlign=bottom;endArrow=open;dashed=1;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="Conn" target="Test">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="m5" value="vr(4)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;verticalAlign=bottom;endArrow=block;exitX=0.5;exitY=0.6;exitDx=0;exitDy=0;entryX=0.5;entryY=0.6;entryDx=0;entryDy=0;" edge="1" parent="1" source="Test" target="Conn">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="m6" value="write(?VAR 4)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;verticalAlign=bottom;endArrow=block;exitX=0.5;exitY=0.7;exitDx=0;exitDy=0;entryX=0.5;entryY=0.7;entryDx=0;entryDy=0;" edge="1" parent="1" source="Conn" target="Serial">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="m7" value="VAR=2500" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;verticalAlign=bottom;endArrow=open;dashed=1;exitX=0.5;exitY=0.8;exitDx=0;exitDy=0;entryX=0.5;entryY=0.8;entryDx=0;entryDy=0;" edge="1" parent="1" source="Serial" target="Conn">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="m8" value="2500" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;verticalAlign=bottom;endArrow=open;dashed=1;exitX=0.5;exitY=0.9;exitDx=0;exitDy=0;entryX=0.5;entryY=0.9;entryDx=0;entryDy=0;" edge="1" parent="1" source="Conn" target="Test">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

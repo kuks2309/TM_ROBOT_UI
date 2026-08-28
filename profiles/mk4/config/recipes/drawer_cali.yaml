@@ -1,0 +1,205 @@
+# Recipe: drawer_cali — 드로어 팔레트 4점 측정 (MK4)
+#
+# [역할] 드로어 마커를 재고, 그 마커 좌표계로 칼리브레이션 마크 4점을 순회 측정해
+#   plate_pose 를 남긴다. 측정 전용 — 물건을 집지 않는다.
+#
+# [이 레시피는 마커를 «스스로» 찍는다 — drawer_marker_scan 을 쓰지 않는다]
+#   job 3 의 손목 자세가 Rz 0.01 로, drawer_marker_scan 계열의 Rz -89.99 와 90도 다르다.
+#   MK4 는 카메라 벡터가 자세 의존적이라(실측 z 편차 4.8mm, sigma 2.10mm) 두 자세로 잰
+#   마커값이 어긋난다. job 6~13 의 4점 offset 은 «Rz 0.01 로 잰 마커» 기준으로 뽑은
+#   값이므로, 다른 자세의 저장본을 끌어다 쓰면 4점이 전부 그만큼 밀린다.
+#
+# [저장 폴더를 나눈 이유] 같은 이유로, 이 레시피의 마커는 data/landmark_pose/drawer_cali 에
+#   따로 남긴다. drawer_pick / drawer_place 가 읽는 data/landmark_pose/drawer 와 섞이면
+#   파지 위치가 몇 mm 밀린다.
+
+name: drawer_cali
+description: 드로어 마커를 1샷 측정하고, 그 마커 좌표계(Rz 기준) 오프셋으로 칼리브레이션 마크 4개를 순회 측정해 plate_pose
+  를 저장한다. 마커 좌표는 Job 5 가 따로 남긴다.
+version: '1.0'
+created: '2026-08-15'
+modified: '2026-08-22'
+jobs:
+- id: 1
+  type: recipe_info
+  name: Recipe 개요
+  params:
+    mode: execution
+    description: pallet0 드로어 마커 기준 4점 측정 마스터
+    author: jjh
+    version: '1.0'
+    vision_origin_check: none
+- id: 2
+  type: smc_grip
+  name: SMC 그리퍼 파지
+  caption: 측정 전 그리퍼 닫기
+  params:
+    timeout: 30.0
+    bypass_interlock: false
+    verify_skip: false
+- id: 3
+  type: move_to_point
+  name: 포인트 이동
+  caption: 드로어마커로 이동
+  params:
+    motion_type: tcp
+    X: 199.73
+    Y: 567.02
+    Z: 248.08
+    Rx: -179.99
+    Ry: -0.01
+    Rz: 0.01
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 199.73
+    Y: 567.02
+    Z: 248.08
+    Rx: -179.99
+    Ry: -0.01
+    Rz: 0.01
+- id: 4
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  caption: 드로어마커_기준점_스캔
+  params:
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz_rx_ry_rz
+- id: 5
+  type: save_landmark_pose
+  name: Landmark 좌표 저장
+  caption: 드로어마커_저장
+  params:
+    save_path: data/landmark_pose/drawer_cali
+    operator: jjh
+- id: 6
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 1사분면_마크_접근
+  params:
+    frame_mode: rz_only
+    offset_x: 57.597
+    offset_y: -222.473
+    offset_z: -28.647
+    offset_rx: 178.63
+    offset_ry: 0.9
+    offset_rz: 178.536
+    velocity: 25.0
+    max_radius_mm: 600.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+- id: 7
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: 1사분면_scan
+  params:
+    jig_number: 4
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz
+- id: 8
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 2사분면_마크_접근
+  params:
+    frame_mode: rz_only
+    offset_x: -79.527
+    offset_y: -223.123
+    offset_z: -24.499
+    offset_rx: 178.63
+    offset_ry: 0.9
+    offset_rz: 178.536
+    velocity: 25.0
+    max_radius_mm: 600.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+- id: 9
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: 2사분면_scan
+  params:
+    jig_number: 2
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz
+- id: 10
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 3사분면_마크_접근
+  params:
+    frame_mode: rz_only
+    offset_x: -80.018
+    offset_y: -419.18
+    offset_z: -24.639
+    offset_rx: 178.63
+    offset_ry: 0.9
+    offset_rz: 178.536
+    velocity: 25.0
+    max_radius_mm: 600.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+- id: 11
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: 3사분면_scan
+  params:
+    jig_number: 1
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz
+- id: 12
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 4사분면_마크_접근
+  params:
+    frame_mode: rz_only
+    offset_x: 57.408
+    offset_y: -418.746
+    offset_z: -27.38
+    offset_rx: 178.63
+    offset_ry: 0.9
+    offset_rz: 178.536
+    velocity: 25.0
+    max_radius_mm: 600.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+- id: 13
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: 4사분면_scan
+  params:
+    jig_number: 3
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz
+- id: 14
+  type: calculate_plate_pose
+  name: Plate Pose 계산
+  caption: pallet_plate_pose_calc
+  params:
+    operator: jjh
+    save_path: data/plate_pose_calc
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 15
+  type: smc_release
+  name: SMC 그리퍼 놓기
+  caption: 측정 후 그리퍼 열기
+  params:
+    timeout: 30.0
+reference:
+  tm_jig_landmark:
+    X: -21.181292099999997
+    Y: 510.2182690000001
+    Z: -350.267034
+    Rx: -179.83445400094348
+    Ry: -0.9079768671201641
+    Rz: 179.66339400000598

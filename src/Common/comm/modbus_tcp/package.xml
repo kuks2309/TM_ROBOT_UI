@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>modbus_tcp</name>
+  <version>0.1.0</version>
+  <description>Modbus TCP(MBAP) client kernel — ROS-free plain CMake (ADR-000: promoted from pio_hal, 사용자 승인 2026-07-30/31). MBAP framing + FC3/FC6 synchronous master only; device register semantics live in each consumer's HAL impl (pio_hal ModbusSignalPort, rio_hal).</description>
+  <maintainer email="drko0808@gmail.com">T-Robotics SW</maintainer>
+  <license>Proprietary</license>
+  <buildtool_depend>cmake</buildtool_depend>
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>

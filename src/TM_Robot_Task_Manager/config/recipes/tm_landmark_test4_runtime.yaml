@@ -1,0 +1,378 @@
+
+name: 새 Recipe (Runtime)
+description: TM Landmark 기준 상대좌표 실행 파일
+version: '1.0'
+created: '2026-01-05'
+modified: '2026-02-10'
+jobs:
+- id: 1
+  type: recipe_info
+  name: Recipe 개요
+  params:
+    mode: execution
+    description: ''
+    author: ''
+    version: '1.0'
+  coordinate_mode: absolute
+- id: 2
+  type: move_to_point
+  name: 포인트 이동
+  caption: 시작점
+  params:
+    motion_type: tcp
+    X: 369.12
+    Y: 575.84
+    Z: -34.85
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -180.0
+    velocity: 50.0
+  coordinate_mode: absolute
+- id: 3
+  type: move_to_point
+  name: 포인트 이동
+  caption: WP1
+  params:
+    motion_type: tcp
+    X: 379.12
+    Y: 575.84
+    Z: -34.85
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -180.0
+    velocity: 50.0
+  coordinate_mode: absolute
+- id: 4
+  type: measure_point
+  name: 측정점
+  caption: 측정점
+  params:
+    point_type: waypoint
+    motion_type: tcp
+    X: 27.57
+    Y: 574.71
+    Z: -35.45
+    Rx: 179.96
+    Ry: -0.01
+    Rz: -179.99
+    velocity: 70.0
+  coordinate_mode: absolute
+- id: 5
+  type: wait
+  name: 대기
+  params:
+    duration: 500
+  coordinate_mode: absolute
+- type: find_landmark
+  name: Landmark 검색
+  caption: Landmark 검색
+  params:
+    grid_step: 20.0
+    grid_size: 3
+    scan_timeout: 500
+    velocity: 30.0
+    on_found: store_position
+    on_not_found: abort
+  id: 6
+  coordinate_mode: absolute
+- id: 7
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  caption: Scan landmark
+  params:
+    wait_after_command: 100
+    repeat_count: 3
+  coordinate_mode: absolute
+- id: 8
+  type: measure_point
+  name: 측정점
+  caption: WP2
+  params:
+    point_type: waypoint
+    motion_type: tcp
+    X: 19.1
+    Y: -141.16
+    Z: -17.44
+    Rx: -0.92
+    Ry: -0.12
+    Rz: -1.22
+    velocity: 25.0
+  original_absolute:
+    X: 2.74
+    Y: 574.72
+    Z: -15.67
+    Rx: 179.99
+    Ry: 0.0
+    Rz: 180.0
+  coordinate_mode: relative
+- id: 9
+  type: move_to_point
+  name: 포인트 이동
+  caption: Jig WP1
+  params:
+    motion_type: tcp
+    X: 209.9
+    Y: 115.02
+    Z: -31.05
+    Rx: -0.12
+    Ry: 0.92
+    Rz: 88.77
+    velocity: 25.0
+  original_absolute:
+    X: -182.51
+    Y: 835.11
+    Z: -5.8
+    Rx: -180.0
+    Ry: -0.01
+    Rz: 90.0
+  coordinate_mode: relative
+- id: 10
+  type: measure_point
+  name: 측정점
+  caption: Jig mark1 detect
+  params:
+    point_type: waypoint
+    motion_type: tcp
+    X: 199.49
+    Y: 116.88
+    Z: 99.37
+    Rx: -0.12
+    Ry: 0.91
+    Rz: 88.77
+    velocity: 70.0
+  original_absolute:
+    X: -172.34
+    Y: 834.67
+    Z: -136.25
+    Rx: -180.0
+    Ry: 0.0
+    Rz: 90.0
+  coordinate_mode: relative
+- id: 11
+  type: wait
+  name: 대기
+  caption: stable wait
+  params:
+    duration: 500
+  coordinate_mode: none
+- id: 12
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: Jig  Mark1
+  params:
+    jig_number: 1
+    wait_after_command: 100
+    repeat_count: 3
+  coordinate_mode: none
+- id: 13
+  type: measure_point
+  name: 측정점
+  caption: Jig Mark2
+  params:
+    point_type: waypoint
+    motion_type: tcp
+    X: 204.49
+    Y: 310.76
+    Z: 98.46
+    Rx: -0.14
+    Ry: 0.86
+    Rz: 88.81
+    velocity: 25.0
+  original_absolute:
+    X: -173.19
+    Y: 1028.6
+    Z: -138.42
+    Rx: 179.98
+    Ry: 0.05
+    Rz: 89.96
+  coordinate_mode: relative
+- id: 14
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: Jig  Mark2
+  params:
+    jig_number: 2
+    wait_after_command: 100
+    repeat_count: 3
+  coordinate_mode: none
+- id: 15
+  type: move_to_point
+  name: 포인트 이동
+  caption: Jig WP1
+  params:
+    motion_type: tcp
+    X: 189.78
+    Y: 110.37
+    Z: -30.93
+    Rx: -0.12
+    Ry: 0.91
+    Rz: 88.77
+    velocity: 25.0
+  original_absolute:
+    X: -162.5
+    Y: 830.02
+    Z: -5.88
+    Rx: -180.0
+    Ry: 0.0
+    Rz: 90.0
+  coordinate_mode: relative
+- id: 16
+  type: move_to_point
+  name: 포인트 이동
+  caption: WP2
+  params:
+    motion_type: tcp
+    X: 19.1
+    Y: -141.16
+    Z: -17.44
+    Rx: -0.92
+    Ry: -0.12
+    Rz: -1.22
+    velocity: 25.0
+  original_absolute:
+    X: 2.74
+    Y: 574.72
+    Z: -15.67
+    Rx: 179.99
+    Ry: 0.0
+    Rz: 180.0
+  coordinate_mode: relative
+- id: 17
+  type: move_to_point
+  name: 포인트 이동
+  caption: WP3
+  params:
+    motion_type: tcp
+    X: -209.51
+    Y: 126.43
+    Z: -19.91
+    Rx: 0.12
+    Ry: -0.92
+    Rz: -91.24
+    velocity: 25.0
+  original_absolute:
+    X: 237.02
+    Y: 837.36
+    Z: -17.86
+    Rx: 180.0
+    Ry: 0.01
+    Rz: -89.99
+  coordinate_mode: relative
+- id: 18
+  type: measure_point
+  name: 측정점
+  caption: Jig Mark3
+  params:
+    point_type: waypoint
+    motion_type: tcp
+    X: -209.73
+    Y: 127.98
+    Z: 100.59
+    Rx: 0.12
+    Ry: -0.85
+    Rz: -91.24
+    velocity: 25.0
+  original_absolute:
+    X: 237.02
+    Y: 836.99
+    Z: -138.37
+    Rx: 180.0
+    Ry: -0.06
+    Rz: -89.99
+  coordinate_mode: relative
+- id: 19
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: Jig Mark3
+  params:
+    jig_number: 3
+    wait_after_command: 100
+    repeat_count: 3
+  coordinate_mode: none
+- id: 20
+  type: measure_point
+  name: 측정점
+  caption: Jig Mark4
+  params:
+    point_type: start
+    motion_type: tcp
+    X: -205.81
+    Y: 303.58
+    Z: 98.46
+    Rx: 0.12
+    Ry: -0.89
+    Rz: -91.24
+    velocity: 25.0
+  original_absolute:
+    X: 236.86
+    Y: 1012.64
+    Z: -139.02
+    Rx: 180.0
+    Ry: -0.02
+    Rz: -89.99
+  coordinate_mode: relative
+- id: 21
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: Jig Mark4
+  params:
+    jig_number: 4
+    wait_after_command: 100
+    repeat_count: 3
+  coordinate_mode: none
+- id: 22
+  type: move_to_point
+  name: 포인트 이동
+  caption: WP3
+  params:
+    motion_type: tcp
+    X: -214.39
+    Y: 126.65
+    Z: -20.0
+    Rx: 0.12
+    Ry: -0.93
+    Rz: -91.23
+    velocity: 25.0
+  original_absolute:
+    X: 241.91
+    Y: 837.47
+    Z: -17.78
+    Rx: -180.0
+    Ry: 0.02
+    Rz: -90.0
+  coordinate_mode: relative
+- id: 23
+  type: move_to_point
+  name: 포인트 이동
+  caption: WP1
+  params:
+    motion_type: tcp
+    X: -406.23
+    Y: -226.49
+    Z: 3.48
+    Rx: -0.86
+    Ry: -0.11
+    Rz: -1.24
+    velocity: 25.0
+  original_absolute:
+    X: 426.1
+    Y: 479.98
+    Z: -35.97
+    Rx: -179.95
+    Ry: -0.01
+    Rz: -179.99
+  coordinate_mode: relative
+- id: 24
+  type: calculate_plate_pose
+  name: Plate Pose 계산
+  coordinate_mode: none
+reference:
+  tm_jig_landmark:
+    X: 24.816177333333332
+    Y: 715.13935
+    Z: -35.38374566666667
+    Rx: -179.08771666666667
+    Ry: -0.10028075333333335
+    Rz: 178.77334333333332
+master_file: tm_landmark_test4.yaml
+master_modified: '2026-02-10'

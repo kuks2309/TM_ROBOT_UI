@@ -1,0 +1,68 @@
+# 그리퍼 명령 액션 — 장치 계층(Actuators/gripper)의 유일한 외부 구동 표면.
+# 프로파일 이름으로 지시한다. 스텝 번호·신호 비트는 이 계약 밖(config·HAL 소유)이다.
+#
+# 필드 유효 조합(서버는 아래 표를 벗어난 요청을 RESULT_INVALID_REQUEST 로 거절한다):
+#   COMMAND_PROFILE : profile 필수(config profiles 키) · step 은 반드시 0
+#   COMMAND_ORIGIN  : profile 은 빈 문자열 · step 은 0
+#   COMMAND_RESET   : profile 은 빈 문자열 · step 은 0
+#   COMMAND_STEP    : 정비 전용 — step 은 1~63 且 config maintenance.allowed_steps 에 포함되어야 하고,
+#                     maintenance.allow_direct_step 이 true 이며 키스위치가 MANUAL 일 때만 수락된다.
+#                     (봉인 정책: 현 설비는 등록 스텝이 1·2·3 뿐이라 기본값은 비활성)
+
+uint8 COMMAND_PROFILE=1   # profile 이 가리키는 스텝 실행 (grip/release/home)
+uint8 COMMAND_ORIGIN=2    # SETUP 원점복귀
+uint8 COMMAND_RESET=3     # 알람 리셋(RESET 라인 + 알람 해제 확인)
+uint8 COMMAND_STEP=4      # 정비 전용 직접 스텝 실행
+
+uint8 command
+string profile
+uint8 step
+# 매거진 인터록 per-goal 우회(기본 false=인터록 적용). true 시 이 명령에 한해 매거진 가드를 건너뛴다.
+# 안전 함의: 매거진/작업물 없이도 grip 이 수행될 수 있다 — 레시피에서 명시적으로 선택할 때만 사용.
+bool bypass_interlock
+---
+uint8 RESULT_OK=0
+uint8 RESULT_INVALID_REQUEST=1     # 필드 조합 위반·미등록 프로파일·봉인된 스텝·권한 없음
+uint8 RESULT_INTERLOCK=2           # 매거진 인터록 등 정책에 의한 거부
+uint8 RESULT_STALE=3               # 판정 불가 — 피드백 스냅샷이 낡음/미수신
+uint8 RESULT_SERVO_NOT_READY=4     # SVRE 미확립
+uint8 RESULT_NOT_HOMED=5           # SETON 미확립 — 원점복귀 선행 필요
+uint8 RESULT_ESTOP_ACTIVE=6        # ESTOP 활성(티칭박스 정지 스위치 포함)
+uint8 RESULT_ALARM_ACTIVE=7        # 알람 활성 — alarm_group 참조
+uint8 RESULT_BUSY_RISE_TIMEOUT=8   # DRIVE 후 BUSY 가 오르지 않음 (명령 미수신 의심)
+uint8 RESULT_BUSY_FALL_TIMEOUT=9   # 동작이 끝나지 않음
+uint8 RESULT_INP_TIMEOUT=10        # 목표 위치 미도달
+uint8 RESULT_IO_FAILURE=11         # 하위 IO 쓰기/읽기 실패
+uint8 RESULT_STATE_INDETERMINATE=12 # 쓰기가 일부만 적용됨 — 상태 재확인 전 재시도 금지
+uint8 RESULT_CANCELED=13           # 취소 요청으로 정상 중단(정지 확인 완료)
+uint8 RESULT_ABORT_FAILED=14       # 중단 처리 중 안전 출력 적용 실패 — 장치 정지 미보장
+
+# 알람 그룹 — legacy 는 OUT0~OUT3 4비트 조합으로 판정한다. 문자열 파싱 대신 이 필드로 분기할 것.
+uint8 ALARM_GROUP_NONE=0
+uint8 ALARM_GROUP_B=1
+uint8 ALARM_GROUP_C=2
+uint8 ALARM_GROUP_D=3
+uint8 ALARM_GROUP_E=4              # FATAL — 전원 재투입 요구
+uint8 ALARM_GROUP_UNKNOWN=5
+
+uint8 result_code
+uint8 alarm_group
+uint8 alarm_raw_bits               # OUT0~OUT5 원시 비트(LSB=OUT0) — 그룹 판정 근거 보존
+uint8 failed_phase                 # 아래 PHASE_* — 어느 단계에서 실패했는가
+uint8 final_step                   # 실제로 실행한 스텝 번호(0=미실행)
+uint32 feedback_seq                # 판정에 사용한 마지막 입력 이미지 일련번호
+string message                     # 사람이 읽는 진단 문자열(기계 분기 금지)
+---
+uint8 PHASE_IDLE=0
+uint8 PHASE_PRECHECK=1         # 인터록·준비 상태 확인
+uint8 PHASE_STEP_SET=2         # IN0~IN5 세팅
+uint8 PHASE_DRIVING=3          # DRIVE 인가 후 BUSY 감시
+uint8 PHASE_VERIFY=4           # INP 확인
+uint8 PHASE_ORIGINATING=5      # SETUP 인가 후 BUSY 감시
+uint8 PHASE_WAIT_SETON=6       # 원점 확립 대기
+uint8 PHASE_RESETTING=7        # RESET 인가 후 알람 해제 대기
+uint8 PHASE_DONE=8
+uint8 PHASE_ABORTING=9         # 안전 정지 경로
+
+uint8 phase
+string phase_name

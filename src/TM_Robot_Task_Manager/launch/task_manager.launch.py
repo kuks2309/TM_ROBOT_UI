@@ -1,0 +1,166 @@
+from launch import LaunchDescription
+from launch_ros.actions import Node
+from launch.actions import DeclareLaunchArgument, OpaqueFunction, ExecuteProcess, Shutdown
+from launch.substitutions import LaunchConfiguration
+import subprocess
+import time
+import os
+from ament_index_python.packages import get_package_share_directory
+
+
+def check_node_running(node_name):
+    try:
+        result = subprocess.run(
+            ['ros2', 'node', 'list'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        return node_name in result.stdout
+    except Exception as e:
+        print(f"Failed to check node status: {e}")
+        return False
+
+
+def launch_setup(context):
+    robot_ip = LaunchConfiguration('robot_ip').perform(context)
+
+    nodes_to_launch = []
+
+    if not check_node_running('/tm_driver'):
+        print(f"[tm_task_manager] TM Driver가 실행되지 않음. 자동으로 실행합니다...")
+        print(f"[tm_task_manager] Robot IP: {robot_ip}")
+
+        tm_driver_node = Node(
+            package='tm_driver',
+            executable='tm_driver',
+            name='tm_driver',
+            output='screen',
+            arguments=[
+                f'robot_ip:={robot_ip}',
+                '--ros-args',
+                '--log-level', 'tm_driver:=error',
+                '--log-level', 'rclcpp:=error',
+            ],
+        )
+        nodes_to_launch.append(tm_driver_node)
+
+        time.sleep(2)
+    else:
+        print(f"[tm_task_manager] TM Driver가 이미 실행 중입니다.")
+
+    if not check_node_running('/tm_camera_bridge'):
+        print(f"[tm_task_manager] TM Camera Bridge가 실행되지 않음. 자동으로 실행합니다...")
+
+        # ⚠️ run 이 launch 전체를 PYTHONNOUSERSITE=1 로 띄운다. 그 변수는
+        #    ~/.local/lib/pythonX/site-packages 를 **무시**시키므로,
+        #    `pip install --user flask` 로 깔아도 이 프로세스에서는 안 보인다.
+        #    (2026-08-27 팹: flask 를 깔았는데도 ModuleNotFoundError 가 났다.)
+        #    워크스페이스 안 vendor/pylibs 를 PYTHONPATH 로 직접 얹어 해결한다.
+        #    PYTHONUNBUFFERED=1 은 진단용 — print/로그가 파이프에서 묶이지 않게.
+        _ws_root = os.path.dirname(os.path.dirname(os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__)))))
+        _vendor = os.path.join(_ws_root, 'vendor', 'pylibs')
+        _pypath = os.environ.get('PYTHONPATH', '')
+        if os.path.isdir(_vendor):
+            _pypath = _vendor + (os.pathsep + _pypath if _pypath else '')
+            print('[tm_task_manager] 카메라 브리지 PYTHONPATH 에 vendor 추가: %s' % _vendor)
+
+        tm_camera_bridge_node = Node(
+            package='tm_task_manager',
+            executable='tm_camera_bridge.py',
+            name='tm_camera_bridge',
+            output='screen',
+            additional_env={
+                'PYTHONPATH': _pypath,
+                'PYTHONUNBUFFERED': '1',
+            },
+        )
+        nodes_to_launch.append(tm_camera_bridge_node)
+    else:
+        print(f"[tm_task_manager] TM Camera Bridge가 이미 실행 중입니다.")
+
+    if not check_node_running('/camera_calibration_node'):
+        print(f"[tm_task_manager] Camera Calibration Node 실행...")
+        # ⚠️ 예전에는 params 파일을 넘기지 않아 config/calibration_params.yaml 의
+        #    보드 크기·사각 크기 설정이 **적용조차 되지 않았다**(2026-08-27 확인).
+        #    파일이 없으면 노드 기본값으로 뜨도록 방어적으로 감싼다.
+        calib_params = []
+        try:
+            from ament_index_python.packages import get_package_share_directory
+            _p = os.path.join(
+                get_package_share_directory('tm_camera_calibration'),
+                'config', 'calibration_params.yaml')
+            if os.path.isfile(_p):
+                calib_params = [_p]
+            else:
+                print('[tm_task_manager] calibration_params.yaml 없음 — 기본값 사용')
+        except Exception as exc:
+            print('[tm_task_manager] 캘리브레이션 설정을 못 찾음(%s) — 기본값 사용' % exc)
+
+        camera_calibration_node = Node(
+            package='tm_camera_calibration',
+            executable='camera_calibration_node',
+            name='camera_calibration_node',
+            output='screen',
+            parameters=calib_params,
+        )
+        nodes_to_launch.append(camera_calibration_node)
+
+    task_manager_node = Node(
+        package='tm_task_manager',
+        executable='task_manager_node',
+        name='tm_task_manager',
+        output='screen',
+        parameters=[{
+            'robot_ip': robot_ip,
+        }],
+        on_exit=Shutdown(),
+    )
+    nodes_to_launch.append(task_manager_node)
+
+    return nodes_to_launch
+
+
+
+def _profile_robot_ip(fallback):
+    """MK2·MK4 의 robot_ip 를 **둘 다 두드려** 응답하는 쪽을 쓴다.
+
+    둘 중 하나에는 붙는다는 전제(사용자 확인 2026-08-27)라, 어느 기계 앞이든
+    같은 명령으로 뜨게 한다. 5890(SCT, 명령 채널)에 TCP 가 열리는지로 판정한다.
+
+    순서: 확정된 프로필의 IP 를 먼저 두드린다 — 두 로봇이 같은 망에 있을 때
+    순서가 뒤바뀌면 엉뚱한 기계에 명령이 간다.
+
+    아무 응답이 없으면 프로필 값 → fallback 순으로 떨어진다. launch 는 설치 순서에
+    따라 패키지 import 가 실패할 수 있어 전체를 방어적으로 감싼다.
+    """
+    try:
+        from tm_task_manager import robot_profile
+
+        print('[tm_task_manager] 로봇 IP 탐색: %s' % robot_profile.probe_report())
+        robot_id, ip = robot_profile.probe_robot_ip()
+        if ip:
+            print('[tm_task_manager] 응답한 로봇으로 붙습니다: %s (%s:%d)'
+                  % (robot_id, ip, robot_profile.ROBOT_PORT))
+            return ip
+
+        found = robot_profile.robot_ip(None)
+        if found:
+            print('[tm_task_manager] 응답 없음 — 프로필 값을 그대로 씁니다: %s' % found)
+            return found
+        print('[tm_task_manager] 응답 없음 · 프로필 미확정 — 기본값 %s' % fallback)
+    except Exception as exc:
+        print('[tm_task_manager] 로봇 프로필을 읽지 못했습니다(%s) — 기본값 %s' % (exc, fallback))
+    return fallback
+
+def generate_launch_description():
+    return LaunchDescription([
+        DeclareLaunchArgument(
+            'robot_ip',
+            default_value=_profile_robot_ip('192.168.192.127'),
+            description='TM Robot IP address'
+        ),
+
+        OpaqueFunction(function=launch_setup),
+    ])

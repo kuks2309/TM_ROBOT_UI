@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>JigPlateValidatorWindow</class>
+ <widget class="QMainWindow" name="JigPlateValidatorWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>900</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Jig Plate 무결성 검사기</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout_main">
+    <!-- 상단 버튼 영역 -->
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_buttons">
+      <item>
+       <widget class="QPushButton" name="pushButton_loadYaml">
+        <property name="text">
+         <string>YAML 로드</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_runValidation">
+        <property name="text">
+         <string>검사 실행</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_saveReport">
+        <property name="text">
+         <string>리포트 저장</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_yamlPath">
+        <property name="text">
+         <string>YAML: 로드되지 않음</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <!-- 메인 컨텐츠 영역 -->
+    <item>
+     <widget class="QSplitter" name="splitter_main">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <!-- 왼쪽: 검사 결과 -->
+      <widget class="QGroupBox" name="groupBox_results">
+       <property name="title">
+        <string>검사 결과</string>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>300</width>
+         <height>0</height>
+        </size>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_results">
+        <item>
+         <widget class="QTextEdit" name="textEdit_results">
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+          <property name="font">
+           <font>
+            <family>Monospace</family>
+            <pointsize>10</pointsize>
+           </font>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <!-- 오른쪽: 그래프 영역 -->
+      <widget class="QWidget" name="widget_graphs">
+       <layout class="QVBoxLayout" name="verticalLayout_graphs">
+        <item>
+         <widget class="QTabWidget" name="tabWidget_visualization">
+          <property name="currentIndex">
+           <number>0</number>
+          </property>
+          <!-- Tab 1: 2D View -->
+          <widget class="QWidget" name="tab_2dView">
+           <attribute name="title">
+            <string>2D View</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="verticalLayout_2dTab">
+            <!-- 2D 평면도 -->
+            <item>
+             <widget class="QGroupBox" name="groupBox_2dPlot">
+              <property name="title">
+               <string>2D 평면도 (XY)</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_2dPlot">
+               <item>
+                <widget class="QWidget" name="widget_2dPlot" native="true">
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>200</height>
+                  </size>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <!-- Z 높이 그래프 -->
+            <item>
+             <widget class="QGroupBox" name="groupBox_zPlot">
+              <property name="title">
+               <string>Z 높이 비교</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_zPlot">
+               <item>
+                <widget class="QWidget" name="widget_zPlot" native="true">
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>150</height>
+                  </size>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <!-- Tab 2: 3D View -->
+          <widget class="QWidget" name="tab_3dView">
+           <attribute name="title">
+            <string>3D View</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="verticalLayout_3dTab">
+            <item>
+             <widget class="QWidget" name="widget_3dPlot" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>400</width>
+                <height>400</height>
+               </size>
+              </property>
+              <layout class="QVBoxLayout" name="layout_3dPlot">
+               <property name="spacing">
+                <number>0</number>
+               </property>
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+              </layout>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

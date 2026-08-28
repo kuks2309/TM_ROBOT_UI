@@ -1,0 +1,793 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>HandEyeAnalyzerWindow</class>
+ <widget class="QWidget" name="HandEyeAnalyzerWindow">
+  <property name="minimumSize">
+   <size>
+    <width>1200</width>
+    <height>800</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Hand-Eye Calibration Analyzer</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_main">
+   <!-- 상단: 파일 열기 -->
+   <item>
+    <widget class="QGroupBox" name="groupBox_file">
+     <property name="title">
+      <string>데이터 파일</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_file">
+      <item>
+       <widget class="QPushButton" name="pushButton_openFile">
+        <property name="text">
+         <string>CSV 열기</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_recentFile">
+        <property name="text">
+         <string>최근 파일</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_fileName">
+        <property name="text">
+         <string>파일을 선택하세요</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_file">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_exportReport">
+        <property name="text">
+         <string>리포트 내보내기</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_saveGraphs">
+        <property name="text">
+         <string>그래프 저장</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+
+   <!-- 탭 위젯 -->
+   <item>
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+
+     <!-- Tab 1: 개요 -->
+     <widget class="QWidget" name="tab_overview">
+      <attribute name="title">
+       <string>개요</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_overview">
+       <!-- 데이터 요약 -->
+       <item>
+        <widget class="QGroupBox" name="groupBox_summary">
+         <property name="title">
+          <string>데이터 요약</string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_summary">
+          <item>
+           <widget class="QLabel" name="label_totalMeasurements">
+            <property name="text">
+             <string>총 측정: 0회</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_totalPositions">
+            <property name="text">
+             <string>위치: 0개</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_repeatCount">
+            <property name="text">
+             <string>반복: 0회</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_successRate">
+            <property name="text">
+             <string>성공률: 0%</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer_summary">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+       </item>
+
+       <!-- 그래프 2x2 그리드 -->
+       <item>
+        <widget class="QGroupBox" name="groupBox_overviewGraphs">
+         <property name="title">
+          <string>Landmark 측정 분포</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_overviewGraphs">
+          <item row="0" column="0">
+           <widget class="QWidget" name="widget_overviewXY" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>250</width>
+              <height>200</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QWidget" name="widget_overviewYZ" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>250</width>
+              <height>200</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QWidget" name="widget_overviewZX" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>250</width>
+              <height>200</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QWidget" name="widget_overviewRotation" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>250</width>
+              <height>200</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+
+       <!-- 통계 요약 -->
+       <item>
+        <widget class="QGroupBox" name="groupBox_overviewStats">
+         <property name="title">
+          <string>반복정밀도 (Repeatability)</string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_overviewStats">
+          <!-- Position -->
+          <item>
+           <widget class="QGroupBox" name="groupBox_posStats">
+            <property name="title">
+             <string>Position (mm)</string>
+            </property>
+            <layout class="QFormLayout" name="formLayout_posStats">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_lmX">
+               <property name="text">
+                <string>Lm_X:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLabel" name="label_lmXValue">
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_lmY">
+               <property name="text">
+                <string>Lm_Y:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QLabel" name="label_lmYValue">
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="label_lmZ">
+               <property name="text">
+                <string>Lm_Z:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QLabel" name="label_lmZValue">
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <!-- Rotation -->
+          <item>
+           <widget class="QGroupBox" name="groupBox_rotStats">
+            <property name="title">
+             <string>Rotation (deg)</string>
+            </property>
+            <layout class="QFormLayout" name="formLayout_rotStats">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_lmRx">
+               <property name="text">
+                <string>Lm_Rx:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLabel" name="label_lmRxValue">
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_lmRy">
+               <property name="text">
+                <string>Lm_Ry:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QLabel" name="label_lmRyValue">
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="label_lmRz">
+               <property name="text">
+                <string>Lm_Rz:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QLabel" name="label_lmRzValue">
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <!-- 3 Sigma -->
+          <item>
+           <widget class="QGroupBox" name="groupBox_3sigma">
+            <property name="title">
+             <string>3 Sigma (99.7%)</string>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_3sigma">
+             <item>
+              <widget class="QLabel" name="label_3sigmaPos">
+               <property name="text">
+                <string>X: - / Y: - / Z: -</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_3sigmaRot">
+               <property name="text">
+                <string>Rx: - / Ry: - / Rz: -</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <!-- 판정 -->
+          <item>
+           <widget class="QGroupBox" name="groupBox_verdict">
+            <property name="title">
+             <string>품질 판정</string>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_verdict">
+             <item>
+              <widget class="QLabel" name="label_verdict">
+               <property name="text">
+                <string>-</string>
+               </property>
+               <property name="styleSheet">
+                <string>font-size: 14pt; font-weight: bold;</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+
+     <!-- Tab 2: 위치별 분석 -->
+     <widget class="QWidget" name="tab_byPosition">
+      <attribute name="title">
+       <string>위치별 분석</string>
+      </attribute>
+      <layout class="QHBoxLayout" name="horizontalLayout_byPosition">
+       <!-- 왼쪽: 히트맵 -->
+       <item>
+        <widget class="QGroupBox" name="groupBox_heatmap">
+         <property name="title">
+          <string>위치별 반복정밀도 히트맵</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_heatmap">
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_heatmapAxis">
+            <item>
+             <widget class="QLabel" name="label_heatmapAxis">
+              <property name="text">
+               <string>표시 항목:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBox_heatmapAxis">
+              <item>
+               <property name="text">
+                <string>Lm_X 표준편차</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Lm_Y 표준편차</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Lm_Z 표준편차</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Lm_Rx 표준편차</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Lm_Ry 표준편차</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Lm_Rz 표준편차</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_zLevel">
+              <property name="text">
+               <string>Z 레벨:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBox_zLevel">
+              <item>
+               <property name="text">
+                <string>전체</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_heatmap">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QWidget" name="widget_heatmap" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>400</width>
+              <height>400</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <!-- 오른쪽: 위치별 통계 테이블 -->
+       <item>
+        <widget class="QGroupBox" name="groupBox_positionStats">
+         <property name="title">
+          <string>위치별 통계</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_positionStats">
+          <item>
+           <widget class="QTableWidget" name="tableWidget_positionStats">
+            <property name="columnCount">
+             <number>9</number>
+            </property>
+            <column>
+             <property name="text">
+              <string>Pos</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>TCP_X</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>TCP_Y</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>TCP_Z</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Lm_X σ</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Lm_Y σ</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Lm_Z σ</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>성공</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>측정</string>
+             </property>
+            </column>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+
+     <!-- Tab 3: Rotation 분석 -->
+     <widget class="QWidget" name="tab_rotation">
+      <attribute name="title">
+       <string>Rotation 분석</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_rotation">
+       <!-- Rx 그래프 -->
+       <item>
+        <widget class="QGroupBox" name="groupBox_rx">
+         <property name="title">
+          <string>Lm_Rx (X축 회전)</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_rx">
+          <item>
+           <widget class="QWidget" name="widget_graphRx" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>400</width>
+              <height>150</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_rotStatsRx">
+            <property name="text">
+             <string>Rx: mean=-, std=-, range=-</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <!-- Ry 그래프 -->
+       <item>
+        <widget class="QGroupBox" name="groupBox_ry">
+         <property name="title">
+          <string>Lm_Ry (Y축 회전)</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_ry">
+          <item>
+           <widget class="QWidget" name="widget_graphRy" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>400</width>
+              <height>150</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_rotStatsRy">
+            <property name="text">
+             <string>Ry: mean=-, std=-, range=-</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <!-- Rz 그래프 -->
+       <item>
+        <widget class="QGroupBox" name="groupBox_rz">
+         <property name="title">
+          <string>Lm_Rz (Z축 회전)</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_rz">
+          <item>
+           <widget class="QWidget" name="widget_graphRz" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>400</width>
+              <height>150</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_rotStatsRz">
+            <property name="text">
+             <string>Rz: mean=-, std=-, range=-</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+
+     <!-- Tab 4: TCP vs Landmark -->
+     <widget class="QWidget" name="tab_tcpVsLandmark">
+      <attribute name="title">
+       <string>TCP vs Landmark</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_tcpVsLandmark">
+       <item>
+        <widget class="QGroupBox" name="groupBox_correlation">
+         <property name="title">
+          <string>TCP 이동 vs Landmark 변화 상관관계</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_correlation">
+          <item row="0" column="0">
+           <widget class="QWidget" name="widget_corrX" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>300</width>
+              <height>250</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QWidget" name="widget_corrY" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>300</width>
+              <height>250</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QWidget" name="widget_corrZ" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>300</width>
+              <height>250</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QGroupBox" name="groupBox_corrStats">
+            <property name="title">
+             <string>상관계수</string>
+            </property>
+            <layout class="QFormLayout" name="formLayout_corrStats">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_corrX">
+               <property name="text">
+                <string>TCP_X vs Lm_X:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLabel" name="label_corrXValue">
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_corrY">
+               <property name="text">
+                <string>TCP_Y vs Lm_Y:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QLabel" name="label_corrYValue">
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="label_corrZ">
+               <property name="text">
+                <string>TCP_Z vs Lm_Z:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QLabel" name="label_corrZValue">
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+
+     <!-- Tab 5: 원본 데이터 -->
+     <widget class="QWidget" name="tab_rawData">
+      <attribute name="title">
+       <string>원본 데이터</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_rawData">
+       <item>
+        <widget class="QTableWidget" name="tableWidget_rawData">
+         <property name="columnCount">
+          <number>15</number>
+         </property>
+         <column>
+          <property name="text">
+           <string>No.</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Pos</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Lm_X</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Lm_Y</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Lm_Z</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Lm_Rx</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Lm_Ry</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Lm_Rz</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>TCP_X</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>TCP_Y</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>TCP_Z</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>TCP_Rx</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>TCP_Ry</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>TCP_Rz</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Time</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

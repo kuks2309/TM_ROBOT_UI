@@ -1,0 +1,16 @@
+int16 lidar_name_req
+int16 field_req
+bool self_config
+---
+bool received
+int16 lidar_name_resp
+int16 field_resp
+
+# lidar_name_req: 1-NAVI_LIDAR_FRONT
+# lidar_name_req: 2-NAVI_LIDAR_REAR
+# lidar_name_req: 3-ODS_LIDAR_FRONT
+# lidar_name_req: 4-ODS_LIDAR_REAR
+# lidar_name_req: 5-ODS_LIDAR_LEFT
+# lidar_name_req: 6-ODS_LIDAR_RIGHT
+# field_req: 1=>8 for navigation lidar
+# field_req: 1=>16 for ODS lidar

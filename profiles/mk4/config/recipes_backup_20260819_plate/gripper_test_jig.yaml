@@ -1,0 +1,248 @@
+name: 새 Recipe
+description: ''
+version: '1.0'
+created: '2026-01-05'
+modified: '2026-02-11'
+jobs:
+- id: 1
+  type: recipe_info
+  name: Recipe 개요
+  params:
+    mode: teaching
+    description: ''
+    author: ''
+    version: '1.0'
+- id: 2
+  type: move_to_point
+  name: 포인트 이동
+  caption: 시작점
+  params:
+    motion_type: tcp
+    X: 369.12
+    Y: 575.84
+    Z: -34.85
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -180.0
+    velocity: 50.0
+  robot_base:
+    X: 369.12
+    Y: 575.84
+    Z: -34.85
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -180.0
+- id: 3
+  type: move_to_point
+  name: 포인트 이동
+  caption: WP1
+  params:
+    motion_type: tcp
+    X: 379.12
+    Y: 575.84
+    Z: -34.85
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -180.0
+    velocity: 50.0
+  robot_base:
+    X: 379.12
+    Y: 575.84
+    Z: -34.85
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -180.0
+- id: 4
+  type: measure_point
+  name: 측정점
+  caption: 측정점
+  params:
+    point_type: waypoint
+    motion_type: tcp
+    X: 27.57
+    Y: 584.74
+    Z: -35.44
+    Rx: 179.96
+    Ry: -0.01
+    Rz: -179.99
+    velocity: 70.0
+  robot_base:
+    X: 27.57
+    Y: 584.74
+    Z: -35.44
+    Rx: 179.96
+    Ry: -0.01
+    Rz: -179.99
+- id: 5
+  type: wait
+  name: 대기
+  params:
+    duration: 500
+- id: 6
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  caption: Scan landmark
+  params:
+    wait_after_command: 100
+    repeat_count: 3
+- id: 7
+  type: move_to_point
+  name: 포인트 이동
+  caption: 회전
+  params:
+    motion_type: tcp
+    X: 30.56
+    Y: 576.74
+    Z: -35.43
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+  robot_base:
+    X: 30.56
+    Y: 576.74
+    Z: -35.43
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 8
+  type: line_move_to_point
+  name: 직선 포인트 이동
+  caption: 25mm 상승
+  params:
+    motion_type: tcp
+    X: 30.56
+    Y: 576.74
+    Z: -35.43
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: 25.0
+    velocity: 25.0
+  robot_base:
+    X: 30.56
+    Y: 576.74
+    Z: -35.43
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 9
+  type: line_move_to_point
+  name: 직선 포인트 이동
+  caption: 지그 방향 375mm
+  params:
+    motion_type: tcp
+    X: 30.56
+    Y: 576.74
+    Z: -10.43
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    offset X: 0.0
+    offset Y: 388.0
+    offset Z: 0.0
+    velocity: 25.0
+  robot_base:
+    X: 30.56
+    Y: 576.74
+    Z: -10.43
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 10
+  type: smc_release
+  name: SMC 그리퍼 놓기
+  params:
+    timeout: 30.0
+- id: 11
+  type: line_move_to_point
+  name: 직선 포인트 이동
+  caption: 173mm  하강
+  params:
+    motion_type: tcp
+    X: 30.56
+    Y: 968.69
+    Z: -10.57
+    Rx: 180.0
+    Ry: -0.02
+    Rz: -90.0
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -173.0
+    velocity: 25.0
+  robot_base:
+    X: 30.56
+    Y: 968.69
+    Z: -10.57
+    Rx: 180.0
+    Ry: -0.02
+    Rz: -90.0
+- id: 12
+  type: smc_grip
+  name: SMC 그리퍼 파지
+  params:
+    timeout: 30.0
+    bypass_interlock: false
+    verify_skip: false
+- id: 13
+  type: smc_release
+  name: SMC 그리퍼 놓기
+  params:
+    timeout: 30.0
+- id: 14
+  type: line_move_to_point
+  name: 직선 포인트 이동
+  caption: 173mm 상승
+  params:
+    motion_type: tcp
+    X: 30.57
+    Y: 968.69
+    Z: -183.58
+    Rx: 180.0
+    Ry: -0.02
+    Rz: -90.0
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: 173.0
+    velocity: 25.0
+  robot_base:
+    X: 30.57
+    Y: 968.69
+    Z: -183.58
+    Rx: 180.0
+    Ry: -0.02
+    Rz: -90.0
+- id: 15
+  type: move_to_point
+  name: 포인트 이동
+  params:
+    motion_type: tcp
+    X: 30.56
+    Y: 576.74
+    Z: -10.43
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+  robot_base:
+    X: 30.56
+    Y: 576.74
+    Z: -10.43
+    Rx: 180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 16
+  type: smc_home
+  name: SMC 그리퍼 원점
+  params:
+    timeout: 30.0
+reference:
+  tm_jig_landmark:
+    X: 24.027849333333332
+    Y: 699.4753466666667
+    Z: -35.44516066666666
+    Rx: -179.32158666666666
+    Ry: 0.013754594333333333
+    Rz: 178.75825999999998

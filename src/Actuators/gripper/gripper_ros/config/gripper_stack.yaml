@@ -1,0 +1,140 @@
+# gripper 스택 단일 설정 스키마 (M0 계약분)
+#
+# 규율
+#  - 물리 비트 인덱스의 유일한 서식지는 이 파일이다. 코드는 신호 **이름**만 안다.
+#  - 필수 키 누락 시 기동 실패시킨다(암묵 기본값으로 굴러가지 않는다).
+#  - 전 시간 키는 단위 접미사(_ms)를 붙인다.
+#
+# 근거
+#  - 비트 인덱스 = 워드×16 + 비트(LSB-first). 스테이션 레이아웃 DI 5워드@0 / DO 6워드@2048.
+#  - 도면 3,4호기: p.72 SLOT#11 DO(그리퍼 명령) · p.66 SLOT#5 DI(그리퍼 피드백) ·
+#    p.63 SLOT#2 DI(MGZ 감지) · p.53·p.65·p.70(코봇 핸드셰이크)
+#  - 컨트롤러 단자 대응: SMC LECP6 Operation Manual (LEC-OM00608) page 26-28
+
+gripper_node:
+  ros__parameters:
+    # remote_io | sim  — 백엔드 교체는 이 한 줄
+    backend: "remote_io"
+
+    # 프로파일 → 컨트롤러 스텝 번호. 스텝의 속도·압력 값은 컨트롤러 테이블 소유이며 여기서 못 바꾼다.
+    profiles:
+      grip: 1
+      release: 2
+      home: 3
+
+    # 도면 주소 ↔ 비트 인덱스 (주석의 0x… 는 도면 표기)
+    # 인덱스 기준: 스테이션 입력/출력 이미지의 **절대 비트 인덱스**(워드×16 + 비트, LSB-first).
+    # DI 는 DI 이미지, command/DO 는 DO 이미지 기준이며 Modbus 레지스터 주소가 아니다.
+    signal_map:
+      # 스테이션 이미지 크기. 상한을 모르면 범위 밖 인덱스를 송신하게 되므로 필수다.
+      # 근거: remote_io_ros 계약 — io_di 80비트(DI 5워드) · io_do 96비트(DO 6워드).
+      do_bit_count: 96
+      di_bit_count: 80
+      command:            # DO — 도면 p.72
+        in0: 80           # 0x1050
+        in1: 81           # 0x1051
+        in2: 82           # 0x1052
+        in3: 83           # 0x1053
+        in4: 84           # 0x1054
+        in5: 85           # 0x1055
+        setup: 86         # 0x1056
+        hold: 87          # 0x1057
+        drive: 88         # 0x1058
+        reset: 89         # 0x1059
+        servo_on: 90      # 0x105A
+        lock_release: 91  # 0x105B
+      feedback:           # DI — 도면 p.66
+        out0: 64          # 0x0040
+        out1: 65          # 0x0041
+        out2: 66          # 0x0042
+        out3: 67          # 0x0043
+        out4: 68          # 0x0044
+        out5: 69          # 0x0045
+        busy: 70          # 0x0046
+        area: 71          # 0x0047
+        set_on: 72        # 0x0048
+        in_position: 73   # 0x0049
+        servo_ready: 74   # 0x004A
+        emergency_stop: 75 # 0x004B — negative-true
+        alarm: 76         # 0x004C — negative-true
+      magazine:           # DI — 도면 p.63. 원시 0 = 감지(센서 NC)
+        sensor_1: 24      # 0x0018
+        sensor_2: 25      # 0x0019
+        detected_level: 0
+
+    # 코봇(TM) 병렬 핸드셰이크 브리지. 주석의 단자명은 도면 p.53 기준.
+    cobot_bridge:
+      enabled: false      # M4 에서 실기 확인 후 활성
+      request_di_bits:    # 코봇 → AMR (도면 p.65 슬롯 표기 COBOT INPUT4~6)
+        grip: 61          # 0x003D ← 코봇 DO4
+        release: 62       # 0x003E ← 코봇 DO5
+        home: 63          # 0x003F ← 코봇 DO6
+      notify_do_bits:     # AMR → 코봇 (도면 p.70 슬롯 표기 COBOT OUTPUT4~6)
+        grip: 61          # 0x103D → 코봇 DI1
+        release: 62       # 0x103E → 코봇 DI2
+        home: 63          # 0x103F → 코봇 DI3
+
+    # 라인 구동 최소 유지 시간
+    pulses:
+      setup_assert_low_ms: 1000  # SETUP 을 0 으로 내려 두는 시간(legacy 파리티)
+      setup_hold_ms: 100         # SETUP 상승 유지 최소 시간
+      reset_hold_ms: 100         # RESET 상승 유지 최소 시간
+      drive_hold_ms: 100         # DRIVE 상승 유지 최소 시간
+
+    timeouts:
+      step_settle_ms: 200        # IN0~5 세팅 후 DRIVE 인가까지의 정착 시간
+      busy_rise_ms: 3000         # DRIVE 후 BUSY 상승 대기 — 전 명령 공통(필수 확인)
+      busy_fall_ms: 10000        # 동작 완료(BUSY 하강) 대기
+      inp_ms: 1000               # INP 확립 대기
+      origin_busy_rise_ms: 2000  # SETUP 후 BUSY 상승 대기 — 일반 구동과 분리(원점복귀 전용)
+      origin_busy_fall_ms: 10000 # 원점복귀 완료 대기
+      seton_ms: 2000             # 원점복귀 후 SETON 대기
+      servo_on_ms: 5000          # SVON 인가 후 SVRE 대기
+      alarm_reset_ms: 10000      # RESET 인가 후 알람 해제 대기
+      feedback_stale_ms: 300     # 이보다 오래된 스냅샷은 stale — 판정 불가
+      # 시퀀스 전체 상한. 단계별 타임아웃이 «각 단계» 를 끊는다면 이 값은 «전체» 를 끊는 감시견이다.
+      # 위 단계 상한 + pulses 의 직렬 최악합 = 44.5s 이므로 그보다 크게 잡는다 — 짧게 잡으면
+      # 각 단계를 모두 지킨 정상 시퀀스가 잘린다. 발동은 단계 타임아웃이 듣지 않았다는 신호다.
+      total_deadline_ms: 45000
+
+    # 기동 시 검증 규칙(위반이면 기동 실패 — 암묵 기본값으로 굴러가지 않는다)
+    validation:
+      all_timeouts_positive: true
+      stale_must_be_shortest: true   # feedback_stale_ms < busy/inp/origin 타임아웃 전부
+      deadline_above_longest_phase: true # total_deadline > 최장 단계 (아니면 그 단계가 도달 불가)
+      profile_steps_within_allowlist: true
+      signal_map_indices_unique: true
+
+    # 명령 × 모드별 매거진 인터록.
+    #   require_both  : MGZ 2점 모두 감지여야 허용
+    #   forbid_any    : 1점이라도 감지면 거부
+    #   none          : 판정하지 않음
+    #
+    # grip 은 모드와 무관하게 require_both, home 은 forbid_any.
+    interlock:
+      auto_mode:
+        grip: "require_both"
+        release: "none"
+        home: "forbid_any"
+      manual_mode:
+        grip: "require_both"
+        release: "none"
+        home: "forbid_any"
+      stale_snapshot_action: "reject"   # 스냅샷 stale 이면 통과가 아니라 거부
+
+      # 정비 우회 — 기본 꺼짐. 켜져 있어도 키스위치 MANUAL 이 아니면 수락하지 않는다.
+      manual_override:
+        enabled: false
+        applies_to: ["grip", "home"]
+        require_manual_key: true
+        audit_log: true               # 우회로 실행된 명령은 반드시 기록에 남긴다
+
+    # 정비 전용 직접 스텝 실행 경로 — 기본 비활성(봉인 정책).
+    maintenance:
+      allow_direct_step: false
+      allowed_steps: [1, 2, 3]   # 컨트롤러에 실제 등록된 스텝만. 확장은 등록 후 추가
+      require_manual_key: true   # 키스위치 MANUAL 상태에서만 수락
+
+    publish:
+      state_period_ms: 100
+      diagnostics_period_ms: 500

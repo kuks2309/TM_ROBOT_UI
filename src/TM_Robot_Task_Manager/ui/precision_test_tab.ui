@@ -1,0 +1,810 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PrecisionTestTab</class>
+ <widget class="QWidget" name="PrecisionTestTab">
+  <layout class="QVBoxLayout" name="verticalLayout_main">
+   <item>
+    <widget class="QScrollArea" name="scrollArea_precision">
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <widget class="QWidget" name="scrollAreaWidgetContents">
+      <layout class="QVBoxLayout" name="verticalLayout_scroll">
+   <!-- 테스트 설정 -->
+   <item>
+    <widget class="QGroupBox" name="groupBox_testSettings">
+     <property name="title">
+      <string>테스트 설정</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_testSettings">
+      <!-- 테스트 설정 한 줄로 -->
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_allSettings">
+        <item>
+         <widget class="QRadioButton" name="radioButton_staticTest">
+          <property name="text">
+           <string>정적 테스트</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="radioButton_dynamicTest">
+          <property name="text">
+           <string>동적 테스트</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_iterations">
+          <property name="text">
+           <string>반복 횟수:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSpinBox" name="spinBox_iterations">
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>1000</number>
+          </property>
+          <property name="value">
+           <number>50</number>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_iterationsUnit">
+          <property name="text">
+           <string>회</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkBox_autoSave">
+          <property name="text">
+           <string>자동 저장</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <!-- 동적 테스트 설정 (Recipe 표시) -->
+        <item>
+         <widget class="QWidget" name="widget_dynamicSettings">
+          <layout class="QHBoxLayout" name="horizontalLayout_dynamicSettings">
+           <property name="leftMargin">
+            <number>10</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="label_recipeLabel">
+             <property name="text">
+              <string>Recipe:</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="label_currentRecipe">
+             <property name="text">
+              <string>(로드된 Recipe 없음)</string>
+             </property>
+             <property name="styleSheet">
+              <string>color: #666; font-style: italic;</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_settings">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+
+      <!-- 제어 버튼 -->
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_controls">
+        <item>
+         <widget class="QPushButton" name="pushButton_startTest">
+          <property name="text">
+           <string>테스트 시작</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_stopTest">
+          <property name="text">
+           <string>중지</string>
+          </property>
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_resetTest">
+          <property name="text">
+           <string>초기화</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+
+      <!-- 진행 상황 -->
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout_progress">
+        <item>
+         <widget class="QLabel" name="label_progress">
+          <property name="text">
+           <string>진행: 0/50 (0%)</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QProgressBar" name="progressBar_test">
+          <property name="value">
+           <number>0</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+
+   <!-- 그래프 영역 -->
+   <item>
+    <widget class="QGroupBox" name="groupBox_graphs">
+     <property name="title">
+      <string>위치 정밀도 그래프</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_graphs">
+      <!-- 그래프는 matplotlib으로 동적 생성 -->
+      <item row="0" column="0">
+       <widget class="QWidget" name="widget_graphXY" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>250</width>
+          <height>200</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QWidget" name="widget_graphYZ" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>250</width>
+          <height>200</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QWidget" name="widget_graphZX" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>250</width>
+          <height>200</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QWidget" name="widget_graphRotation" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>250</width>
+          <height>200</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+
+   <!-- 통계 정보 -->
+   <item>
+    <widget class="QGroupBox" name="groupBox_statistics">
+     <property name="title">
+      <string>통계 정보</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_statistics">
+      <!-- Position 통계 -->
+      <item>
+       <widget class="QGroupBox" name="groupBox_positionStats">
+        <property name="title">
+         <string>Position (mm)</string>
+        </property>
+        <layout class="QFormLayout" name="formLayout_positionStats">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_xStats">
+           <property name="text">
+            <string>X:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLabel" name="label_xStatsValue">
+           <property name="text">
+            <string>μ= 0.00  σ= 0.00</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label_yStats">
+           <property name="text">
+            <string>Y:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLabel" name="label_yStatsValue">
+           <property name="text">
+            <string>μ= 0.00  σ= 0.00</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="label_zStats">
+           <property name="text">
+            <string>Z:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QLabel" name="label_zStatsValue">
+           <property name="text">
+            <string>μ= 0.00  σ= 0.00</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+
+      <!-- Rotation 통계 -->
+      <item>
+       <widget class="QGroupBox" name="groupBox_rotationStats">
+        <property name="title">
+         <string>Rotation (deg)</string>
+        </property>
+        <layout class="QFormLayout" name="formLayout_rotationStats">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_rxStats">
+           <property name="text">
+            <string>Rx:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLabel" name="label_rxStatsValue">
+           <property name="text">
+            <string>μ= 0.00  σ= 0.00</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label_ryStats">
+           <property name="text">
+            <string>Ry:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLabel" name="label_ryStatsValue">
+           <property name="text">
+            <string>μ= 0.00  σ= 0.00</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="label_rzStats">
+           <property name="text">
+            <string>Rz:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QLabel" name="label_rzStatsValue">
+           <property name="text">
+            <string>μ= 0.00  σ= 0.00</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+
+      <!-- 3σ 범위 -->
+      <item>
+       <widget class="QGroupBox" name="groupBox_3sigma">
+        <property name="title">
+         <string>3σ 범위</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_3sigma">
+         <item>
+          <widget class="QLabel" name="label_3sigmaPosition">
+           <property name="text">
+            <string>X=±0.00  Y=±0.00  Z=±0.00</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_3sigmaRotation">
+           <property name="text">
+            <string>Rx=±0.00  Ry=±0.00  Rz=±0.00</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+
+   <!-- 측정 데이터 테이블 -->
+   <item>
+    <widget class="QGroupBox" name="groupBox_data">
+     <property name="title">
+      <string>측정 데이터</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_data">
+      <item>
+       <widget class="QTableWidget" name="tableWidget_measurements">
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>200</height>
+         </size>
+        </property>
+        <property name="columnCount">
+         <number>14</number>
+        </property>
+        <column>
+         <property name="text">
+          <string>No.</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>X (mm)</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Y (mm)</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Z (mm)</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Rx (deg)</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Ry (deg)</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Rz (deg)</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>TCP_X</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>TCP_Y</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>TCP_Z</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>TCP_Rx</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>TCP_Ry</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>TCP_Rz</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>시간</string>
+         </property>
+        </column>
+       </widget>
+      </item>
+      <!-- 데이터 관리 버튼 -->
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_dataButtons">
+        <item>
+         <widget class="QPushButton" name="pushButton_exportCSV">
+          <property name="text">
+           <string>데이터 내보내기 (CSV)</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_saveGraph">
+          <property name="text">
+           <string>그래프 저장 (PNG)</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_precisionAnalyzer">
+          <property name="text">
+           <string>정밀도 분석</string>
+          </property>
+          <property name="toolTip">
+           <string>상세 정밀도 분석 도구 실행</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_dataButtons">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <!-- ===== 신규 블록 A: 저장 데이터 정밀도 분석 (plate_pose_calc) ===== -->
+   <item>
+    <widget class="QGroupBox" name="groupBox_plateDataset">
+     <property name="title">
+      <string>저장 데이터 정밀도 분석 (plate_pose_calc)</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_plateDataset">
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_datasetControls">
+        <item>
+         <widget class="QLabel" name="label_plateFolder">
+          <property name="text">
+           <string>팔레트:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboBox_plateFolder">
+          <property name="minimumWidth">
+           <number>140</number>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="radioButton_datasetCorrected">
+          <property name="text">
+           <string>corrected</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+          <property name="toolTip">
+           <string>jig 번호가 홀수=긴 변 규칙으로 정규화된 보정본</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="radioButton_datasetRaw">
+          <property name="text">
+           <string>raw</string>
+          </property>
+          <property name="toolTip">
+           <string>원본. 로더가 jig 순서를 검사 관례에 맞게 정규화한다</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_loadDataset">
+          <property name="text">
+           <string>불러오기</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_browseDataset">
+          <property name="text">
+           <string>폴더 선택...</string>
+          </property>
+          <property name="toolTip">
+           <string>plate_pose_calc 루트 디렉터리를 직접 지정</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkBox_datasetAbsolute">
+          <property name="text">
+           <string>절대 좌표로 보기</string>
+          </property>
+          <property name="toolTip">
+           <string>해제 시 평균 대비 편차를 그린다 (μm 급 산포가 보인다)</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_datasetStatus">
+          <property name="text">
+           <string>(로드된 데이터 없음)</string>
+          </property>
+          <property name="styleSheet">
+           <string>color: #666; font-style: italic;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_datasetControls">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QWidget" name="widget_datasetScatter" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>420</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QTableWidget" name="tableWidget_datasetStats">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>180</height>
+         </size>
+        </property>
+        <column>
+         <property name="text">
+          <string>대상</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>축</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>n</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>평균 μ</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>표준편차 σ</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>3σ</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>최소</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>최대</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Range</string>
+         </property>
+        </column>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_datasetButtons">
+        <item>
+         <widget class="QPushButton" name="pushButton_exportDatasetCSV">
+          <property name="text">
+           <string>분석 결과 내보내기 (CSV)</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_saveDatasetGraph">
+          <property name="text">
+           <string>산점도 저장 (PNG)</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_datasetButtons">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <!-- ===== 신규 블록 B: Jig 3D 형상 검사 ===== -->
+   <item>
+    <widget class="QGroupBox" name="groupBox_jigShape">
+     <property name="title">
+      <string>Jig 3D 형상 검사</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_jigShape">
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_jigShapeControls">
+        <item>
+         <widget class="QCheckBox" name="checkBox_overlayAllPallets">
+          <property name="text">
+           <string>팔레트 전체 겹쳐보기</string>
+          </property>
+          <property name="toolTip">
+           <string>모든 팔레트 사각형을 한 3D 축에 겹쳐 그린다</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_saveJigShape">
+          <property name="text">
+           <string>3D 그래프 저장 (PNG)</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_jigShapeVerdict">
+          <property name="text">
+           <string>(검사 전)</string>
+          </property>
+          <property name="styleSheet">
+           <string>color: #666; font-style: italic;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_jigShapeControls">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_jigShapeBody">
+        <item>
+         <widget class="QWidget" name="widget_jig3D" native="true">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>460</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QTableWidget" name="tableWidget_jigCheck">
+          <property name="maximumWidth">
+           <number>460</number>
+          </property>
+          <column>
+           <property name="text">
+            <string>검사 항목</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>측정값</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>허용</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>판정</string>
+           </property>
+          </column>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

@@ -1,0 +1,28 @@
+# 평면 수직 정렬 그리퍼 오차 preset (OffsetPresetService 저장소)
+#
+# 축은 x, y, rx, ry, rz 5종이다 — 법선 방향 거리는 standoff_mm 이 정하므로 z 는 이 스키마에 없다.
+# 팔레트 pick/place 레시피의 파지 높이(offset_z 161.319)는 레시피에 직접 들어 있다.
+#
+# 출처: pallet5 실기 티칭(2026-08-20). 사용자가 pallet5 에 무충돌로 들어가는 자세를 잡아
+#       절대 TCP(X -419.09 Y -222.99 Z 172.42 Rx -179.30 Ry -0.11 Rz 179.68)로 남겼고,
+#       그것을 corrected 평면 좌표계로 역산한 값이다.
+#
+#   mk4_pallet_even : 위 역산값 그대로 (pallet0 · 2 · 4)
+#   mk4_pallet_odd  : 위와 동일하되 **rx·ry 를 역방향으로** (pallet1 · 3 · 5) — 사용자 지시 2026-08-20
+#                     rx -179.381 → 179.381 (180 기준 편차 부호 반전) · ry 0.146 → -0.146
+#
+# 캘리는 data/plate_pose_calc/pallet{N}/corrected/ 를 읽는다(손목 고정 편향 제거 + jig 번호 통일본).
+
+presets:
+  mk4_pallet_even:
+    x: 2.798
+    y: -1.133
+    rx: -179.381
+    ry: 0.146
+    rz: -0.397
+  mk4_pallet_odd:
+    x: 2.798
+    y: -1.133
+    rx: 179.381
+    ry: -0.146
+    rz: -0.397

@@ -1,0 +1,9 @@
+# status: true = <BC85>
+
+bool status
+---
+bool serial_connect_error
+bool illegal_packet
+bool checksum_error
+bool setting_error
+string data

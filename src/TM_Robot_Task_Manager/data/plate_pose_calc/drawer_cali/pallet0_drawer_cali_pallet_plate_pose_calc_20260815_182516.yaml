@@ -1,0 +1,44 @@
+operator: jjh
+recipe: pallet0_drawer_cali
+task_caption: pallet_plate_pose_calc
+saved_at: '2026-08-15 18:25:16'
+plate_pose:
+  x: 201.643
+  y: 717.437
+  z: -283.045
+  rx: -0.159
+  ry: 1.436
+  rz: -177.781
+landmarks:
+  jig1:
+    x: 267.068
+    y: 818.064
+    z: -281.393
+    rx: 179.633
+    ry: 1.673
+    rz: -177.847
+    measured_at: '2026-08-15 18:25:09'
+  jig2:
+    x: 273.392
+    y: 622.126
+    z: -281.256
+    rx: 128.374
+    ry: 1.733
+    rz: -177.795
+    measured_at: '2026-08-15 18:25:02'
+  jig3:
+    x: 129.735
+    y: 812.86
+    z: -284.126
+    rx: 179.581
+    ry: 2.153
+    rz: -177.828
+    measured_at: '2026-08-15 18:25:16'
+  jig4:
+    x: 136.379
+    y: 616.697
+    z: -285.407
+    rx: 179.597
+    ry: 1.684
+    rz: -177.767
+    measured_at: '2026-08-15 18:24:48'

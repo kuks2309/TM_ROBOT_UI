@@ -1,0 +1,69 @@
+
+name: "팔레트 픽업"
+description: "AR 태그 기반 팔레트 픽업 작업"
+version: "1.0"
+created: "2025-12-16"
+
+jobs:
+  - id: 1
+    type: go_home
+    name: "HOME 이동"
+    params:
+      use_tmflow: false
+
+  - id: 2
+    type: move_to_point
+    name: "AR 검색 위치로 이동"
+    params:
+      position: [0.0, -20.0, 100.0, 0.0, 90.0, 0.0]
+      velocity: 25.0
+      motion_type: joint
+
+  - id: 3
+    type: scan_ar_tag
+    name: "AR 태그 인식"
+    params:
+      target_id: 0
+      timeout: 5.0
+
+  - id: 4
+    type: move_to_ar_offset
+    name: "픽업 접근 (위)"
+    params:
+      offset:
+        x: 0.0
+        y: 0.0
+        z: -100.0
+      velocity: 50.0
+
+  - id: 5
+    type: move_linear
+    name: "픽업 위치로 하강"
+    params:
+      offset:
+        x: 0.0
+        y: 0.0
+        z: -50.0
+      velocity: 20.0
+
+  - id: 6
+    type: gripper_close
+    name: "그리퍼 닫기"
+    params:
+      delay: 0.5
+
+  - id: 7
+    type: move_linear
+    name: "들어올리기"
+    params:
+      offset:
+        x: 0.0
+        y: 0.0
+        z: 100.0
+      velocity: 30.0
+
+  - id: 8
+    type: go_home
+    name: "HOME 복귀"
+    params:
+      use_tmflow: false

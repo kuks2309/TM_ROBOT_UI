@@ -1,0 +1,261 @@
+import os
+import struct
+import select
+import yaml
+from typing import Optional, Dict, Any
+from PyQt5.QtCore import QObject, QThread, pyqtSignal, QTimer
+
+JS_EVENT_SIZE = 8
+JS_EVENT_FORMAT = 'IhBB'
+JS_EVENT_BUTTON = 0x01
+JS_EVENT_AXIS = 0x02
+JS_EVENT_INIT = 0x80
+
+
+class JoystickWorker(QThread):
+    axis_changed = pyqtSignal(int, float)
+    button_changed = pyqtSignal(int, bool)
+    connection_changed = pyqtSignal(bool)
+    error_occurred = pyqtSignal(str)
+
+    def __init__(self, device_path: str):
+        super().__init__()
+        self.device_path = device_path
+        self._running = False
+
+    def run(self):
+        self._running = True
+
+        try:
+            with open(self.device_path, 'rb') as js:
+                self.connection_changed.emit(True)
+
+                while self._running:
+                    readable, _, _ = select.select([js], [], [], 0.1)
+
+                    if not readable:
+                        continue
+
+                    event_data = js.read(JS_EVENT_SIZE)
+                    if not event_data or len(event_data) < JS_EVENT_SIZE:
+                        self.connection_changed.emit(False)
+                        break
+
+                    time, value, event_type, number = struct.unpack(
+                        JS_EVENT_FORMAT, event_data
+                    )
+
+                    event_type &= ~JS_EVENT_INIT
+
+                    if event_type == JS_EVENT_BUTTON:
+                        self.button_changed.emit(number, bool(value))
+                    elif event_type == JS_EVENT_AXIS:
+                        normalized = value / 32767.0
+                        self.axis_changed.emit(number, normalized)
+
+        except FileNotFoundError:
+            self.error_occurred.emit(f"장치를 찾을 수 없습니다: {self.device_path}")
+            self.connection_changed.emit(False)
+        except PermissionError:
+            self.error_occurred.emit(
+                f"장치 권한 없음: {self.device_path}\n"
+                "해결: sudo usermod -a -G input $USER 후 재로그인"
+            )
+            self.connection_changed.emit(False)
+        except Exception as e:
+            self.error_occurred.emit(f"조이스틱 오류: {str(e)}")
+            self.connection_changed.emit(False)
+
+    def stop(self):
+        self._running = False
+
+
+class JoystickService(QObject):
+    jog_requested = pyqtSignal(str, int)
+    mode_changed = pyqtSignal(str)
+    connection_changed = pyqtSignal(bool)
+    status_changed = pyqtSignal(str)
+
+    DEFAULT_CONFIG = {
+        'joystick': {
+            'device_path': '/dev/input/js0',
+            'deadzone': 0.15,
+            'poll_interval_ms': 50,
+            'deadman_axes': {
+                'xyz': 2,
+                'rxryrz': 5,
+                'threshold': 0.5
+            },
+            'axes': {
+                'x': 0, 'y': 1, 'z': 7,
+                'rx': 3, 'ry': 4, 'rz': 7
+            },
+            'jog': {
+                'step_mm': 1.0,
+                'step_deg': 0.5,
+                'velocity_percent': 10,
+                'continuous_interval_ms': 100
+            }
+        }
+    }
+
+    def __init__(self, config_path: Optional[str] = None):
+        super().__init__()
+        self._config = self._load_config(config_path)
+        self._worker: Optional[JoystickWorker] = None
+        self._enabled = False
+        self._deadman_xyz_active = False
+        self._deadman_rxryrz_active = False
+        self._current_mode = 'None'
+        self._axis_values: Dict[int, float] = {}
+
+        self._jog_timer = QTimer()
+        self._jog_timer.timeout.connect(self._process_jog)
+
+        self._reconnect_timer = QTimer()
+        self._reconnect_timer.timeout.connect(self._try_reconnect)
+        self._reconnect_timer.setInterval(5000)
+
+    def _load_config(self, config_path: Optional[str]) -> Dict[str, Any]:
+        if config_path and os.path.exists(config_path):
+            try:
+                with open(config_path, 'r') as f:
+                    return yaml.safe_load(f)
+            except Exception as e:
+                print(f"[JoystickService] 설정 로드 실패: {e}, 기본값 사용")
+        return self.DEFAULT_CONFIG.copy()
+
+
+    def get_jog_step_mm(self) -> float:
+        return self._config['joystick']['jog']['step_mm']
+
+    def get_jog_step_deg(self) -> float:
+        return self._config['joystick']['jog']['step_deg']
+
+    def get_jog_velocity(self) -> float:
+        return float(self._config['joystick']['jog']['velocity_percent'])
+
+    def get_current_mode(self) -> str:
+        return self._current_mode
+
+
+    def start(self):
+        if self._worker is not None:
+            return
+
+        device_path = self._config['joystick']['device_path']
+        self._worker = JoystickWorker(device_path)
+
+        self._worker.axis_changed.connect(self._on_axis_changed)
+        self._worker.button_changed.connect(self._on_button_changed)
+        self._worker.connection_changed.connect(self._on_connection_changed)
+        self._worker.error_occurred.connect(self._on_error)
+
+        self._worker.start()
+
+    def stop(self):
+        self._jog_timer.stop()
+        self._reconnect_timer.stop()
+
+        if self._worker:
+            self._worker.stop()
+            self._worker.wait(500)
+            self._worker = None
+
+    def set_enabled(self, enabled: bool):
+        self._enabled = enabled
+        if enabled:
+            self.start()
+            interval = self._config['joystick']['jog']['continuous_interval_ms']
+            self._jog_timer.start(interval)
+            self.status_changed.emit("PS2 조그 활성화")
+        else:
+            self._jog_timer.stop()
+            self.status_changed.emit("PS2 조그 비활성화")
+
+
+    def _on_axis_changed(self, axis_id: int, value: float):
+        deadzone = self._config['joystick']['deadzone']
+        deadman_axes = self._config['joystick']['deadman_axes']
+        threshold = deadman_axes.get('threshold', 0.5)
+
+        if axis_id == deadman_axes['xyz']:
+            was_active = self._deadman_xyz_active
+            self._deadman_xyz_active = value > threshold
+            if self._deadman_xyz_active and not was_active:
+                self._current_mode = 'XYZ'
+                self.mode_changed.emit('XYZ')
+                self.status_changed.emit("XYZ 이동 모드")
+            elif not self._deadman_xyz_active and was_active:
+                if not self._deadman_rxryrz_active:
+                    self._current_mode = 'None'
+                    self.mode_changed.emit('None')
+                self.status_changed.emit("XYZ 데드맨 해제")
+
+        elif axis_id == deadman_axes['rxryrz']:
+            was_active = self._deadman_rxryrz_active
+            self._deadman_rxryrz_active = value > threshold
+            if self._deadman_rxryrz_active and not was_active:
+                self._current_mode = 'RxRyRz'
+                self.mode_changed.emit('RxRyRz')
+                self.status_changed.emit("RxRyRz 회전 모드")
+            elif not self._deadman_rxryrz_active and was_active:
+                if not self._deadman_xyz_active:
+                    self._current_mode = 'None'
+                    self.mode_changed.emit('None')
+                self.status_changed.emit("RxRyRz 데드맨 해제")
+
+        if abs(value) < deadzone:
+            value = 0.0
+        self._axis_values[axis_id] = value
+
+    def _on_button_changed(self, button_id: int, pressed: bool):
+        pass
+
+    def _on_connection_changed(self, connected: bool):
+        self.connection_changed.emit(connected)
+
+        if not connected and self._enabled:
+            self._reconnect_timer.start()
+            self.status_changed.emit("조이스틱 연결 해제 - 재연결 시도 중...")
+
+    def _on_error(self, message: str):
+        self.status_changed.emit(message)
+
+    def _try_reconnect(self):
+        device_path = self._config['joystick']['device_path']
+        if os.path.exists(device_path):
+            self._reconnect_timer.stop()
+            self.stop()
+            self.start()
+
+    def _process_jog(self):
+        if not self._enabled:
+            return
+
+        axes = self._config['joystick']['axes']
+        deadzone = self._config['joystick']['deadzone']
+
+        if self._deadman_xyz_active:
+            xyz_map = {
+                axes['x']: 'x',
+                axes['y']: 'y',
+                axes['z']: 'z'
+            }
+            for axis_id, axis_name in xyz_map.items():
+                value = self._axis_values.get(axis_id, 0.0)
+                if abs(value) > deadzone:
+                    direction = 1 if value > 0 else -1
+                    self.jog_requested.emit(axis_name, direction)
+
+        if self._deadman_rxryrz_active:
+            rxryrz_map = {
+                axes['rx']: 'rx',
+                axes['ry']: 'ry',
+                axes['rz']: 'rz'
+            }
+            for axis_id, axis_name in rxryrz_map.items():
+                value = self._axis_values.get(axis_id, 0.0)
+                if abs(value) > deadzone:
+                    direction = 1 if value > 0 else -1
+                    self.jog_requested.emit(axis_name, direction)

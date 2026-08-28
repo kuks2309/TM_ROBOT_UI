@@ -1,0 +1,25 @@
+joystick:
+  device_path: "/dev/input/js0"
+
+  deadzone: 0.15
+
+  poll_interval_ms: 50
+
+  deadman_axes:
+    xyz: 2
+    rxryrz: 5
+    threshold: 0.5
+
+  axes:
+    x: 0
+    y: 1
+    z: 7
+    rx: 3
+    ry: 4
+    rz: 7
+
+  jog:
+    step_mm: 1.0
+    step_deg: 0.5
+    velocity_percent: 10
+    continuous_interval_ms: 100

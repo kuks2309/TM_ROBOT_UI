@@ -1,0 +1,1029 @@
+# Recipe: 팔레트 순환 모션 전용 반복시험 (MK2)
+#   출처: 08-20 12:37 판(단일 오프셋 -0.81/0.02, 높이 157/177/407)에서
+#   그리퍼(schunk_grip/release)·wait·check_magazine 잡을 제거한 것.
+#   좌표·높이·속도·straight_path 는 원본 그대로. 그리퍼를 조작하지 않고 경로만 반복한다.
+#   [주의] 그리퍼 잡이 없다는 것은 "박스가 없다" 는 뜻이 아니다. 실행 전에 박스를
+#          물려두면 박스를 들고 돈다. 무부하로 돌리려면 실행 전에 그리퍼를 비워둘 것.
+#          첫 실행은 반드시 Step 으로.
+# TM Task Manager Recipe File
+#
+# [무엇] 박스 1개를 pallet0 에서 집어 pallet1 에 놓고, 다시 pallet1 에서 집어 pallet2 로…
+#        pallet5 에서 집어 pallet0 에 놓아 한 바퀴 돌린다. 6 사이클 = 집기 6 + 놓기 6.
+#
+# [출처] pallet{N}_pick.yaml / pallet{N}_place.yaml 의 잡 구조를 이어붙인 뒤,
+#        offset 6축을 100회 완주본(pallet_all_align_from_file) 값으로 환원했다(아래 참조).
+#        속도·감속·가드·잡 순서는 개별 레시피와 동일하고, 캡션 앞 P0→P1 표식과
+#        id 재번호가 이 파일에서 추가된 것이다.
+#
+# [검증본 100% 재현 — 2026-08-19]
+#   개별 레시피 값(2.582, 1.524, 156.292 / rx 179.673, rz -90.008)으로 총집본을 돌리자
+#   **박스를 든 채 내려갈 때 6개 팔레트 전부 가드와 충돌**했다.
+#   1차로 offset_x/y 만 평면 중심으로 옮겼더니 **더 심해졌다** — XY 치우침은 원인이 아니었다.
+#   남은 차이는 **Rz 180.008°** 다: 총집본 -90.008(평면 X축 기준)은 검증본 +90.000 의 정반대다.
+#   박스가 TCP 기준으로 편심돼 매달리면 180° 반전 시 편심이 반대편으로 넘어가
+#   **박스 모서리가 가드에 닿는다**(사용자 관측: 닿는 것은 박스 모서리).
+#   저장 캘리로 환산한 검증본 자세는 6개 팔레트 전부 평면 좌표계로 동일하다:
+#     (-0.810, 0.020, 150.000) / rx ±180.000 / ry 0.000 / rz +90.000
+#
+# [높이만 예외 — 2026-08-19 3차, 실기 확인 반영]
+#   Rz 환원으로 가드 충돌은 사라졌으나(사용자 확인: 양옆 긴 면에 안 박음) **파지 위치가 낮았다.**
+#   높이는 개별 레시피 값이 맞다는 사용자 판단에 따라 평면 기준 z 를 되돌린 뒤,
+#   실기 확인으로 1mm 를 더 올렸다:
+#     집기·놓기 150.0 → 156.292 → **157.292** · 접근·이탈 250.0 → 256.292 → **257.292**
+#
+#   [파지 홈 — 2026-08-19 실기 관측]
+#   박스에 파지 홈이 있고 **여유는 잘 쳐줘야 3mm** 다. 낮은 높이에서는
+#   **그리퍼 한쪽 손가락만 홈에 들어가고 반대쪽은 홈 밖을 잡는** 현상이 있었다.
+#   높이를 올리는 것으로 문제없는 수준이 됐지만, 근본은 그리퍼 장착 오차(2026-08-19 실측 0.332°)이거나
+#   검증본 자세 자체의 미세 오차일 수 있다. 홈 여유가 3mm 뿐이라 각도 오차에 민감하다.
+#   근본 해결은 '현재위치 입력'(estimate_plane_align_tool_offset)으로 offset_rx/ry 를 실측해 넣는 것.
+#   XY(-0.81, 0.02)와 자세(rx 180.0 / ry 0.0 / rz +90.0)는 검증본 값 그대로 둔다 —
+#   가드에 안 박히는 것이 그 자세 덕이므로 건드리지 않는다.
+#
+#   [!! 되돌아온 대가 !!] offset_rx 가 180.0 이 되면서 그리퍼 장착 오차 0.332° 보정이 사라진다.
+#   2026-08-19 실측대로 그리퍼 한쪽 턱이 폭 100mm 기준 0.58mm 높아진다.
+#   개별 pallet{N}_pick/place 는 그 보정(179.673)을 유지하고 있다 — 총집본만 검증본 자세다.
+#
+# [!! 삭제된 pick_place_all_pallets.yaml 과 같은 모양이지만 원인은 제거됐다 !!]
+#   그 레시피의 충돌 원인은 **최저 높이(집는 높이)에서 move_to_saved_pose 를 불러
+#   팔레트 안에서 179.5° 제자리 회전**한 것이었다(8/17 22:40 로그, 30초 타임아웃).
+#   본 레시피는 move_to_saved_pose 를 쓰지 않고, 팔레트를 떠날 때마다
+#   move_linear 로 공구 -Z 150mm 후퇴한다 — 100회 완주한 pallet_all_align_from_file 과 같은 규칙.
+#   팔레트 간 이동은 집는 높이 +250mm 에서 이뤄지고(하강은 XY 먼저, Z 나중),
+#   팔레트별 목표 Rz 차이는 최대 0.43° 라 제자리 회전이 사실상 없다.
+#
+# [자세 값] 8/15 성공값. offset_rx 179.673 은 그리퍼가 플랜지에 0.332° 기울어 달린 것을
+#           상쇄하는 보정이다 — 180.0 으로 "정리"하지 말 것(2026-08-19 실측 근거는 개별 레시피 헤더 참조).
+#
+# [!! 안전 !!]
+#   · 시작 전 pallet0 에 박스가 있어야 하고, pallet1~5 는 비어 있어야 한다.
+#   · 첫 접근은 Run 누른 시점의 자세에서 목표 자세로 맞춘 뒤 이동한다 —
+#     반드시 팔레트 밖 안전한 높이에서 시작할 것.
+#   · 첫 실행은 Step 으로. 사이클 1(P0→P1)을 통과한 뒤 연속 실행할 것.
+#   · pallet5 는 저장 캘리 데이터의 대각선 차가 2.202mm 로 임계(1.5mm)를 넘어
+#     불러올 때 [경고] 가 뜬다(실행은 계속된다). 재측정 검토 대상.
+
+name: 팔레트 순환 — 모션 전용 반복시험 (그리퍼·인터록 제거)
+description: 박스 1개를 pallet0→1→2→3→4→5→0 으로 순환 이송한다. 개별 pallet{N}_pick / pallet{N}_place 레시피를 순서대로 이어붙인 총집본으로, 값은 개별 레시피와 동일하다.
+version: '1.0'
+created: '2026-08-19'
+modified: '2026-08-19'
+jobs:
+- id: 1
+  type: recipe_info
+  name: Recipe 개요
+  params:
+    mode: execution
+    description: 박스 1개를 pallet0→1→2→3→4→5→0 으로 순환 이송한다
+    author: jjh
+    version: '1.0'
+    vision_origin_check: none
+# ───── 사이클 1/6 : pallet0 집기 → pallet1 놓기 ─────
+- id: 2
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: P0→P1 · pallet0 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet0
+    file_prefix: pallet0_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 3
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P0→P1 · 팔레트 위 접근 (집는 높이 +100mm) — 파지면 +20mm 위 (L자, 하강 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+- id: 4
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P0→P1 · 팔레트에서 집기 (pallet0~5 성공값) — 법선 직선 20mm @3%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 157.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 5
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P0→P1 · 팔레트에서 들어올림 (집는 높이 +100mm) — 법선 직선 20mm @3% (상승 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 6
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P0→P1 · 팔레트에서 들어올림 (집는 높이 +100mm) — 법선 직선 230mm @20%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 407.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 7
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: P0→P1 · pallet1 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet1
+    file_prefix: pallet1_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 8
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P0→P1 · 팔레트 위 접근 (놓는 높이 +100mm) — 파지면 +20mm 위 (L자, 하강 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+- id: 9
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P0→P1 · 팔레트에 놓기 (pallet0~5 성공값) — 법선 직선 20mm @3%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 157.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 10
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P0→P1 · 팔레트에서 빠짐 (놓는 높이 +100mm) — 법선 직선 20mm @3% (상승 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 11
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P0→P1 · 팔레트에서 빠짐 (놓는 높이 +100mm) — 법선 직선 230mm @20%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 407.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 12
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: P1→P2 · pallet1 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet1
+    file_prefix: pallet1_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 13
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P1→P2 · 팔레트 위 접근 (집는 높이 +100mm) — 파지면 +20mm 위 (L자, 하강 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+- id: 14
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P1→P2 · 팔레트에서 집기 (pallet0~5 성공값) — 법선 직선 20mm @3%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 157.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 15
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P1→P2 · 팔레트에서 들어올림 (집는 높이 +100mm) — 법선 직선 20mm @3% (상승 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 16
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P1→P2 · 팔레트에서 들어올림 (집는 높이 +100mm) — 법선 직선 230mm @20%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 407.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 17
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: P1→P2 · pallet2 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet2
+    file_prefix: pallet2_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 18
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P1→P2 · 팔레트 위 접근 (놓는 높이 +100mm) — 파지면 +20mm 위 (L자, 하강 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+- id: 19
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P1→P2 · 팔레트에 놓기 (pallet0~5 성공값) — 법선 직선 20mm @3%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 157.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 20
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P1→P2 · 팔레트에서 빠짐 (놓는 높이 +100mm) — 법선 직선 20mm @3% (상승 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 21
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P1→P2 · 팔레트에서 빠짐 (놓는 높이 +100mm) — 법선 직선 230mm @20%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 407.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 22
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: P2→P3 · pallet2 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet2
+    file_prefix: pallet2_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 23
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P2→P3 · 팔레트 위 접근 (집는 높이 +100mm) — 파지면 +20mm 위 (L자, 하강 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+- id: 24
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P2→P3 · 팔레트에서 집기 (pallet0~5 성공값) — 법선 직선 20mm @3%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 157.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 25
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P2→P3 · 팔레트에서 들어올림 (집는 높이 +100mm) — 법선 직선 20mm @3% (상승 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 26
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P2→P3 · 팔레트에서 들어올림 (집는 높이 +100mm) — 법선 직선 230mm @20%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 407.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 27
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: P2→P3 · pallet3 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet3
+    file_prefix: pallet3_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 28
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P2→P3 · 팔레트 위 접근 (놓는 높이 +100mm) — 파지면 +20mm 위 (L자, 하강 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+- id: 29
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P2→P3 · 팔레트에 놓기 (pallet0~5 성공값) — 법선 직선 20mm @3%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 157.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 30
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P2→P3 · 팔레트에서 빠짐 (놓는 높이 +100mm) — 법선 직선 20mm @3% (상승 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 31
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P2→P3 · 팔레트에서 빠짐 (놓는 높이 +100mm) — 법선 직선 230mm @20%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 407.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 32
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: P3→P4 · pallet3 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet3
+    file_prefix: pallet3_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 33
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P3→P4 · 팔레트 위 접근 (집는 높이 +100mm) — 파지면 +20mm 위 (L자, 하강 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+- id: 34
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P3→P4 · 팔레트에서 집기 (pallet0~5 성공값) — 법선 직선 20mm @3%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 157.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 35
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P3→P4 · 팔레트에서 들어올림 (집는 높이 +100mm) — 법선 직선 20mm @3% (상승 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 36
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P3→P4 · 팔레트에서 들어올림 (집는 높이 +100mm) — 법선 직선 230mm @20%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 407.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 37
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: P3→P4 · pallet4 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet4
+    file_prefix: pallet4_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 38
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P3→P4 · 팔레트 위 접근 (놓는 높이 +100mm) — 파지면 +20mm 위 (L자, 하강 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+- id: 39
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P3→P4 · 팔레트에 놓기 (pallet0~5 성공값) — 법선 직선 20mm @3%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 157.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 40
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P3→P4 · 팔레트에서 빠짐 (놓는 높이 +100mm) — 법선 직선 20mm @3% (상승 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 41
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P3→P4 · 팔레트에서 빠짐 (놓는 높이 +100mm) — 법선 직선 230mm @20%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 407.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 42
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: P4→P5 · pallet4 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet4
+    file_prefix: pallet4_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 43
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P4→P5 · 팔레트 위 접근 (집는 높이 +100mm) — 파지면 +20mm 위 (L자, 하강 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+- id: 44
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P4→P5 · 팔레트에서 집기 (pallet0~5 성공값) — 법선 직선 20mm @3%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 157.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 45
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P4→P5 · 팔레트에서 들어올림 (집는 높이 +100mm) — 법선 직선 20mm @3% (상승 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 46
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P4→P5 · 팔레트에서 들어올림 (집는 높이 +100mm) — 법선 직선 230mm @20%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 407.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 47
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: P4→P5 · pallet5 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet5
+    file_prefix: pallet5_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 48
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P4→P5 · 팔레트 위 접근 (놓는 높이 +100mm) — 파지면 +20mm 위 (L자, 하강 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+- id: 49
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P4→P5 · 팔레트에 놓기 (pallet0~5 성공값) — 법선 직선 20mm @3%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 157.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 50
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P4→P5 · 팔레트에서 빠짐 (놓는 높이 +100mm) — 법선 직선 20mm @3% (상승 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 51
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P4→P5 · 팔레트에서 빠짐 (놓는 높이 +100mm) — 법선 직선 230mm @20%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 407.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 52
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: P5→P0 · pallet5 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet5
+    file_prefix: pallet5_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 53
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P5→P0 · 팔레트 위 접근 (집는 높이 +100mm) — 파지면 +20mm 위 (L자, 하강 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+- id: 54
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P5→P0 · 팔레트에서 집기 (pallet0~5 성공값) — 법선 직선 20mm @3%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 157.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 55
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P5→P0 · 팔레트에서 들어올림 (집는 높이 +100mm) — 법선 직선 20mm @3% (상승 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 56
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P5→P0 · 팔레트에서 들어올림 (집는 높이 +100mm) — 법선 직선 230mm @20%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 407.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 57
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: P5→P0 · pallet0 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet0
+    file_prefix: pallet0_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 58
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P5→P0 · 팔레트 위 접근 (놓는 높이 +100mm) — 파지면 +20mm 위 (L자, 하강 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+- id: 59
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P5→P0 · 팔레트에 놓기 (pallet0~5 성공값) — 법선 직선 20mm @3%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 157.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 60
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P5→P0 · 팔레트에서 빠짐 (놓는 높이 +100mm) — 법선 직선 20mm @3% (상승 정지 1회)
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 177.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 61
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P5→P0 · 팔레트에서 빠짐 (놓는 높이 +100mm) — 법선 직선 230mm @20%
+  params:
+    offset_x: -0.81
+    offset_y: 0.02
+    offset_z: 407.292
+    offset_rx: 180.0
+    offset_ry: 0.0
+    offset_rz: 90.0
+    velocity: 20.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0

@@ -1,0 +1,655 @@
+# Recipe: 팔레트 순환 이송 총집본 — 짝수 (0 → 2 → 4 → 0) (MK4)
+# TM Task Manager Recipe File (MK4)
+#
+# [무엇] 박스 1개를 pallet0 에서 집어 pallet2 에 놓고 … 마지막에 pallet0 로 돌려놓는다.
+#        3 사이클 = 집기 3 + 놓기 3.
+#
+# [!! 홀·짝을 나눈 이유 !!]
+#   MK4 는 팔레트가 로봇 양쪽에 나뉘어 있다 —
+#     짝수 0·2·4 : 로봇 앞쪽 (중심 X≈+393 · Z≈-297)
+#     홀수 1·3·5 : 로봇 뒤쪽 (중심 X≈-418 · Z≈+11)
+#   한 파일에서 0→1→2… 로 돌리면 사이클마다 약 810mm 를 앞뒤로 횡단한다.
+#   본 레시피는 **짝수 그룹(로봇 앞쪽 (중심 X≈+393 · Z≈-297)) 안에서만** 돌므로 그 횡단이 없다.
+#
+# [팔레트 축] 평면 X축 = 짧은 변 → offset_rz 89.607
+#
+# [출처] pallet{N}_pick.yaml / pallet{N}_place.yaml 의 잡을 **텍스트 그대로** 이어붙였다.
+#        offset·속도·가드는 개별 레시피와 완전히 동일하다. 캡션 앞 사이클 표식과
+#        id 재번호만 이 파일에서 추가된 것이다.
+#
+# [자세 값] 2026-08-20 실기 티칭 역산 공구오차 적용 — 상세는 개별 레시피 헤더 참조.
+# [모션 규칙] move_to_saved_pose 미사용. 팔레트를 떠날 때마다 move_linear 로 공구 -Z 150mm 후퇴.
+#
+# [!! 안전 !!]
+#   · 시작 전 pallet0 에 박스가 있어야 하고, pallet2·pallet4 는 비어 있어야 한다.
+#   · 첫 접근은 Run 누른 시점의 자세에서 목표 자세로 맞춘 뒤 이동한다 —
+#     반드시 팔레트 밖 안전한 높이에서 시작할 것.
+#   · **첫 실행은 반드시 Step 으로.**
+
+name: 팔레트 순환 이송 총집본 — 짝수 (0 → 2 → 4 → 0) (MK4)
+description: 박스 1개를 pallet0→2→4→0 로 순환 이송한다. 짝수 팔레트는 로봇 앞쪽 (중심 X≈+393 · Z≈-297)에 모여 있어 앞뒤 횡단이 없다. 개별 pallet{N}_pick / _place 를 이어붙인 총집본.
+version: '1.0'
+created: '2026-08-20'
+modified: '2026-08-20'
+jobs:
+- id: 1
+  type: recipe_info
+  name: Recipe 개요
+  params:
+    mode: execution
+    description: 박스 1개를 pallet0→2→4→0 로 순환 이송한다 (MK4 짝수)
+    author: jjh
+    version: '1.0'
+    vision_origin_check: none
+# ───── 사이클 1/3 : pallet0 집기 → pallet2 놓기 ─────
+# 인터록 — 집기 전 소스 재고 확인. 비었으면 이 사이클(15잡)을 통째로 건너뛴다.
+#   on_mismatch: stop=레시피 정지 · skip=이 사이클 건너뜀 · ignore=무시하고 진행
+- id: 2
+  type: check_magazine
+  name: 매거진 재고 확인
+  caption: P0→P2 · 인터록 — pallet0 에 박스가 있어야 집는다
+  params:
+    slot: 0
+    expect: present
+    timeout: 3.0
+    on_mismatch: skip
+    skip_count: 14
+- id: 3
+  type: smc_release
+  name: SMC 그리퍼 놓기
+  caption: P0→P2 · 집기 전 그리퍼 열기
+  params:
+    timeout: 30.0
+- id: 4
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: P0→P2 · pallet0 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet0
+    file_prefix: pallet0_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 5
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P0→P2 · 파지 높이 +20mm 위로 접근 (L자, 여기서 1회 정지) — 파지면 +20mm 위 (L자, 하강 정지 1회)
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 180.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 20.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+- id: 6
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P0→P2 · pallet0 에서 집기 (실기 티칭 기반) — 법선 직선 20mm @3%
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 160.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 3.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+    straight_path: true
+- id: 7
+  type: smc_grip
+  name: SMC 그리퍼 파지
+  caption: P0→P2 · 박스 파지
+  params:
+    timeout: 30.0
+    bypass_interlock: false
+    verify_skip: false
+- id: 8
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P0→P2 · pallet0 에서 들어올림 — 법선 직선 20mm @3% (상승 정지 1회)
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 180.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 3.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+    straight_path: true
+- id: 9
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P0→P2 · pallet0 에서 들어올림 — 법선 직선 230mm @20%
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 410.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 20.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+# 인터록 — 놓기 전 목적지 재고 확인. 차 있으면 다음 팔레트에 놓으러 간다.
+#   skip_count 14 = 이 놓기 6잡 + 다음 사이클의 집기 8잡(그리퍼 열기·파지 포함)을 건너뛰고
+#   다음 사이클의 «놓기 인터록» 에 착지한다. 박스를 쥔 채 놓을 곳만 바꾸는 것이다.
+#   건너뛰는 구간에 smc_release·smc_grip 이 들어 있으므로 쥔 박스를 놓치지 않는다.
+- id: 10
+  type: check_magazine
+  name: 매거진 재고 확인
+  caption: P0→P2 · 인터록 — pallet2 가 비어 있어야 놓는다 (차 있으면 다음 팔레트로)
+  params:
+    slot: 2
+    expect: empty
+    timeout: 3.0
+    on_mismatch: skip
+    skip_count: 14
+- id: 11
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: P0→P2 · pallet2 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet2
+    file_prefix: pallet2_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 12
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P0→P2 · 파지 높이 +20mm 위로 접근 (L자, 여기서 1회 정지) — 파지면 +20mm 위 (L자, 하강 정지 1회)
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 180.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 20.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+- id: 13
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P0→P2 · pallet2 에 놓기 (실기 티칭 기반) — 법선 직선 20mm @3%
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 160.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 3.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+    straight_path: true
+- id: 14
+  type: smc_release
+  name: SMC 그리퍼 놓기
+  caption: P0→P2 · 박스 놓기
+  params:
+    timeout: 30.0
+- id: 15
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P0→P2 · pallet2 에서 빠짐 — 법선 직선 20mm @3% (상승 정지 1회)
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 180.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 3.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+    straight_path: true
+- id: 16
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P0→P2 · pallet2 에서 빠짐 — 법선 직선 230mm @20%
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 410.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 20.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+# 인터록 — 집기 전 소스 재고 확인. 비었으면 이 사이클(15잡)을 통째로 건너뛴다.
+#   on_mismatch: stop=레시피 정지 · skip=이 사이클 건너뜀 · ignore=무시하고 진행
+- id: 17
+  type: check_magazine
+  name: 매거진 재고 확인
+  caption: P2→P4 · 인터록 — pallet2 에 박스가 있어야 집는다
+  params:
+    slot: 2
+    expect: present
+    timeout: 3.0
+    on_mismatch: skip
+    skip_count: 14
+- id: 18
+  type: smc_release
+  name: SMC 그리퍼 놓기
+  caption: P2→P4 · 집기 전 그리퍼 열기
+  params:
+    timeout: 30.0
+- id: 19
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: P2→P4 · pallet2 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet2
+    file_prefix: pallet2_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 20
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P2→P4 · 파지 높이 +20mm 위로 접근 (L자, 여기서 1회 정지) — 파지면 +20mm 위 (L자, 하강 정지 1회)
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 180.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 20.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+- id: 21
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P2→P4 · pallet2 에서 집기 (실기 티칭 기반) — 법선 직선 20mm @3%
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 160.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 3.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+    straight_path: true
+- id: 22
+  type: smc_grip
+  name: SMC 그리퍼 파지
+  caption: P2→P4 · 박스 파지
+  params:
+    timeout: 30.0
+    bypass_interlock: false
+    verify_skip: false
+- id: 23
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P2→P4 · pallet2 에서 들어올림 — 법선 직선 20mm @3% (상승 정지 1회)
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 180.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 3.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+    straight_path: true
+- id: 24
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P2→P4 · pallet2 에서 들어올림 — 법선 직선 230mm @20%
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 410.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 20.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+# 인터록 — 놓기 전 목적지 재고 확인. 차 있으면 다음 팔레트에 놓으러 간다.
+#   skip_count 14 = 이 놓기 6잡 + 다음 사이클의 집기 8잡(그리퍼 열기·파지 포함)을 건너뛰고
+#   다음 사이클의 «놓기 인터록» 에 착지한다. 박스를 쥔 채 놓을 곳만 바꾸는 것이다.
+#   건너뛰는 구간에 smc_release·smc_grip 이 들어 있으므로 쥔 박스를 놓치지 않는다.
+- id: 25
+  type: check_magazine
+  name: 매거진 재고 확인
+  caption: P2→P4 · 인터록 — pallet4 가 비어 있어야 놓는다 (차 있으면 다음 팔레트로)
+  params:
+    slot: 4
+    expect: empty
+    timeout: 3.0
+    on_mismatch: skip
+    skip_count: 14
+- id: 26
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: P2→P4 · pallet4 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet4
+    file_prefix: pallet4_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 27
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P2→P4 · 파지 높이 +20mm 위로 접근 (L자, 여기서 1회 정지) — 파지면 +20mm 위 (L자, 하강 정지 1회)
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 180.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 20.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+- id: 28
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P2→P4 · pallet4 에 놓기 (실기 티칭 기반) — 법선 직선 20mm @3%
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 160.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 3.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+    straight_path: true
+- id: 29
+  type: smc_release
+  name: SMC 그리퍼 놓기
+  caption: P2→P4 · 박스 놓기
+  params:
+    timeout: 30.0
+- id: 30
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P2→P4 · pallet4 에서 빠짐 — 법선 직선 20mm @3% (상승 정지 1회)
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 180.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 3.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+    straight_path: true
+- id: 31
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P2→P4 · pallet4 에서 빠짐 — 법선 직선 230mm @20%
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 410.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 20.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+# 인터록 — 집기 전 소스 재고 확인. 비었으면 이 사이클(15잡)을 통째로 건너뛴다.
+#   on_mismatch: stop=레시피 정지 · skip=이 사이클 건너뜀 · ignore=무시하고 진행
+- id: 32
+  type: check_magazine
+  name: 매거진 재고 확인
+  caption: P4→P0 · 인터록 — pallet4 에 박스가 있어야 집는다
+  params:
+    slot: 4
+    expect: present
+    timeout: 3.0
+    on_mismatch: skip
+    skip_count: 14
+- id: 33
+  type: smc_release
+  name: SMC 그리퍼 놓기
+  caption: P4→P0 · 집기 전 그리퍼 열기
+  params:
+    timeout: 30.0
+- id: 34
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: P4→P0 · pallet4 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet4
+    file_prefix: pallet4_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 35
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P4→P0 · 파지 높이 +20mm 위로 접근 (L자, 여기서 1회 정지) — 파지면 +20mm 위 (L자, 하강 정지 1회)
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 180.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 20.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+- id: 36
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P4→P0 · pallet4 에서 집기 (실기 티칭 기반) — 법선 직선 20mm @3%
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 160.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 3.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+    straight_path: true
+- id: 37
+  type: smc_grip
+  name: SMC 그리퍼 파지
+  caption: P4→P0 · 박스 파지
+  params:
+    timeout: 30.0
+    bypass_interlock: false
+    verify_skip: false
+- id: 38
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P4→P0 · pallet4 에서 들어올림 — 법선 직선 20mm @3% (상승 정지 1회)
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 180.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 3.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+    straight_path: true
+- id: 39
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P4→P0 · pallet4 에서 들어올림 — 법선 직선 230mm @20%
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 410.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 20.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+# 인터록 — 마지막 놓기. 이 뒤에는 갈 팔레트가 없으므로 stop 이다.
+#   여기서 skip 하면 박스를 쥔 채 레시피가 조용히 끝난다. 순환을 더 돌리려면
+#   사이클을 추가하고 이 잡의 on_mismatch 를 skip·skip_count 14 로 바꿀 것.
+- id: 40
+  type: check_magazine
+  name: 매거진 재고 확인
+  caption: P4→P0 · 인터록 — pallet0 가 비어 있어야 놓는다
+  params:
+    slot: 0
+    expect: empty
+    timeout: 3.0
+    on_mismatch: stop
+    skip_count: 0
+- id: 41
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: P4→P0 · pallet0 저장 데이터 불러오기
+  params:
+    source_path: data/plate_pose_calc/pallet0
+    file_prefix: pallet0_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 42
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P4→P0 · 파지 높이 +20mm 위로 접근 (L자, 여기서 1회 정지) — 파지면 +20mm 위 (L자, 하강 정지 1회)
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 180.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 20.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+- id: 43
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P4→P0 · pallet0 에 놓기 (실기 티칭 기반) — 법선 직선 20mm @3%
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 160.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 3.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+    straight_path: true
+- id: 44
+  type: smc_release
+  name: SMC 그리퍼 놓기
+  caption: P4→P0 · 박스 놓기
+  params:
+    timeout: 30.0
+- id: 45
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P4→P0 · pallet0 에서 빠짐 — 법선 직선 20mm @3% (상승 정지 1회)
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 180.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 3.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+    straight_path: true
+- id: 46
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: P4→P0 · pallet0 에서 빠짐 — 법선 직선 230mm @20%
+  params:
+    offset_x: -3.138
+    offset_y: -0.756
+    offset_z: 410.279
+    offset_rx: -177.970
+    offset_ry: 0.149
+    offset_rz: -90.701
+    velocity: 20.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0

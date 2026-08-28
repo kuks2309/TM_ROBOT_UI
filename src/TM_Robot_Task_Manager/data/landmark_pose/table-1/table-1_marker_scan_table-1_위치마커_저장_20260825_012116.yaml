@@ -1,0 +1,11 @@
+operator: jjh
+recipe: table-1_marker_scan
+task_caption: table-1_위치마커_저장
+saved_at: '2026-08-25 01:21:16'
+landmark:
+  x: -39.039
+  y: 616.915
+  z: -252.594
+  rx: 179.433
+  ry: 0.17
+  rz: 2.17

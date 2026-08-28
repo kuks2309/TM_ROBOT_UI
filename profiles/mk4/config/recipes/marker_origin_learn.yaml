@@ -1,0 +1,78 @@
+# Recipe: 마커 기준점 측정 (학습용) (MK4)
+# TM Task Manager Recipe File
+
+name: 마커 기준점 측정 (학습용) (MK4)
+description: 기준 마커 자세로 이동해 10회 측정(3sigma)하고 그 자세에 머문다. 이어서 설정 탭의 [기준점 학습] 을 눌러 기준으로
+  저장한다.
+version: '1.0'
+created: '2026-08-23'
+modified: '2026-08-23'
+jobs:
+- id: 1
+  type: recipe_info
+  name: Recipe 개요
+  params:
+    mode: execution
+    description: 기준 마커를 측정하고 학습 자세에 머문다
+    author: jjh
+    version: '1.0'
+    vision_origin_check: none
+- id: 2
+  type: smc_grip
+  name: SMC 그리퍼 파지
+  caption: 촬영 위해 그리퍼 닫기 (카메라 시야 확보)
+  params:
+    timeout: 30.0
+    bypass_interlock: true
+    verify_skip: true
+- id: 3
+  type: move_to_point
+  name: 포인트 이동
+  caption: 기준 마커 자세로 이동 (여기서 학습한다)
+  params:
+    motion_type: tcp
+    X: 204.4
+    Y: 412.02
+    Z: 64.75
+    Rx: 180.0
+    Ry: 0.0
+    Rz: 0.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 204.4
+    Y: 412.02
+    Z: 64.75
+    Rx: 180.0
+    Ry: 0.0
+    Rz: 0.0
+- id: 4
+  type: wait
+  name: 대기
+  caption: 진동 안정화 대기
+  params:
+    duration: 500
+- id: 5
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  caption: 기준 마커 측정 (10회 · 3sigma)
+  params:
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz_rx_ry_rz
+- id: 6
+  type: save_landmark_pose
+  name: Landmark 좌표 저장
+  caption: 측정값 파일 저장 (이력 보관)
+  params:
+    save_path: data/landmark_pose
+    operator: jjh
+reference:
+  tm_jig_landmark:
+    X: 219.42235
+    Y: 257.429745
+    Z: 2.0588318699999997
+    Rx: -179.7284519850988
+    Ry: 0.23134563321647167
+    Rz: 90.59624470003487

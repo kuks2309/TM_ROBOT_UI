@@ -1,0 +1,3753 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1400</width>
+    <height>800</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>TM Task Manager</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout_main">
+    <!-- 상단: 탭 위젯 -->
+    <item>
+     <widget class="QTabWidget" name="tabWidget_main">
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <!-- 탭 1: Task 편집 (3단 구성) -->
+      <widget class="QWidget" name="tab_taskEdit">
+       <attribute name="title">
+        <string>Task 편집</string>
+       </attribute>
+       <layout class="QHBoxLayout" name="horizontalLayout_taskEdit">
+        <!-- 1단: Task Sequence -->
+        <item>
+         <widget class="QGroupBox" name="groupBox_taskSequence">
+          <property name="title">
+           <string>Task Sequence</string>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>280</width>
+            <height>0</height>
+           </size>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_taskSequence">
+           <item>
+            <widget class="QListWidget" name="listWidget_taskSequence"/>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_seqButtons">
+             <item>
+              <widget class="QPushButton" name="pushButton_moveUp">
+               <property name="text">
+                <string>▲</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_moveDown">
+               <property name="text">
+                <string>▼</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_copyTask">
+               <property name="text">
+                <string>복사</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_removeTask">
+               <property name="text">
+                <string>삭제</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <!-- 2단: Available Tasks -->
+        <item>
+         <widget class="QGroupBox" name="groupBox_availableTasks">
+          <property name="title">
+           <string>Available Tasks</string>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>280</width>
+            <height>0</height>
+           </size>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_availableTasks">
+           <item>
+            <widget class="QTreeWidget" name="treeWidget_availableTasks">
+             <column>
+              <property name="text">
+               <string>Task</string>
+              </property>
+             </column>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_addTask">
+             <property name="text">
+              <string>← Sequence에 추가</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <!-- 3단: Task 파라미터 -->
+        <item>
+         <widget class="QGroupBox" name="groupBox_taskParams">
+          <property name="title">
+           <string>Task 파라미터</string>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>280</width>
+            <height>0</height>
+           </size>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_taskParams">
+           <item>
+            <widget class="QLabel" name="label_selectedTask">
+             <property name="text">
+              <string>선택된 Task: 없음</string>
+             </property>
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QScrollArea" name="scrollArea_params">
+             <property name="widgetResizable">
+              <bool>true</bool>
+             </property>
+             <widget class="QWidget" name="scrollAreaWidgetContents_params">
+              <layout class="QFormLayout" name="formLayout_params"/>
+             </widget>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="label_tmLandmarkResult">
+             <property name="text">
+              <string/>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+             <property name="wordWrap">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_moveToParams">
+             <property name="text">
+              <string>이 위치로 이동</string>
+             </property>
+             <property name="toolTip">
+              <string>현재 파라미터 값으로 로봇 이동</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_paramButtons">
+             <item>
+              <widget class="QPushButton" name="pushButton_applyParams">
+               <property name="text">
+                <string>파라미터 적용</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_teachPosition">
+               <property name="text">
+                <string>현재위치 입력</string>
+               </property>
+               <property name="toolTip">
+                <string>로봇 현재 위치를 파라미터에 입력</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <!-- 4단: 로봇 현재 위치 -->
+        <item>
+         <widget class="QGroupBox" name="groupBox_robotStatus">
+          <property name="title">
+           <string>로봇 현재 위치</string>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>280</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>450</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_robotStatus">
+           <!-- IP 정보 -->
+           <item>
+            <layout class="QGridLayout" name="gridLayout_ip">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_robotIp">
+               <property name="text">
+                <string>Robot:</string>
+               </property>
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLineEdit" name="lineEdit_robotIp">
+               <property name="maximumSize">
+                <size>
+                 <width>120</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>192.168.0.1</string>
+               </property>
+               <property name="placeholderText">
+                <string>192.168.0.1</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QPushButton" name="pushButton_findRobotIp">
+               <property name="text">
+                <string>찾기</string>
+               </property>
+               <property name="toolTip">
+                <string>네트워크에서 TM 로봇 IP 검색</string>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>50</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_pcIp">
+               <property name="text">
+                <string>PC:</string>
+               </property>
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QLineEdit" name="lineEdit_pcIp">
+               <property name="maximumSize">
+                <size>
+                 <width>120</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="2">
+              <widget class="QPushButton" name="pushButton_refreshPcIp">
+               <property name="text">
+                <string>갱신</string>
+               </property>
+               <property name="toolTip">
+                <string>PC IP 주소 다시 확인</string>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>50</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <widget class="QFrame" name="line_ipSeparator">
+             <property name="frameShape">
+              <enum>QFrame::HLine</enum>
+             </property>
+             <property name="frameShadow">
+              <enum>QFrame::Sunken</enum>
+             </property>
+            </widget>
+           </item>
+           <!-- Joint 위치 -->
+           <item>
+            <widget class="QLabel" name="label_jointTitle">
+             <property name="text">
+              <string>Joint (deg):</string>
+             </property>
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QGridLayout" name="gridLayout_joint">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_j1">
+               <property name="text">
+                <string>J1:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLineEdit" name="lineEdit_j1">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QLabel" name="label_j2">
+               <property name="text">
+                <string>J2:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="3">
+              <widget class="QLineEdit" name="lineEdit_j2">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="4">
+              <widget class="QLabel" name="label_j3">
+               <property name="text">
+                <string>J3:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="5">
+              <widget class="QLineEdit" name="lineEdit_j3">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_j4">
+               <property name="text">
+                <string>J4:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QLineEdit" name="lineEdit_j4">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="2">
+              <widget class="QLabel" name="label_j5">
+               <property name="text">
+                <string>J5:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="3">
+              <widget class="QLineEdit" name="lineEdit_j5">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="4">
+              <widget class="QLabel" name="label_j6">
+               <property name="text">
+                <string>J6:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="5">
+              <widget class="QLineEdit" name="lineEdit_j6">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <!-- TCP 위치 -->
+           <item>
+            <layout class="QHBoxLayout" name="hLayout_tcpTitle">
+             <item>
+              <widget class="QLabel" name="label_tcpTitle">
+               <property name="text">
+                <string>TCP (mm, deg):</string>
+               </property>
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="spacer_tcpTitle">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <layout class="QGridLayout" name="gridLayout_tcp">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_tcpX">
+               <property name="text">
+                <string>X:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLineEdit" name="lineEdit_tcpX">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QLabel" name="label_tcpY">
+               <property name="text">
+                <string>Y:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="3">
+              <widget class="QLineEdit" name="lineEdit_tcpY">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="4">
+              <widget class="QLabel" name="label_tcpZ">
+               <property name="text">
+                <string>Z:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="5">
+              <widget class="QLineEdit" name="lineEdit_tcpZ">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_tcpRx">
+               <property name="text">
+                <string>Rx:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QLineEdit" name="lineEdit_tcpRx">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="2">
+              <widget class="QLabel" name="label_tcpRy">
+               <property name="text">
+                <string>Ry:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="3">
+              <widget class="QLineEdit" name="lineEdit_tcpRy">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="4">
+              <widget class="QLabel" name="label_tcpRz">
+               <property name="text">
+                <string>Rz:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="5">
+              <widget class="QLineEdit" name="lineEdit_tcpRz">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <!-- 좌표계 선택 -->
+           <item>
+            <widget class="QLabel" name="label_coordinateSystem">
+             <property name="text">
+              <string>좌표계:</string>
+             </property>
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_coordinateSystem">
+             <item>
+              <widget class="QComboBox" name="comboBox_coordinateSystem">
+               <property name="toolTip">
+                <string>로봇 좌표계 선택</string>
+               </property>
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <item>
+                <property name="text">
+                 <string>RobotBase</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>vision_TM_Landmark_detection</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>vision_TM_Jig_detect</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>vision_jig_plate_1</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>vision_jig_plate_2</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>vision_jig_plate_3</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>vision_jig_plate_4</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_applyCoordinateSystem">
+               <property name="text">
+                <string>적용</string>
+               </property>
+               <property name="toolTip">
+                <string>선택한 좌표계로 변경</string>
+               </property>
+               <property name="minimumWidth">
+                <number>60</number>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btn_readBase">
+               <property name="text">
+                <string>읽기</string>
+               </property>
+               <property name="toolTip">
+                <string>현재 좌표계 읽기</string>
+               </property>
+               <property name="minimumWidth">
+                <number>60</number>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <!-- TCP Pose 선택 (3개 좌표계 정의) -->
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_tcpPoseSelect">
+             <item>
+              <widget class="QLabel" name="label_tcpPoseSelect">
+               <property name="text">
+                <string>TCP Pose:</string>
+               </property>
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QRadioButton" name="radioButton_robotBase">
+               <property name="text">
+                <string>robot_base</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QRadioButton" name="radioButton_jigLandmark">
+               <property name="text">
+                <string>jig_landmark</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QRadioButton" name="radioButton_jigPlate">
+               <property name="text">
+                <string>jig_plate</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_applyTcpPose">
+               <property name="text">
+                <string>TCP Pose 적용</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="horizontalSpacer_tcpPose">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </item>
+           <!-- TCP 조그 컨트롤 -->
+           <item>
+            <widget class="QGroupBox" name="groupBox_jog">
+             <property name="title">
+              <string>TCP 조그</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_jog">
+              <!-- 이동 거리 설정 -->
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_jogStep">
+                <item>
+                 <widget class="QLabel" name="label_jogStep">
+                  <property name="text">
+                   <string>이동 거리 (mm):</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QDoubleSpinBox" name="spinBox_jogStep">
+                  <property name="minimum">
+                   <double>0.100000000000000</double>
+                  </property>
+                  <property name="maximum">
+                   <double>100.000000000000000</double>
+                  </property>
+                  <property name="singleStep">
+                   <double>1.000000000000000</double>
+                  </property>
+                  <property name="value">
+                   <double>10.000000000000000</double>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <!-- 조그 속도 설정 -->
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_jogVelocity">
+                <item>
+                 <widget class="QLabel" name="label_jogVelocity">
+                  <property name="text">
+                   <string>이동 속도 (%):</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="spinBox_jogVelocity">
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="maximum">
+                   <number>100</number>
+                  </property>
+                  <property name="singleStep">
+                   <number>5</number>
+                  </property>
+                  <property name="value">
+                   <number>20</number>
+                  </property>
+                  <property name="suffix">
+                   <string>%</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <!-- 조그 버튼들 -->
+              <item>
+               <layout class="QGridLayout" name="gridLayout_jogButtons">
+                <!-- X축 (좌측) -->
+                <item row="0" column="0">
+                 <widget class="QLabel" name="label_jogX">
+                  <property name="text">
+                   <string>X:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QPushButton" name="pushButton_jogXMinus">
+                  <property name="text">
+                   <string>X-</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="2">
+                 <widget class="QPushButton" name="pushButton_jogXPlus">
+                  <property name="text">
+                   <string>X+</string>
+                  </property>
+                 </widget>
+                </item>
+                <!-- Rx축 (우측) -->
+                <item row="0" column="3">
+                 <widget class="QLabel" name="label_jogRx">
+                  <property name="text">
+                   <string>Rx:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="4">
+                 <widget class="QPushButton" name="pushButton_jogRxMinus">
+                  <property name="text">
+                   <string>Rx-</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="5">
+                 <widget class="QPushButton" name="pushButton_jogRxPlus">
+                  <property name="text">
+                   <string>Rx+</string>
+                  </property>
+                 </widget>
+                </item>
+                <!-- Y축 (좌측) -->
+                <item row="1" column="0">
+                 <widget class="QLabel" name="label_jogY">
+                  <property name="text">
+                   <string>Y:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="1">
+                 <widget class="QPushButton" name="pushButton_jogYMinus">
+                  <property name="text">
+                   <string>Y-</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="2">
+                 <widget class="QPushButton" name="pushButton_jogYPlus">
+                  <property name="text">
+                   <string>Y+</string>
+                  </property>
+                 </widget>
+                </item>
+                <!-- Ry축 (우측) -->
+                <item row="1" column="3">
+                 <widget class="QLabel" name="label_jogRy">
+                  <property name="text">
+                   <string>Ry:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="4">
+                 <widget class="QPushButton" name="pushButton_jogRyMinus">
+                  <property name="text">
+                   <string>Ry-</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="5">
+                 <widget class="QPushButton" name="pushButton_jogRyPlus">
+                  <property name="text">
+                   <string>Ry+</string>
+                  </property>
+                 </widget>
+                </item>
+                <!-- Z축 (좌측) -->
+                <item row="2" column="0">
+                 <widget class="QLabel" name="label_jogZ">
+                  <property name="text">
+                   <string>Z:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="1">
+                 <widget class="QPushButton" name="pushButton_jogZMinus">
+                  <property name="text">
+                   <string>Z-</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="2">
+                 <widget class="QPushButton" name="pushButton_jogZPlus">
+                  <property name="text">
+                   <string>Z+</string>
+                  </property>
+                 </widget>
+                </item>
+                <!-- Rz축 (우측) -->
+                <item row="2" column="3">
+                 <widget class="QLabel" name="label_jogRz">
+                  <property name="text">
+                   <string>Rz:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="4">
+                 <widget class="QPushButton" name="pushButton_jogRzMinus">
+                  <property name="text">
+                   <string>Rz-</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="5">
+                 <widget class="QPushButton" name="pushButton_jogRzPlus">
+                  <property name="text">
+                   <string>Rz+</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <!-- PS2 Joystick Control -->
+           <item>
+            <widget class="QGroupBox" name="groupBox_ps2Jog">
+             <property name="title">
+              <string>PS2 Joystick Control</string>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>60</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>80</height>
+              </size>
+             </property>
+             <layout class="QHBoxLayout" name="horizontalLayout_ps2Jog">
+              <item>
+               <widget class="QCheckBox" name="checkBox_ps2JogEnable">
+                <property name="text">
+                 <string>Enable PS2 Jog</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_ps2Status">
+                <property name="text">
+                 <string>Status: Disconnected</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_ps2Mode">
+                <property name="text">
+                 <string>Mode: XYZ</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_ps2">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <!-- 탭 2: Vision -->
+      <widget class="QWidget" name="tab_vision">
+       <attribute name="title">
+        <string>Vision</string>
+       </attribute>
+       <layout class="QHBoxLayout" name="horizontalLayout_vision">
+        <!-- 카메라 영상 -->
+        <item>
+         <widget class="QGroupBox" name="groupBox_camera">
+          <property name="title">
+           <string>카메라 영상</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_camera">
+           <item>
+            <widget class="QLabel" name="label_cameraImage">
+             <property name="minimumSize">
+              <size>
+               <width>480</width>
+               <height>360</height>
+              </size>
+             </property>
+             <property name="styleSheet">
+              <string>background-color: #333333;</string>
+             </property>
+             <property name="text">
+              <string>카메라 영상 없음</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_cameraButtons">
+             <item>
+              <widget class="QPushButton" name="pushButton_startCamera">
+               <property name="text">
+                <string>카메라 시작</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_stopCamera">
+               <property name="text">
+                <string>카메라 정지</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_imageCapture">
+               <property name="text">
+                <string>Image Capture</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_imageSave">
+               <property name="text">
+                <string>Image Save</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="horizontalSpacer_camera">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <!-- 오른쪽 패널: AR Tag / Camera Calibration 탭 -->
+        <item>
+         <widget class="QTabWidget" name="tabWidget_visionRight">
+          <property name="currentIndex">
+           <number>0</number>
+          </property>
+          <!-- Tab 1: AR Tag 인식 -->
+          <widget class="QWidget" name="tab_arTag">
+           <attribute name="title">
+            <string>AR Tag 인식</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="verticalLayout_arDetection">
+            <item>
+             <widget class="QLabel" name="label_detectedTags">
+              <property name="text">
+               <string>검출된 태그 목록:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QTableWidget" name="tableWidget_detectedTags">
+              <property name="columnCount">
+               <number>4</number>
+              </property>
+              <column>
+               <property name="text">
+                <string>ID</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>X (m)</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Y (m)</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Z (m)</string>
+               </property>
+              </column>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="groupBox_selectedTag">
+              <property name="title">
+               <string>선택된 태그 정보</string>
+              </property>
+              <layout class="QFormLayout" name="formLayout_selectedTag">
+               <item row="0" column="0">
+                <widget class="QLabel" name="label_selectedTagId">
+                 <property name="text">
+                  <string>태그 ID:</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <widget class="QLabel" name="label_selectedTagIdValue">
+                 <property name="text">
+                  <string>-</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="0">
+                <widget class="QLabel" name="label_selectedTagPos">
+                 <property name="text">
+                  <string>위치:</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="1">
+                <widget class="QLabel" name="label_selectedTagPosValue">
+                 <property name="text">
+                  <string>-</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="0">
+                <widget class="QLabel" name="label_selectedTagRot">
+                 <property name="text">
+                  <string>회전:</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="1">
+                <widget class="QLabel" name="label_selectedTagRotValue">
+                 <property name="text">
+                  <string>-</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_useSelectedTag">
+              <property name="text">
+               <string>선택된 태그를 기준으로 설정</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="groupBox_visionJog">
+              <property name="title">
+               <string>TCP 조그</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_visionJog">
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_visionJogParams">
+                 <item>
+                  <widget class="QLabel" name="label_visionJogStep">
+                   <property name="text">
+                    <string>이동 거리 (mm):</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QDoubleSpinBox" name="spinBox_visionJogStep">
+                   <property name="minimum">
+                    <double>0.100000000000000</double>
+                   </property>
+                   <property name="maximum">
+                    <double>100.000000000000000</double>
+                   </property>
+                   <property name="singleStep">
+                    <double>1.000000000000000</double>
+                   </property>
+                   <property name="value">
+                    <double>10.000000000000000</double>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="label_visionJogVelocity">
+                   <property name="text">
+                    <string>이동 속도:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSpinBox" name="spinBox_visionJogVelocity">
+                   <property name="minimum">
+                    <number>1</number>
+                   </property>
+                   <property name="maximum">
+                    <number>100</number>
+                   </property>
+                   <property name="singleStep">
+                    <number>5</number>
+                   </property>
+                   <property name="value">
+                    <number>20</number>
+                   </property>
+                   <property name="suffix">
+                    <string>%</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QGridLayout" name="gridLayout_visionJog">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="label_visionJogX">
+                   <property name="text">
+                    <string>X:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QPushButton" name="pushButton_visionJogXMinus">
+                   <property name="text">
+                    <string>X-</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="2">
+                  <widget class="QPushButton" name="pushButton_visionJogXPlus">
+                   <property name="text">
+                    <string>X+</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="3">
+                  <widget class="QLabel" name="label_visionJogRx">
+                   <property name="text">
+                    <string>Rx:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="4">
+                  <widget class="QPushButton" name="pushButton_visionJogRxMinus">
+                   <property name="text">
+                    <string>Rx-</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="5">
+                  <widget class="QPushButton" name="pushButton_visionJogRxPlus">
+                   <property name="text">
+                    <string>Rx+</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="label_visionJogY">
+                   <property name="text">
+                    <string>Y:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QPushButton" name="pushButton_visionJogYMinus">
+                   <property name="text">
+                    <string>Y-</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="2">
+                  <widget class="QPushButton" name="pushButton_visionJogYPlus">
+                   <property name="text">
+                    <string>Y+</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="3">
+                  <widget class="QLabel" name="label_visionJogRy">
+                   <property name="text">
+                    <string>Ry:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="4">
+                  <widget class="QPushButton" name="pushButton_visionJogRyMinus">
+                   <property name="text">
+                    <string>Ry-</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="5">
+                  <widget class="QPushButton" name="pushButton_visionJogRyPlus">
+                   <property name="text">
+                    <string>Ry+</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QLabel" name="label_visionJogZ">
+                   <property name="text">
+                    <string>Z:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="1">
+                  <widget class="QPushButton" name="pushButton_visionJogZMinus">
+                   <property name="text">
+                    <string>Z-</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="2">
+                  <widget class="QPushButton" name="pushButton_visionJogZPlus">
+                   <property name="text">
+                    <string>Z+</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="3">
+                  <widget class="QLabel" name="label_visionJogRz">
+                   <property name="text">
+                    <string>Rz:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="4">
+                  <widget class="QPushButton" name="pushButton_visionJogRzMinus">
+                   <property name="text">
+                    <string>Rz-</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="5">
+                  <widget class="QPushButton" name="pushButton_visionJogRzPlus">
+                   <property name="text">
+                    <string>Rz+</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <spacer name="verticalSpacer_arDetection">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>40</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </widget>
+          <!-- Tab 2: Camera Calibration -->
+          <widget class="QWidget" name="tab_cameraCalibration">
+           <attribute name="title">
+            <string>Camera Calibration</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="verticalLayout_calibration">
+            <item>
+             <widget class="QLabel" name="label_calibrationStatus">
+              <property name="text">
+               <string>캘리브레이션 준비</string>
+              </property>
+             </widget>
+            </item>
+            <!-- Chessboard 설정 (한 줄) -->
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_chessboard">
+              <property name="spacing">
+               <number>3</number>
+              </property>
+              <item>
+               <widget class="QLabel" name="label_gridX">
+                <property name="text">
+                 <string>Grid X:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSpinBox" name="spinBox_boardWidth">
+                <property name="minimum">
+                 <number>3</number>
+                </property>
+                <property name="maximum">
+                 <number>20</number>
+                </property>
+                <property name="value">
+                 <number>9</number>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_gridY">
+                <property name="text">
+                 <string>Y:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSpinBox" name="spinBox_boardHeight">
+                <property name="minimum">
+                 <number>3</number>
+                </property>
+                <property name="maximum">
+                 <number>20</number>
+                </property>
+                <property name="value">
+                 <number>6</number>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_squareSize">
+                <property name="text">
+                 <string>크기(mm):</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QDoubleSpinBox" name="doubleSpinBox_squareSize">
+                <property name="minimum">
+                 <double>1.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>100.000000000000000</double>
+                </property>
+                <property name="value">
+                 <double>25.000000000000000</double>
+                </property>
+                <property name="decimals">
+                 <number>1</number>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_chessboard">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+            <!-- 버튼들 -->
+            <item>
+             <widget class="QPushButton" name="pushButton_detectChessboard">
+              <property name="text">
+               <string>Chessboard 인식</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_moveToChessboardCenter">
+              <property name="text">
+               <string>Chessboard 중심 이동</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_capturedCount">
+              <property name="text">
+               <string>캡처된 이미지: 0</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_calibButtons">
+              <item>
+               <widget class="QPushButton" name="pushButton_captureCalibImage">
+                <property name="text">
+                 <string>이미지 캡처</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton_runCalibration">
+                <property name="text">
+                 <string>캘리브레이션 실행</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_saveCalibration">
+              <property name="text">
+               <string>결과 저장</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="verticalSpacer_calibration">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>40</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </widget>
+          <!-- Tab 3: Image Processing -->
+          <widget class="QWidget" name="tab_imageProcessing">
+           <attribute name="title">
+            <string>Image Processing</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="verticalLayout_imageProcessing">
+            <!-- Threshold 설정 -->
+            <item>
+             <widget class="QGroupBox" name="groupBox_threshold">
+              <property name="title">
+               <string>Threshold</string>
+              </property>
+              <layout class="QHBoxLayout" name="horizontalLayout_threshold">
+               <item>
+                <widget class="QLabel" name="label_thresholdValue">
+                 <property name="text">
+                  <string>Threshold 값:</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QSpinBox" name="spinBox_thresholdValue">
+                 <property name="minimum">
+                  <number>0</number>
+                 </property>
+                 <property name="maximum">
+                  <number>255</number>
+                 </property>
+                 <property name="value">
+                  <number>128</number>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="pushButton_applyThreshold">
+                 <property name="text">
+                  <string>적용</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QSlider" name="horizontalSlider_threshold">
+                 <property name="minimum">
+                  <number>0</number>
+                 </property>
+                 <property name="maximum">
+                  <number>255</number>
+                 </property>
+                 <property name="value">
+                  <number>128</number>
+                 </property>
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>200</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="horizontalSpacer_threshold">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <!-- 처리된 이미지 표시 -->
+            <item>
+             <widget class="QLabel" name="label_processedImage">
+              <property name="minimumSize">
+               <size>
+                <width>320</width>
+                <height>240</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>처리된 이미지</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+              <property name="styleSheet">
+               <string>background-color: #333; color: white;</string>
+              </property>
+             </widget>
+            </item>
+            <!-- 저장 버튼 -->
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_saveProcessed">
+              <item>
+               <widget class="QPushButton" name="pushButton_saveProcessedImage">
+                <property name="text">
+                 <string>처리 이미지 저장</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_saveProcessed">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <spacer name="verticalSpacer_imageProcessing">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>40</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </widget>
+          <!-- Tab 4: AI Data Collection -->
+          <widget class="QWidget" name="tab_aiDataCollection">
+           <attribute name="title">
+            <string>AI Data Collection</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="verticalLayout_aiDataCollection">
+            <item>
+             <spacer name="verticalSpacer_aiDataCollection">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>40</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </widget>
+          <!-- Tab 5: AI Detection -->
+          <widget class="QWidget" name="tab_aiDetection">
+           <attribute name="title">
+            <string>AI Detection</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="verticalLayout_aiDetection">
+           </layout>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <!-- 탭 3: 실행 모니터 -->
+      <widget class="QWidget" name="tab_runMonitor">
+       <attribute name="title">
+        <string>실행 모니터</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_runMonitor">
+        <!-- 실행 제어 -->
+        <item>
+         <widget class="QGroupBox" name="groupBox_runControl">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="title">
+           <string>실행 제어</string>
+          </property>
+          <layout class="QHBoxLayout" name="horizontalLayout_runControl">
+           <item>
+            <widget class="QPushButton" name="pushButton_run">
+             <property name="text">
+              <string>▶ 실행</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_pause">
+             <property name="text">
+              <string>⏸ 일시정지</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_stop">
+             <property name="text">
+              <string>⏹ 정지</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_step">
+             <property name="text">
+              <string>⏭ 스텝</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_runFrom">
+             <property name="text">
+              <string>▶▶ 현재부터</string>
+             </property>
+             <property name="toolTip">
+              <string>선택한 Task부터 끝까지 실행</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_runReverse">
+             <property name="text">
+              <string>◀◀ 역순</string>
+             </property>
+             <property name="toolTip">
+              <string>선택한 Task부터 1번까지 역순 실행</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_runControl">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QSpinBox" name="spinBox_repeatCount">
+             <property name="minimum">
+              <number>1</number>
+             </property>
+             <property name="maximum">
+              <number>999</number>
+             </property>
+             <property name="value">
+              <number>1</number>
+             </property>
+             <property name="suffix">
+              <string> 회</string>
+             </property>
+             <property name="toolTip">
+              <string>반복 실행 횟수</string>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>70</width>
+               <height>0</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_repeatRun">
+             <property name="text">
+              <string>🔄 반복</string>
+             </property>
+             <property name="toolTip">
+              <string>지정 횟수만큼 Recipe 반복 실행</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <!-- 현재 상태 -->
+        <item>
+         <widget class="QGroupBox" name="groupBox_currentStatus">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="title">
+           <string>현재 상태</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_currentStatus">
+           <item>
+            <layout class="QFormLayout" name="formLayout_status">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_taskLabel">
+               <property name="text">
+                <string>Task:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLabel" name="label_currentTask">
+               <property name="text">
+                <string>없음</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <widget class="QProgressBar" name="progressBar_task">
+             <property name="value">
+              <number>0</number>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <!-- Recipe/로그 분할 영역 -->
+        <item>
+         <widget class="QSplitter" name="splitter_monitorArea">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <!-- 왼쪽: Task Sequence -->
+          <widget class="QGroupBox" name="groupBox_monitorSequence">
+           <property name="title">
+            <string>Task Sequence</string>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_monitorSequence">
+            <item>
+             <widget class="QListWidget" name="listWidget_monitorJobs"/>
+            </item>
+           </layout>
+          </widget>
+          <!-- 오른쪽: 실행 로그 -->
+          <widget class="QGroupBox" name="groupBox_log">
+           <property name="title">
+            <string>실행 로그</string>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_log">
+            <item>
+             <widget class="QTextEdit" name="textEdit_log">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_logButtons">
+              <item>
+               <widget class="QPushButton" name="pushButton_clearLog">
+                <property name="text">
+                 <string>로그 지우기</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton_saveLog">
+                <property name="text">
+                 <string>로그 저장</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_log">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <!-- 탭 4: 좌표계 설정 -->
+      <widget class="QWidget" name="tab_coordinateSystem">
+       <attribute name="title">
+        <string>좌표계 설정</string>
+       </attribute>
+       <layout class="QHBoxLayout" name="horizontalLayout_coordinateSystem">
+        <!-- jig_landmark + mark_jig_plate 수직 배치 -->
+        <item>
+         <layout class="QVBoxLayout" name="verticalLayout_jigLandmarkSection">
+          <item>
+           <widget class="QGroupBox" name="groupBox_jigLandmark">
+          <property name="title">
+           <string>jig_landmark</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_jigLandmark">
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_jigLandmarkName">
+             <item>
+              <widget class="QLabel" name="label_jigLandmarkName">
+               <property name="text">
+                <string>Vision Base:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="lineEdit_jigLandmarkName">
+               <property name="text">
+                <string>jig_landmark</string>
+               </property>
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <layout class="QGridLayout" name="gridLayout_jigLandmark">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_jigLandmarkX">
+               <property name="text">
+                <string>X:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_jigLandmarkX">
+               <property name="minimum">
+                <double>-10000.000000000000000</double>
+               </property>
+               <property name="maximum">
+                <double>10000.000000000000000</double>
+               </property>
+               <property name="decimals">
+                <number>2</number>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QLabel" name="label_jigLandmarkRx">
+               <property name="text">
+                <string>Rx:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="3">
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_jigLandmarkRx">
+               <property name="minimum">
+                <double>-360.000000000000000</double>
+               </property>
+               <property name="maximum">
+                <double>360.000000000000000</double>
+               </property>
+               <property name="decimals">
+                <number>2</number>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_jigLandmarkY">
+               <property name="text">
+                <string>Y:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_jigLandmarkY">
+               <property name="minimum">
+                <double>-10000.000000000000000</double>
+               </property>
+               <property name="maximum">
+                <double>10000.000000000000000</double>
+               </property>
+               <property name="decimals">
+                <number>2</number>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="2">
+              <widget class="QLabel" name="label_jigLandmarkRy">
+               <property name="text">
+                <string>Ry:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="3">
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_jigLandmarkRy">
+               <property name="minimum">
+                <double>-360.000000000000000</double>
+               </property>
+               <property name="maximum">
+                <double>360.000000000000000</double>
+               </property>
+               <property name="decimals">
+                <number>2</number>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="label_jigLandmarkZ">
+               <property name="text">
+                <string>Z:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_jigLandmarkZ">
+               <property name="minimum">
+                <double>-10000.000000000000000</double>
+               </property>
+               <property name="maximum">
+                <double>10000.000000000000000</double>
+               </property>
+               <property name="decimals">
+                <number>2</number>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="2">
+              <widget class="QLabel" name="label_jigLandmarkRz">
+               <property name="text">
+                <string>Rz:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="3">
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_jigLandmarkRz">
+               <property name="minimum">
+                <double>-360.000000000000000</double>
+               </property>
+               <property name="maximum">
+                <double>360.000000000000000</double>
+               </property>
+               <property name="decimals">
+                <number>2</number>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_jigLandmarkButtons">
+             <item>
+              <widget class="QPushButton" name="pushButton_readJigLandmark">
+               <property name="text">
+                <string>TM Flow에서 읽기</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_saveJigLandmark">
+               <property name="text">
+                <string>저장</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <!-- mark_jig_plate 1~4 섹션 (4개 모두 표시) -->
+        <item>
+         <widget class="QGroupBox" name="groupBox_markJigPlate">
+          <property name="title">
+           <string>mark_jig_plate (1~4)</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_markJigPlateAll">
+           <!-- mark_jig_plate_1 -->
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_mark1">
+             <property name="text">
+              <string>1:</string>
+             </property>
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLabel" name="label_mark1X">
+             <property name="text">
+              <string>X:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark1X">
+             <property name="minimum">
+              <double>-10000.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>10000.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="3">
+            <widget class="QLabel" name="label_mark1Y">
+             <property name="text">
+              <string>Y:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="4">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark1Y">
+             <property name="minimum">
+              <double>-10000.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>10000.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="5">
+            <widget class="QLabel" name="label_mark1Z">
+             <property name="text">
+              <string>Z:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="6">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark1Z">
+             <property name="minimum">
+              <double>-10000.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>10000.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="7">
+            <widget class="QLabel" name="label_mark1Rx">
+             <property name="text">
+              <string>Rx:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="8">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark1Rx">
+             <property name="minimum">
+              <double>-360.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>360.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="9">
+            <widget class="QLabel" name="label_mark1Ry">
+             <property name="text">
+              <string>Ry:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="10">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark1Ry">
+             <property name="minimum">
+              <double>-360.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>360.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="11">
+            <widget class="QLabel" name="label_mark1Rz">
+             <property name="text">
+              <string>Rz:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="12">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark1Rz">
+             <property name="minimum">
+              <double>-360.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>360.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="13">
+            <widget class="QPushButton" name="pushButton_readMark1">
+             <property name="text">
+              <string>읽기</string>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>50</width>
+               <height>16777215</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+           <!-- mark_jig_plate_2 -->
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_mark2">
+             <property name="text">
+              <string>2:</string>
+             </property>
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QLabel" name="label_mark2X">
+             <property name="text">
+              <string>X:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="2">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark2X">
+             <property name="minimum">
+              <double>-10000.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>10000.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="3">
+            <widget class="QLabel" name="label_mark2Y">
+             <property name="text">
+              <string>Y:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="4">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark2Y">
+             <property name="minimum">
+              <double>-10000.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>10000.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="5">
+            <widget class="QLabel" name="label_mark2Z">
+             <property name="text">
+              <string>Z:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="6">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark2Z">
+             <property name="minimum">
+              <double>-10000.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>10000.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="7">
+            <widget class="QLabel" name="label_mark2Rx">
+             <property name="text">
+              <string>Rx:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="8">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark2Rx">
+             <property name="minimum">
+              <double>-360.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>360.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="9">
+            <widget class="QLabel" name="label_mark2Ry">
+             <property name="text">
+              <string>Ry:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="10">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark2Ry">
+             <property name="minimum">
+              <double>-360.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>360.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="11">
+            <widget class="QLabel" name="label_mark2Rz">
+             <property name="text">
+              <string>Rz:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="12">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark2Rz">
+             <property name="minimum">
+              <double>-360.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>360.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="13">
+            <widget class="QPushButton" name="pushButton_readMark2">
+             <property name="text">
+              <string>읽기</string>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>50</width>
+               <height>16777215</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+           <!-- mark_jig_plate_3 -->
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_mark3">
+             <property name="text">
+              <string>3:</string>
+             </property>
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QLabel" name="label_mark3X">
+             <property name="text">
+              <string>X:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="2">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark3X">
+             <property name="minimum">
+              <double>-10000.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>10000.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="3">
+            <widget class="QLabel" name="label_mark3Y">
+             <property name="text">
+              <string>Y:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="4">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark3Y">
+             <property name="minimum">
+              <double>-10000.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>10000.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="5">
+            <widget class="QLabel" name="label_mark3Z">
+             <property name="text">
+              <string>Z:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="6">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark3Z">
+             <property name="minimum">
+              <double>-10000.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>10000.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="7">
+            <widget class="QLabel" name="label_mark3Rx">
+             <property name="text">
+              <string>Rx:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="8">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark3Rx">
+             <property name="minimum">
+              <double>-360.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>360.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="9">
+            <widget class="QLabel" name="label_mark3Ry">
+             <property name="text">
+              <string>Ry:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="10">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark3Ry">
+             <property name="minimum">
+              <double>-360.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>360.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="11">
+            <widget class="QLabel" name="label_mark3Rz">
+             <property name="text">
+              <string>Rz:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="12">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark3Rz">
+             <property name="minimum">
+              <double>-360.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>360.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="13">
+            <widget class="QPushButton" name="pushButton_readMark3">
+             <property name="text">
+              <string>읽기</string>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>50</width>
+               <height>16777215</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+           <!-- mark_jig_plate_4 -->
+           <item row="3" column="0">
+            <widget class="QLabel" name="label_mark4">
+             <property name="text">
+              <string>4:</string>
+             </property>
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QLabel" name="label_mark4X">
+             <property name="text">
+              <string>X:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="2">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark4X">
+             <property name="minimum">
+              <double>-10000.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>10000.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="3">
+            <widget class="QLabel" name="label_mark4Y">
+             <property name="text">
+              <string>Y:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="4">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark4Y">
+             <property name="minimum">
+              <double>-10000.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>10000.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="5">
+            <widget class="QLabel" name="label_mark4Z">
+             <property name="text">
+              <string>Z:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="6">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark4Z">
+             <property name="minimum">
+              <double>-10000.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>10000.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="7">
+            <widget class="QLabel" name="label_mark4Rx">
+             <property name="text">
+              <string>Rx:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="8">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark4Rx">
+             <property name="minimum">
+              <double>-360.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>360.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="9">
+            <widget class="QLabel" name="label_mark4Ry">
+             <property name="text">
+              <string>Ry:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="10">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark4Ry">
+             <property name="minimum">
+              <double>-360.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>360.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="11">
+            <widget class="QLabel" name="label_mark4Rz">
+             <property name="text">
+              <string>Rz:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="12">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_mark4Rz">
+             <property name="minimum">
+              <double>-360.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>360.000000000000000</double>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="13">
+            <widget class="QPushButton" name="pushButton_readMark4">
+             <property name="text">
+              <string>읽기</string>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>50</width>
+               <height>16777215</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <!-- jig_plate 섹션 -->
+        <item>
+         <layout class="QVBoxLayout" name="verticalLayout_jigPlateSection">
+          <!-- jig_plate 섹션 -->
+          <item>
+           <widget class="QGroupBox" name="groupBox_jigPlate">
+            <property name="title">
+             <string>jig_plate</string>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_jigPlate">
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_jigPlateName">
+               <item>
+                <widget class="QLabel" name="label_jigPlateName">
+                 <property name="text">
+                  <string>Vision Base:</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLineEdit" name="lineEdit_jigPlateName">
+                 <property name="text">
+                  <string>jig_plate</string>
+                 </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <layout class="QGridLayout" name="gridLayout_jigPlate">
+               <item row="0" column="0">
+                <widget class="QLabel" name="label_jigPlateX">
+                 <property name="text">
+                  <string>X:</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_jigPlateX">
+                 <property name="minimum">
+                  <double>-10000.000000000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>10000.000000000000000</double>
+                 </property>
+                 <property name="decimals">
+                  <number>2</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="2">
+                <widget class="QLabel" name="label_jigPlateRx">
+                 <property name="text">
+                  <string>Rx:</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="3">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_jigPlateRx">
+                 <property name="minimum">
+                  <double>-360.000000000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>360.000000000000000</double>
+                 </property>
+                 <property name="decimals">
+                  <number>2</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="0">
+                <widget class="QLabel" name="label_jigPlateY">
+                 <property name="text">
+                  <string>Y:</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="1">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_jigPlateY">
+                 <property name="minimum">
+                  <double>-10000.000000000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>10000.000000000000000</double>
+                 </property>
+                 <property name="decimals">
+                  <number>2</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="2">
+                <widget class="QLabel" name="label_jigPlateRy">
+                 <property name="text">
+                  <string>Ry:</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="3">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_jigPlateRy">
+                 <property name="minimum">
+                  <double>-360.000000000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>360.000000000000000</double>
+                 </property>
+                 <property name="decimals">
+                  <number>2</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="0">
+                <widget class="QLabel" name="label_jigPlateZ">
+                 <property name="text">
+                  <string>Z:</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="1">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_jigPlateZ">
+                 <property name="minimum">
+                  <double>-10000.000000000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>10000.000000000000000</double>
+                 </property>
+                 <property name="decimals">
+                  <number>2</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="2">
+                <widget class="QLabel" name="label_jigPlateRz">
+                 <property name="text">
+                  <string>Rz:</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="3">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_jigPlateRz">
+                 <property name="minimum">
+                  <double>-360.000000000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>360.000000000000000</double>
+                 </property>
+                 <property name="decimals">
+                  <number>2</number>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_jigPlateButtons">
+               <item>
+                <widget class="QPushButton" name="pushButton_calculateJigPlate">
+                 <property name="text">
+                  <string>4개 Mark로부터 계산</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="pushButton_saveJigPlate">
+                 <property name="text">
+                  <string>저장</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="pushButton_openJigValidator">
+                 <property name="text">
+                  <string>3D 검증</string>
+                 </property>
+                 <property name="toolTip">
+                  <string>Jig Plate 3D 시각화 및 검증 도구 열기</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <!-- 기준점 확인 (로봇 교정 필요 여부 점검) -->
+          <item>
+           <widget class="QGroupBox" name="groupBox_referenceCheck">
+            <property name="title">
+             <string>Vision Origin Check</string>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_referenceCheck">
+             <item>
+              <widget class="QLabel" name="label_referenceLandmarkTitle">
+               <property name="text">
+                <string>기준 좌표 (RobotBase 기준, mm / deg)</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <layout class="QGridLayout" name="gridLayout_referenceLandmark">
+               <item row="0" column="0">
+                <widget class="QLabel" name="label_refLandmarkX">
+                 <property name="text">
+                  <string>X:</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_refLandmarkX">
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
+                 <property name="buttonSymbols">
+                  <enum>QAbstractSpinBox::NoButtons</enum>
+                 </property>
+                 <property name="minimum">
+                  <double>-10000.000000000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>10000.000000000000000</double>
+                 </property>
+                 <property name="decimals">
+                  <number>3</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="2">
+                <widget class="QLabel" name="label_refLandmarkRx">
+                 <property name="text">
+                  <string>Rx:</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="3">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_refLandmarkRx">
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
+                 <property name="buttonSymbols">
+                  <enum>QAbstractSpinBox::NoButtons</enum>
+                 </property>
+                 <property name="minimum">
+                  <double>-360.000000000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>360.000000000000000</double>
+                 </property>
+                 <property name="decimals">
+                  <number>3</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="0">
+                <widget class="QLabel" name="label_refLandmarkY">
+                 <property name="text">
+                  <string>Y:</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="1">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_refLandmarkY">
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
+                 <property name="buttonSymbols">
+                  <enum>QAbstractSpinBox::NoButtons</enum>
+                 </property>
+                 <property name="minimum">
+                  <double>-10000.000000000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>10000.000000000000000</double>
+                 </property>
+                 <property name="decimals">
+                  <number>3</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="2">
+                <widget class="QLabel" name="label_refLandmarkRy">
+                 <property name="text">
+                  <string>Ry:</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="3">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_refLandmarkRy">
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
+                 <property name="buttonSymbols">
+                  <enum>QAbstractSpinBox::NoButtons</enum>
+                 </property>
+                 <property name="minimum">
+                  <double>-360.000000000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>360.000000000000000</double>
+                 </property>
+                 <property name="decimals">
+                  <number>3</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="0">
+                <widget class="QLabel" name="label_refLandmarkZ">
+                 <property name="text">
+                  <string>Z:</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="1">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_refLandmarkZ">
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
+                 <property name="buttonSymbols">
+                  <enum>QAbstractSpinBox::NoButtons</enum>
+                 </property>
+                 <property name="minimum">
+                  <double>-10000.000000000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>10000.000000000000000</double>
+                 </property>
+                 <property name="decimals">
+                  <number>3</number>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="2">
+                <widget class="QLabel" name="label_refLandmarkRz">
+                 <property name="text">
+                  <string>Rz:</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="3">
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_refLandmarkRz">
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
+                 <property name="buttonSymbols">
+                  <enum>QAbstractSpinBox::NoButtons</enum>
+                 </property>
+                 <property name="minimum">
+                  <double>-360.000000000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>360.000000000000000</double>
+                 </property>
+                 <property name="decimals">
+                  <number>3</number>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_referenceTcpTitle">
+               <property name="text">
+                <string>학습 TCP 자세 (확인 시 이 자세로 복귀)</string>
+               </property>
+               <property name="toolTip">
+                <string>측정값에 로봇 기구학 오차가 포함되므로, 학습 때와 같은 TCP 자세에서 측정해야 편차가 유효합니다</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="lineEdit_referenceTcpPose">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+               <property name="placeholderText">
+                <string>미학습</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_referenceMeasure">
+               <item>
+                <widget class="QLabel" name="label_refRepeat">
+                 <property name="text">
+                  <string>반복:</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QSpinBox" name="spinBox_refRepeat">
+                 <property name="minimum">
+                  <number>1</number>
+                 </property>
+                 <property name="maximum">
+                  <number>20</number>
+                 </property>
+                 <property name="value">
+                  <number>5</number>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLabel" name="label_refOutlier">
+                 <property name="text">
+                  <string>Outlier:</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QComboBox" name="comboBox_refOutlier">
+                 <item>
+                  <property name="text">
+                   <string>none</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>iqr</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>3sigma</string>
+                  </property>
+                 </item>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_refLearnedInfo">
+               <property name="text">
+                <string>학습 이력: 없음</string>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_referenceTolerance">
+               <item>
+                <widget class="QLabel" name="label_refTolXYZ">
+                 <property name="text">
+                  <string>허용범위 XYZ:</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_refTolXYZ">
+                 <property name="suffix">
+                  <string> mm</string>
+                 </property>
+                 <property name="minimum">
+                  <double>0.001000000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>100.000000000000000</double>
+                 </property>
+                 <property name="singleStep">
+                  <double>0.100000000000000</double>
+                 </property>
+                 <property name="decimals">
+                  <number>3</number>
+                 </property>
+                 <property name="value">
+                  <double>1.000000000000000</double>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLabel" name="label_refTolRPY">
+                 <property name="text">
+                  <string>RxRyRz:</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QDoubleSpinBox" name="doubleSpinBox_refTolRPY">
+                 <property name="suffix">
+                  <string> deg</string>
+                 </property>
+                 <property name="minimum">
+                  <double>0.001000000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>100.000000000000000</double>
+                 </property>
+                 <property name="singleStep">
+                  <double>0.100000000000000</double>
+                 </property>
+                 <property name="decimals">
+                  <number>3</number>
+                 </property>
+                 <property name="value">
+                  <double>0.500000000000000</double>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="pushButton_refSaveTolerance">
+                 <property name="text">
+                  <string>허용범위 저장</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_referenceButtons">
+               <item>
+                <widget class="QPushButton" name="pushButton_refLearn">
+                 <property name="text">
+                  <string>기준점 학습</string>
+                 </property>
+                 <property name="toolTip">
+                  <string>현재 TCP 자세에서 Landmark를 반복 측정해 기준값으로 저장합니다</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="pushButton_refCheckNow">
+                 <property name="text">
+                  <string>지금 확인</string>
+                 </property>
+                 <property name="toolTip">
+                  <string>학습된 TCP 자세로 이동해 기준점을 즉시 1회 검증합니다</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_refCheckResult">
+               <property name="text">
+                <string>결과: -</string>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+      <!-- 탭 5: 설정 -->
+      <widget class="QWidget" name="tab_settings">
+       <attribute name="title">
+        <string>설정</string>
+       </attribute>
+       <layout class="QHBoxLayout" name="horizontalLayout_settings">
+        <!-- TF 발행 설정 -->
+        <item>
+         <widget class="QGroupBox" name="groupBox_tfPublish">
+          <property name="title">
+           <string>TF 발행 설정</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_tfPublish">
+           <item>
+            <widget class="QCheckBox" name="checkBox_enableTF">
+             <property name="text">
+              <string>TF 발행 활성화</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_tfInterval">
+             <item>
+              <widget class="QLabel" name="label_tfInterval">
+               <property name="text">
+                <string>발행 주기 (초):</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QDoubleSpinBox" name="doubleSpinBox_tfInterval">
+               <property name="minimum">
+                <double>0.100000000000000</double>
+               </property>
+               <property name="maximum">
+                <double>10.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>0.100000000000000</double>
+               </property>
+               <property name="value">
+                <double>1.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <widget class="QLabel" name="label_tfStatus">
+             <property name="text">
+              <string>상태: 비활성</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="verticalSpacer_tfPublish">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_settings">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+      <!-- 탭 5: 글로벌 변수 -->
+      <widget class="QWidget" name="tab_globalVariables">
+       <attribute name="title">
+        <string>글로벌 변수</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_globalVariables">
+        <item>
+         <widget class="QGroupBox" name="groupBox_variableControl">
+          <property name="title">
+           <string>글로벌 변수 읽기/쓰기</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_variableControl">
+           <!-- 변수 이름 선택 -->
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_variableName">
+             <item>
+              <widget class="QLabel" name="label_variableName">
+               <property name="text">
+                <string>변수 이름:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="comboBox_variableName">
+               <property name="editable">
+                <bool>true</bool>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>200</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <item>
+                <property name="text">
+                 <string>g_robot_command</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>g_TM_Landmark</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>g_tm_landmark_detect</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>g_jig_landmark1_detect</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>g_jig_landmark2_detect</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>g_jig_landmark3_detect</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>g_jig_landmark4_detect</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>g_Jig_Landmark1</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>g_Jig_Landmark2</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>g_Jig_Landmark3</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>g_Jig_Landmark4</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item>
+              <spacer name="horizontalSpacer_variableName">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </item>
+           <!-- 변수 값 입력 -->
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_variableValue">
+             <item>
+              <widget class="QLabel" name="label_variableValue">
+               <property name="text">
+                <string>변수 값:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="lineEdit_variableValue">
+               <property name="placeholderText">
+                <string>값 입력 또는 읽기 결과</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <!-- 버튼들 -->
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_variableButtons">
+             <item>
+              <widget class="QPushButton" name="pushButton_readVariable">
+               <property name="text">
+                <string>읽기</string>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>100</width>
+                 <height>30</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_writeVariable">
+               <property name="text">
+                <string>쓰기</string>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>100</width>
+                 <height>30</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="horizontalSpacer_variableButtons">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </item>
+           <!-- 상태 표시 -->
+           <item>
+            <widget class="QLabel" name="label_variableStatus">
+             <property name="text">
+              <string>상태: 대기 중</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <!-- 변수 히스토리 -->
+        <item>
+         <widget class="QGroupBox" name="groupBox_variableHistory">
+          <property name="title">
+           <string>변수 히스토리</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_variableHistory">
+           <item>
+            <widget class="QTableWidget" name="tableWidget_variableHistory">
+             <property name="columnCount">
+              <number>3</number>
+             </property>
+             <column>
+              <property name="text">
+               <string>시간</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>변수 이름</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>값</string>
+              </property>
+             </column>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_clearHistory">
+             <property name="text">
+              <string>히스토리 지우기</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <!-- 탭 6: 정밀도 테스트 -->
+      <widget class="QWidget" name="tab_precisionTest">
+       <attribute name="title">
+        <string>정밀도 테스트</string>
+       </attribute>
+      </widget>
+      <!-- 탭 7: Hand-Eye 테스트 -->
+      <widget class="QWidget" name="tab_handeyeTest">
+       <attribute name="title">
+        <string>Hand-Eye Test</string>
+       </attribute>
+      </widget>
+      <!-- 탭 8: PS2 조이스틱 테스트 -->
+      <widget class="QWidget" name="tab_ps2JoystickTest">
+       <attribute name="title">
+        <string>PS2 Joystick</string>
+       </attribute>
+      </widget>
+      <!-- 탭 9: IO Control -->
+      <widget class="QWidget" name="tab_ioControl">
+       <attribute name="title">
+        <string>IO Control</string>
+       </attribute>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <!-- 메뉴바 -->
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1400</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionNew"/>
+    <addaction name="actionOpen"/>
+    <widget class="QMenu" name="menuRecentFiles">
+     <property name="title">
+      <string>최근 파일</string>
+     </property>
+    </widget>
+    <addaction name="menuRecentFiles"/>
+    <addaction name="actionSave"/>
+    <addaction name="actionSaveAs"/>
+    <addaction name="separator"/>
+    <addaction name="actionExit"/>
+   </widget>
+   <widget class="QMenu" name="menuRobot">
+    <property name="title">
+     <string>Robot</string>
+    </property>
+    <addaction name="actionConnect"/>
+    <addaction name="actionDisconnect"/>
+    <addaction name="separator"/>
+    <addaction name="actionHome"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionAbout"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuRobot"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <!-- 상태바 -->
+  <widget class="QStatusBar" name="statusbar"/>
+  <!-- 툴바 -->
+  <widget class="QToolBar" name="toolBar">
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="actionConnect"/>
+   <addaction name="separator"/>
+   <addaction name="actionStop"/>
+   <addaction name="actionEmergencyStop"/>
+  </widget>
+  <!-- 액션들 -->
+  <action name="actionNew">
+   <property name="text">
+    <string>New</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
+  </action>
+  <action name="actionOpen">
+   <property name="text">
+    <string>Open</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="actionSave">
+   <property name="text">
+    <string>Save</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="actionSaveAs">
+   <property name="text">
+    <string>Save As...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+S</string>
+   </property>
+  </action>
+  <action name="actionExit">
+   <property name="text">
+    <string>Exit</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="actionConnect">
+   <property name="text">
+    <string>연결</string>
+   </property>
+  </action>
+  <action name="actionDisconnect">
+   <property name="text">
+    <string>연결 해제</string>
+   </property>
+  </action>
+  <action name="actionHome">
+   <property name="text">
+    <string>홈</string>
+   </property>
+  </action>
+  <action name="actionStop">
+   <property name="text">
+    <string>정지</string>
+   </property>
+  </action>
+  <action name="actionEmergencyStop">
+   <property name="text">
+    <string>비상정지</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

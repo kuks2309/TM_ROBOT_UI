@@ -1,0 +1,6 @@
+train: /home/amap/TM_Robot_ros2_ws/src/AI/tasks/jig_latch/data/train/images
+val: /home/amap/TM_Robot_ros2_ws/src/AI/tasks/jig_latch/data/valid/images
+test: /home/amap/TM_Robot_ros2_ws/src/AI/tasks/jig_latch/data/test/images
+
+nc: 1
+names: ['jig_latch']

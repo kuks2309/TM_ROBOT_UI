@@ -1,0 +1,478 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PS2JoystickTestWidget</class>
+ <widget class="QWidget" name="PS2JoystickTestWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <!-- 연결 상태 그룹 -->
+    <widget class="QGroupBox" name="groupBox_connection">
+     <property name="title">
+      <string>연결 상태</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_connection">
+      <item>
+       <widget class="QLabel" name="label_connectionIndicator">
+        <property name="minimumSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string>background-color: #F44336; border-radius: 10px;</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_connectionStatus">
+        <property name="text">
+         <string>연결 안됨</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_1">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_devicePath">
+        <property name="text">
+         <string>장치: /dev/input/js0</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <!-- 모드 및 설정 그룹 -->
+    <widget class="QGroupBox" name="groupBox_settings">
+     <property name="title">
+      <string>모드 및 설정</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_settings">
+      <item>
+       <widget class="QLabel" name="label_modeIndicator">
+        <property name="minimumSize">
+         <size>
+          <width>60</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string>background-color: #888888; border-radius: 5px;</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_currentMode">
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>모드: None</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_deadzone">
+        <property name="text">
+         <string>Deadzone: 0.15</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_threshold">
+        <property name="text">
+         <string>Threshold: 0.5</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <!-- 축 값 그룹 -->
+    <widget class="QGroupBox" name="groupBox_axes">
+     <property name="title">
+      <string>축 값 (Axes)</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_axes">
+      <!-- 축 0 -->
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_axis0">
+        <property name="text"><string>축 0:</string></property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QProgressBar" name="progressBar_axis0">
+        <property name="minimum"><number>0</number></property>
+        <property name="maximum"><number>100</number></property>
+        <property name="value"><number>50</number></property>
+        <property name="textVisible"><bool>false</bool></property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QLabel" name="label_axisValue0">
+        <property name="minimumSize"><size><width>60</width><height>0</height></size></property>
+        <property name="text"><string>+0.00</string></property>
+        <property name="alignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
+       </widget>
+      </item>
+      <!-- 축 1 -->
+      <item row="0" column="3">
+       <widget class="QLabel" name="label_axis1">
+        <property name="text"><string>축 1:</string></property>
+       </widget>
+      </item>
+      <item row="0" column="4">
+       <widget class="QProgressBar" name="progressBar_axis1">
+        <property name="minimum"><number>0</number></property>
+        <property name="maximum"><number>100</number></property>
+        <property name="value"><number>50</number></property>
+        <property name="textVisible"><bool>false</bool></property>
+       </widget>
+      </item>
+      <item row="0" column="5">
+       <widget class="QLabel" name="label_axisValue1">
+        <property name="minimumSize"><size><width>60</width><height>0</height></size></property>
+        <property name="text"><string>+0.00</string></property>
+        <property name="alignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
+       </widget>
+      </item>
+      <!-- 축 2 -->
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_axis2">
+        <property name="text"><string>축 2 (LT):</string></property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QProgressBar" name="progressBar_axis2">
+        <property name="minimum"><number>0</number></property>
+        <property name="maximum"><number>100</number></property>
+        <property name="value"><number>50</number></property>
+        <property name="textVisible"><bool>false</bool></property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QLabel" name="label_axisValue2">
+        <property name="minimumSize"><size><width>60</width><height>0</height></size></property>
+        <property name="text"><string>+0.00</string></property>
+        <property name="alignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
+       </widget>
+      </item>
+      <!-- 축 3 -->
+      <item row="1" column="3">
+       <widget class="QLabel" name="label_axis3">
+        <property name="text"><string>축 3:</string></property>
+       </widget>
+      </item>
+      <item row="1" column="4">
+       <widget class="QProgressBar" name="progressBar_axis3">
+        <property name="minimum"><number>0</number></property>
+        <property name="maximum"><number>100</number></property>
+        <property name="value"><number>50</number></property>
+        <property name="textVisible"><bool>false</bool></property>
+       </widget>
+      </item>
+      <item row="1" column="5">
+       <widget class="QLabel" name="label_axisValue3">
+        <property name="minimumSize"><size><width>60</width><height>0</height></size></property>
+        <property name="text"><string>+0.00</string></property>
+        <property name="alignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
+       </widget>
+      </item>
+      <!-- 축 4 -->
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_axis4">
+        <property name="text"><string>축 4:</string></property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QProgressBar" name="progressBar_axis4">
+        <property name="minimum"><number>0</number></property>
+        <property name="maximum"><number>100</number></property>
+        <property name="value"><number>50</number></property>
+        <property name="textVisible"><bool>false</bool></property>
+       </widget>
+      </item>
+      <item row="2" column="2">
+       <widget class="QLabel" name="label_axisValue4">
+        <property name="minimumSize"><size><width>60</width><height>0</height></size></property>
+        <property name="text"><string>+0.00</string></property>
+        <property name="alignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
+       </widget>
+      </item>
+      <!-- 축 5 -->
+      <item row="2" column="3">
+       <widget class="QLabel" name="label_axis5">
+        <property name="text"><string>축 5 (RT):</string></property>
+       </widget>
+      </item>
+      <item row="2" column="4">
+       <widget class="QProgressBar" name="progressBar_axis5">
+        <property name="minimum"><number>0</number></property>
+        <property name="maximum"><number>100</number></property>
+        <property name="value"><number>50</number></property>
+        <property name="textVisible"><bool>false</bool></property>
+       </widget>
+      </item>
+      <item row="2" column="5">
+       <widget class="QLabel" name="label_axisValue5">
+        <property name="minimumSize"><size><width>60</width><height>0</height></size></property>
+        <property name="text"><string>+0.00</string></property>
+        <property name="alignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
+       </widget>
+      </item>
+      <!-- 축 6 -->
+      <item row="3" column="0">
+       <widget class="QLabel" name="label_axis6">
+        <property name="text"><string>축 6:</string></property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QProgressBar" name="progressBar_axis6">
+        <property name="minimum"><number>0</number></property>
+        <property name="maximum"><number>100</number></property>
+        <property name="value"><number>50</number></property>
+        <property name="textVisible"><bool>false</bool></property>
+       </widget>
+      </item>
+      <item row="3" column="2">
+       <widget class="QLabel" name="label_axisValue6">
+        <property name="minimumSize"><size><width>60</width><height>0</height></size></property>
+        <property name="text"><string>+0.00</string></property>
+        <property name="alignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
+       </widget>
+      </item>
+      <!-- 축 7 -->
+      <item row="3" column="3">
+       <widget class="QLabel" name="label_axis7">
+        <property name="text"><string>축 7:</string></property>
+       </widget>
+      </item>
+      <item row="3" column="4">
+       <widget class="QProgressBar" name="progressBar_axis7">
+        <property name="minimum"><number>0</number></property>
+        <property name="maximum"><number>100</number></property>
+        <property name="value"><number>50</number></property>
+        <property name="textVisible"><bool>false</bool></property>
+       </widget>
+      </item>
+      <item row="3" column="5">
+       <widget class="QLabel" name="label_axisValue7">
+        <property name="minimumSize"><size><width>60</width><height>0</height></size></property>
+        <property name="text"><string>+0.00</string></property>
+        <property name="alignment"><set>Qt::AlignRight|Qt::AlignVCenter</set></property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <!-- 버튼 상태 그룹 -->
+    <widget class="QGroupBox" name="groupBox_buttons">
+     <property name="title">
+      <string>버튼 상태 (Buttons)</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_buttons">
+      <!-- 버튼 0-3 -->
+      <item row="0" column="0">
+       <widget class="QFrame" name="frame_buttonIndicator0">
+        <property name="minimumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="maximumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="styleSheet"><string>background-color: #888888; border-radius: 8px;</string></property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLabel" name="label_button0"><property name="text"><string>BTN 0</string></property></widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QFrame" name="frame_buttonIndicator1">
+        <property name="minimumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="maximumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="styleSheet"><string>background-color: #888888; border-radius: 8px;</string></property>
+       </widget>
+      </item>
+      <item row="0" column="3">
+       <widget class="QLabel" name="label_button1"><property name="text"><string>BTN 1</string></property></widget>
+      </item>
+      <item row="0" column="4">
+       <widget class="QFrame" name="frame_buttonIndicator2">
+        <property name="minimumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="maximumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="styleSheet"><string>background-color: #888888; border-radius: 8px;</string></property>
+       </widget>
+      </item>
+      <item row="0" column="5">
+       <widget class="QLabel" name="label_button2"><property name="text"><string>BTN 2</string></property></widget>
+      </item>
+      <item row="0" column="6">
+       <widget class="QFrame" name="frame_buttonIndicator3">
+        <property name="minimumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="maximumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="styleSheet"><string>background-color: #888888; border-radius: 8px;</string></property>
+       </widget>
+      </item>
+      <item row="0" column="7">
+       <widget class="QLabel" name="label_button3"><property name="text"><string>BTN 3</string></property></widget>
+      </item>
+      <!-- 버튼 4-7 -->
+      <item row="1" column="0">
+       <widget class="QFrame" name="frame_buttonIndicator4">
+        <property name="minimumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="maximumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="styleSheet"><string>background-color: #888888; border-radius: 8px;</string></property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLabel" name="label_button4"><property name="text"><string>BTN 4</string></property></widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QFrame" name="frame_buttonIndicator5">
+        <property name="minimumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="maximumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="styleSheet"><string>background-color: #888888; border-radius: 8px;</string></property>
+       </widget>
+      </item>
+      <item row="1" column="3">
+       <widget class="QLabel" name="label_button5"><property name="text"><string>BTN 5</string></property></widget>
+      </item>
+      <item row="1" column="4">
+       <widget class="QFrame" name="frame_buttonIndicator6">
+        <property name="minimumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="maximumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="styleSheet"><string>background-color: #888888; border-radius: 8px;</string></property>
+       </widget>
+      </item>
+      <item row="1" column="5">
+       <widget class="QLabel" name="label_button6"><property name="text"><string>BTN 6</string></property></widget>
+      </item>
+      <item row="1" column="6">
+       <widget class="QFrame" name="frame_buttonIndicator7">
+        <property name="minimumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="maximumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="styleSheet"><string>background-color: #888888; border-radius: 8px;</string></property>
+       </widget>
+      </item>
+      <item row="1" column="7">
+       <widget class="QLabel" name="label_button7"><property name="text"><string>BTN 7</string></property></widget>
+      </item>
+      <!-- 버튼 8-11 -->
+      <item row="2" column="0">
+       <widget class="QFrame" name="frame_buttonIndicator8">
+        <property name="minimumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="maximumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="styleSheet"><string>background-color: #888888; border-radius: 8px;</string></property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLabel" name="label_button8"><property name="text"><string>BTN 8</string></property></widget>
+      </item>
+      <item row="2" column="2">
+       <widget class="QFrame" name="frame_buttonIndicator9">
+        <property name="minimumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="maximumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="styleSheet"><string>background-color: #888888; border-radius: 8px;</string></property>
+       </widget>
+      </item>
+      <item row="2" column="3">
+       <widget class="QLabel" name="label_button9"><property name="text"><string>BTN 9</string></property></widget>
+      </item>
+      <item row="2" column="4">
+       <widget class="QFrame" name="frame_buttonIndicator10">
+        <property name="minimumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="maximumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="styleSheet"><string>background-color: #888888; border-radius: 8px;</string></property>
+       </widget>
+      </item>
+      <item row="2" column="5">
+       <widget class="QLabel" name="label_button10"><property name="text"><string>BTN 10</string></property></widget>
+      </item>
+      <item row="2" column="6">
+       <widget class="QFrame" name="frame_buttonIndicator11">
+        <property name="minimumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="maximumSize"><size><width>16</width><height>16</height></size></property>
+        <property name="styleSheet"><string>background-color: #888888; border-radius: 8px;</string></property>
+       </widget>
+      </item>
+      <item row="2" column="7">
+       <widget class="QLabel" name="label_button11"><property name="text"><string>BTN 11</string></property></widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <!-- 상태 메시지 -->
+    <widget class="QLabel" name="label_statusMessage">
+     <property name="text">
+      <string>PS2 조이스틱 테스트 탭</string>
+     </property>
+     <property name="styleSheet">
+      <string>color: #666666;</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

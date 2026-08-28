@@ -1,0 +1,467 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>LandmarkVisualizer</class>
+ <widget class="QMainWindow" name="LandmarkVisualizer">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1200</width>
+    <height>800</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>TM Landmark Visualizer</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QHBoxLayout" name="horizontalLayout_main">
+    <!-- 왼쪽: 데이터 테이블 및 컨트롤 -->
+    <item>
+     <widget class="QWidget" name="widget_left">
+      <property name="maximumSize">
+       <size>
+        <width>400</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_left">
+       <!-- 파일 컨트롤 -->
+       <item>
+        <widget class="QGroupBox" name="groupBox_file">
+         <property name="title">
+          <string>데이터 파일</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_file">
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_fileButtons">
+            <item>
+             <widget class="QPushButton" name="pushButton_openCSV">
+              <property name="text">
+               <string>CSV 열기</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_recentFile">
+              <property name="text">
+               <string>최근 파일</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_fileName">
+            <property name="text">
+             <string>(파일 없음)</string>
+            </property>
+            <property name="styleSheet">
+             <string>color: #666; font-style: italic;</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+
+       <!-- ROS2 연결 -->
+       <item>
+        <widget class="QGroupBox" name="groupBox_ros">
+         <property name="title">
+          <string>ROS2 연결</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_ros">
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_rosConnect">
+            <item>
+             <widget class="QPushButton" name="pushButton_connectROS">
+              <property name="text">
+               <string>ROS2 연결</string>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_rosStatus">
+              <property name="text">
+               <string>연결 안됨</string>
+              </property>
+              <property name="styleSheet">
+               <string>color: #999;</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_tcpPose">
+            <property name="text">
+             <string>TCP: -</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_jointState">
+            <property name="text">
+             <string>Joints: -</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+
+       <!-- 데이터 테이블 -->
+       <item>
+        <widget class="QGroupBox" name="groupBox_data">
+         <property name="title">
+          <string>측정 데이터</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_data">
+          <item>
+           <widget class="QTableWidget" name="tableWidget_data">
+            <property name="selectionMode">
+             <enum>QAbstractItemView::SingleSelection</enum>
+            </property>
+            <property name="selectionBehavior">
+             <enum>QAbstractItemView::SelectRows</enum>
+            </property>
+            <property name="columnCount">
+             <number>7</number>
+            </property>
+            <column>
+             <property name="text">
+              <string>No.</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>X</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Y</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Z</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Rx</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Ry</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Rz</string>
+             </property>
+            </column>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_selectedInfo">
+            <property name="text">
+             <string>선택: -</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+
+       <!-- 표시 옵션 -->
+       <item>
+        <widget class="QGroupBox" name="groupBox_display">
+         <property name="title">
+          <string>표시 옵션</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_display">
+          <item>
+           <widget class="QCheckBox" name="checkBox_showRobotTCP">
+            <property name="text">
+             <string>로봇 TCP 표시 (실시간)</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+
+       <item>
+        <spacer name="verticalSpacer_left">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+    </item>
+
+    <!-- 오른쪽: 시각화 영역 -->
+    <item>
+     <widget class="QWidget" name="widget_right">
+      <layout class="QVBoxLayout" name="verticalLayout_right">
+       <!-- 탭으로 분리된 뷰 -->
+       <item>
+        <widget class="QTabWidget" name="tabWidget_views">
+         <property name="currentIndex">
+          <number>0</number>
+         </property>
+         <!-- 3D 뷰 탭 (첫 번째) -->
+         <widget class="QWidget" name="tab_3D">
+          <attribute name="title">
+           <string>3D 뷰</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="verticalLayout_tab3D">
+           <item>
+            <widget class="QWidget" name="widget_view3D" native="true">
+             <property name="minimumSize">
+              <size>
+               <width>400</width>
+               <height>400</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <!-- XY 평면 탭 (Top View) -->
+         <widget class="QWidget" name="tab_XY">
+          <attribute name="title">
+           <string>XY 평면 (Top)</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="verticalLayout_tabXY">
+           <item>
+            <widget class="QWidget" name="widget_viewXY" native="true">
+             <property name="minimumSize">
+              <size>
+               <width>400</width>
+               <height>400</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <!-- XZ 평면 탭 (Front View) -->
+         <widget class="QWidget" name="tab_XZ">
+          <attribute name="title">
+           <string>XZ 평면 (Front)</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="verticalLayout_tabXZ">
+           <item>
+            <widget class="QWidget" name="widget_viewXZ" native="true">
+             <property name="minimumSize">
+              <size>
+               <width>400</width>
+               <height>400</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <!-- YZ 평면 탭 (Side View) -->
+         <widget class="QWidget" name="tab_YZ">
+          <attribute name="title">
+           <string>YZ 평면 (Side)</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="verticalLayout_tabYZ">
+           <item>
+            <widget class="QWidget" name="widget_viewYZ" native="true">
+             <property name="minimumSize">
+              <size>
+               <width>400</width>
+               <height>400</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <!-- 개요 탭 (4개 그래프 한눈에) -->
+         <widget class="QWidget" name="tab_overview">
+          <attribute name="title">
+           <string>개요</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_overview">
+           <item row="0" column="0">
+            <widget class="QWidget" name="widget_overviewXY" native="true">
+             <property name="minimumSize">
+              <size>
+               <width>250</width>
+               <height>200</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QWidget" name="widget_overviewXZ" native="true">
+             <property name="minimumSize">
+              <size>
+               <width>250</width>
+               <height>200</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QWidget" name="widget_overviewYZ" native="true">
+             <property name="minimumSize">
+              <size>
+               <width>250</width>
+               <height>200</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QWidget" name="widget_overview3D" native="true">
+             <property name="minimumSize">
+              <size>
+               <width>250</width>
+               <height>200</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+
+       <!-- 선택된 점 상세 정보 -->
+       <item>
+        <widget class="QGroupBox" name="groupBox_selectedDetail">
+         <property name="title">
+          <string>선택된 측정점 상세</string>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>100</height>
+          </size>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_selectedDetail">
+          <item>
+           <widget class="QLabel" name="label_selectedLandmark">
+            <property name="text">
+             <string>Landmark: X=- Y=- Z=- Rx=- Ry=- Rz=-</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_selectedTCP">
+            <property name="text">
+             <string>TCP: X=- Y=- Z=- Rx=- Ry=- Rz=-</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1200</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menu_file">
+    <property name="title">
+     <string>파일</string>
+    </property>
+    <addaction name="action_openCSV"/>
+    <addaction name="action_recentFiles"/>
+    <addaction name="separator"/>
+    <addaction name="action_exportImage"/>
+    <addaction name="separator"/>
+    <addaction name="action_exit"/>
+   </widget>
+   <widget class="QMenu" name="menu_view">
+    <property name="title">
+     <string>보기</string>
+    </property>
+    <addaction name="action_resetView"/>
+    <addaction name="action_zoomFit"/>
+   </widget>
+   <addaction name="menu_file"/>
+   <addaction name="menu_view"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="action_openCSV">
+   <property name="text">
+    <string>CSV 열기...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="action_recentFiles">
+   <property name="text">
+    <string>최근 파일</string>
+   </property>
+  </action>
+  <action name="action_exportImage">
+   <property name="text">
+    <string>이미지 내보내기...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="action_exit">
+   <property name="text">
+    <string>종료</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="action_resetView">
+   <property name="text">
+    <string>뷰 초기화</string>
+   </property>
+   <property name="shortcut">
+    <string>R</string>
+   </property>
+  </action>
+  <action name="action_zoomFit">
+   <property name="text">
+    <string>화면에 맞추기</string>
+   </property>
+   <property name="shortcut">
+    <string>F</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

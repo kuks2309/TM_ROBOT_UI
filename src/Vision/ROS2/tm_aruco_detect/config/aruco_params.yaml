@@ -1,0 +1,19 @@
+aruco_detector:
+  ros__parameters:
+    image_topic: "/techman_image"
+    
+    camera_frame: "camera_link"
+    
+    aruco_dict_id: 0
+    
+    marker_size: 0.05
+    
+    publish_tf: true
+    
+    publish_debug_image: true
+    
+    camera_matrix: [615.0, 0.0, 320.0,
+                    0.0, 615.0, 240.0,
+                    0.0, 0.0, 1.0]
+    
+    dist_coeffs: [0.0, 0.0, 0.0, 0.0, 0.0]

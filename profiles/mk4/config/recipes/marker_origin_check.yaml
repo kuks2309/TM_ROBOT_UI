@@ -1,0 +1,70 @@
+# Recipe: 마커 기준점 확인 (MK4)
+# TM Task Manager Recipe File (MK4)
+#
+# [무엇] 학습해 둔 TCP 자세로 이동해 기준 마커를 재측정하고, 학습값과의 6축 편차를 판정한다.
+#   허용범위를 넘으면 알람을 내고 레시피가 실패한다. 판정만 하며 아무것도 보정하지 않는다.
+#
+# [안전위치 잡을 뺀 이유 — 2026-08-23]
+#   job 3 의 settled_origin_check 가 move_to_reference=true 로 **학습된 TCP 까지 스스로 이동**한다.
+#   앞뒤에 안전위치 경유를 두면 왕복만 늘고, 기준 자세가 바뀔 때마다 그 경로도 같이 손봐야 한다.
+#   시작 자세는 호출하는 쪽이 책임진다.
+#
+# [순서]
+#   1 recipe_info
+#   2 촬영용 파지    — 열린 손가락이 카메라 시야를 가리므로 닫는다
+#   3 기준점 확인    — 학습 TCP 로 이동 → 안정화 500ms → 5 회 측정(IQR) → 6 축 편차 판정
+#
+# [job 3 이 하는 일] macros/builtin.py 의 vision_origin_check 매크로다.
+#   · move_to_reference=true → 학습된 TCP 자세로 이동(속도 20%)
+#   · settle_ms 500 → 이동 직후 진동이 잦아들 때까지 대기하고 촬영
+#   · repeat_count 5 · outlier_method iqr → 5 회 측정 후 사분위 범위 밖을 버리고 평균
+#   · service.evaluate() 로 학습 마커 좌표와 축별 차를 내고 허용범위와 비교
+#   · 초과 시 on_origin_check_alarm 발화 + 실패 반환 → 레시피 정지
+#
+# [학습 상태 — 2026-08-23 14:52:34 저장됨]
+#   학습 TCP    X 204.400  Y 412.021  Z  64.750  Rx -180.000  Ry 0.000  Rz  0.000
+#   기준 마커   x 219.427  y 257.439  z   2.033  rx -179.723  ry 0.325  rz 90.590
+#   학습 산포   x 0.0035  y 0.0080  z 0.0465 mm | rx 0.1106  ry 0.0493  rz 0.0136 deg
+#   허용범위    xyz 1.0mm · rpy 0.5°  → 전 축 여유 있음. 가장 빠듯한 축은 rx(4.5 배).
+#   ※ 학습 시 outlier_method 가 none 이었다(GUI 설정값). 더 단단히 잡으려면 설정 탭에서
+#     3sigma 또는 iqr 로 바꾸고 반복을 늘린 뒤 재학습할 것.
+#
+# [주의] RobotBase 좌표계에서만 동작한다. 다른 좌표계면 job 3 이 거부한다.
+#   기준점이 학습돼 있지 않으면 job 3 이 다음 메시지로 실패한다:
+#     "기준점이 학습되지 않았습니다 — 좌표계 탭에서 [기준점 학습]을 먼저 수행하세요"
+#
+# [!! 안전 !!] 첫 실행은 Step 으로. 현재 자세에서 학습 TCP 까지 경로에 장애물이 없는지 확인할 것.
+
+name: 마커 기준점 확인 (MK4)
+description: 학습된 TCP 자세로 이동해 기준 마커를 5회 측정(IQR)하고 학습값과의 6축 편차를 판정한다. 허용범위 초과 시 알람과 함께 정지한다.
+version: '2.0'
+created: '2026-08-23'
+modified: '2026-08-23'
+jobs:
+- id: 1
+  type: recipe_info
+  name: Recipe 개요
+  params:
+    mode: execution
+    description: 기준 마커를 재측정해 로봇 교정 필요 여부를 판정한다
+    author: jjh
+    version: '2.0'
+    vision_origin_check: none
+- id: 2
+  type: smc_grip
+  name: SMC 그리퍼 파지
+  caption: 촬영 위해 그리퍼 닫기 (카메라 시야 확보)
+  params:
+    timeout: 30.0
+    bypass_interlock: true
+    verify_skip: true
+- id: 3
+  type: settled_origin_check
+  name: Settled Origin Check
+  caption: 기준 TCP 이동 → 마커 촬영 → 학습값과 비교
+  params:
+    settle_ms: 500
+    move_to_reference: true
+    velocity: 20.0
+    repeat_count: 5
+    outlier_method: iqr

@@ -1,0 +1,5 @@
+int32 command
+---
+bool detected
+float32 distance_sensor_one
+float32 distance_sensor_two

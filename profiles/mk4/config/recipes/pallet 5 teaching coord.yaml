@@ -1,0 +1,51 @@
+# Recipe: pallet5 집기 (MK4)
+# TM Task Manager Recipe File
+
+name: pallet5 집기 (MK4)
+description: pallet5 저장 평면을 불러와 평면 좌표계로 박스를 집고 공구 -Z 로 후퇴한다. 오프셋은 MK2 검증값 이식(MK4 미검증).
+version: '1.0'
+created: '2026-08-19'
+modified: '2026-08-20'
+jobs:
+- id: 1
+  type: move_to_point
+  name: 포인트 이동
+  params:
+    motion_type: tcp
+    X: -419.06
+    Y: -222.62
+    Z: 202.45
+    Rx: -179.3
+    Ry: -0.11
+    Rz: 179.68
+    velocity: 25.0
+    decomposed_tcp: false
+  robot_base:
+    X: -419.06
+    Y: -222.62
+    Z: 202.45
+    Rx: -179.3
+    Ry: -0.11
+    Rz: 179.68
+- id: 2
+  type: line_move_to_point
+  name: 직선 포인트 이동
+  params:
+    motion_type: tcp
+    X: -419.09
+    Y: -222.99
+    Z: 172.42
+    Rx: -179.3
+    Ry: -0.11
+    Rz: 179.68
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: 0.0
+    velocity: 1.0
+  robot_base:
+    X: -419.09
+    Y: -222.99
+    Z: 172.42
+    Rx: -179.3
+    Ry: -0.11
+    Rz: 179.68

@@ -1,0 +1,35 @@
+##########################################################################
+# Service
+# camera_index: 0: Left, 1: Right, 2: Rear
+# task: 1: RX, 2: TX, 3: Charging, 4: STK
+# offset_dist (mm): desired offset distance btw robot and aruco
+# ---
+# detected: True if aruco detected, False if not
+# id : aruco marker ID
+#
+# (dist,vx,vy) : distance moved by robot with velocity vx, vy [m/s]
+# (theta, vw) theta: rotation (positive), if theta> 0, cw<0, and vice versa
+# x_aruco, y_aruco, z_aruco[m]: camera position relative to aruco marker (at docking node)
+# theta_aruco [rad]
+# z_aruco: distace from aruco to ground,
+# note: ground to camera: 173mm
+##########################################################################
+
+int32 camera_index
+int32 task      
+int32 offset_dist  
+int32 amr_angle
+int32 aruco_id
+---
+bool detected
+int32 id
+float32 dist
+float32 vx
+float32 vy
+float32 theta
+float32 vw
+float32 x_aruco
+float32 y_aruco
+float32 z_aruco
+float32 theta_aruco
+int32 error_code

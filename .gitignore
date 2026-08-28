@@ -1,0 +1,83 @@
+docs/user_instructions/sessions/
+
+# coding 번들: OMC 런타임 상태 비추적
+.omc/
+docs/claude_guideline/git_workflow/
+
+# ===== tm-robot-uni 프로젝트 (nx-orin-1 에서 이식) =====
+
+# VSCode
+.vscode/browse.vc.db
+.vscode/browse.vc.db-shm
+.vscode/browse.vc.db-wal
+.vscode/*.db*
+.vscode/
+.idea/
+
+# ROS2 build artifacts
+build/
+install/
+log/
+
+# Bag files
+bag/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+*.so
+.Python
+*.egg-info/
+.eggs/
+
+# Virtual environments (old paths)
+src/AI/YoloV8/yolov8_env/
+src/AI/Hailo_H8/hailo_env/
+
+# Virtual environments (new engine paths)
+src/AI/engine/yolov8/yolov8_env/
+src/AI/engine/yolov8/model/
+src/AI/engine/hailo/hailo_env/
+src/AI/engine/hailo/hailo_env.backup*/
+src/AI/engine/hailo/hailo-tappas/
+src/AI/engine/hailo/hailort*
+src/AI/engine/hailo/Hailo H8*/
+
+# Test files
+# 루트에 널린 임시 검증 스크립트를 막으려는 규칙이다. 다만 패키지의 정식 test 디렉터리까지
+# 함께 걸려서, 새 테스트를 추가하면 `git add` 가 조용히 건너뛴다(2026-08-11 실제 누락 발생).
+# 정식 테스트 디렉터리는 예외로 둔다.
+test_*.py
+!src/TM_Robot_Task_Manager/test/test_*.py
+!src/tm_web_bridge/test/test_*.py
+
+# Temporary files
+*.swp
+*.swo
+*~
+*.log
+build.log
+pyhailort.log
+acceleras.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Export files
+TM_Export/images/
+
+# Large data (images)
+src/TM_Robot_Task_Manager/data/images/
+
+# 캘리브레이션 원본 이미지 (장당 ~7MB). 결과 calibration_result.yaml 만 추적한다.
+src/Vision/ROS2/tm_camera_calibration/calibration_data/**/*.png
+src/Vision/ROS2/tm_camera_calibration/calibration_data/**/*.jpg
+
+# AI Tools
+.serena/
+src/AI/engine/hailo/hailo_model_zoo_v2.6/

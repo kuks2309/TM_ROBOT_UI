@@ -1,0 +1,285 @@
+# Recipe: 드로어 → 팔레트 (박스 이송)
+# TM Task Manager Recipe File
+
+name: 드로어 → 팔레트 (박스 이송)
+description: 드로어 마커를 1샷 측정해 마커 좌표계로 드로어의 박스를 집고, 팔레트 평면 좌표계로 놓는다. 드로어·팔레트가 어디에 있든
+  같은 상대 위치로 간다.
+version: '1.0'
+created: '2026-08-15'
+modified: '2026-08-15'
+jobs:
+- id: 1
+  type: recipe_info
+  name: Recipe 개요
+  params:
+    mode: execution
+    description: 드로어에서 박스를 집어 팔레트에 놓는다
+    author: jjh
+    version: '1.0'
+    vision_origin_check: none
+- id: 2
+  type: save_pose
+  name: 현재 자세 저장
+  caption: 시작 자세 저장
+  params:
+    key: start
+- id: 3
+  type: schunk_release
+  name: SCHUNK 그리퍼 놓기
+  params:
+    timeout: 15.0
+- id: 4
+  type: wait
+  name: 대기
+  caption: 그리퍼 동작 완료 대기
+  params:
+    duration: 2000
+- id: 5
+  type: move_to_point
+  name: 포인트 이동
+  caption: 드로어마커로 이동
+  params:
+    motion_type: tcp
+    X: 399.78
+    Y: 567.1
+    Z: 78.16
+    Rx: -180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 399.78
+    Y: 567.1
+    Z: 78.16
+    Rx: -180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 6
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  caption: 드로어마커_기준점_스캔
+  params:
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz_rx_ry_rz
+- id: 7
+  type: save_landmark_pose
+  name: Landmark 좌표 저장
+  caption: 드로어마커_저장
+  params:
+    save_path: data/landmark_pose
+    operator: jjh
+- id: 8
+  type: move_linear
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: -120.0
+    velocity: 50.0
+- id: 9
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 박스 위 접근 (집는 높이 +150mm)
+  params:
+    frame_mode: rz_only
+    landmark_source: latest_scan
+    source_path: data/landmark_pose
+    file_prefix: ''
+    average_count: 1
+    offset_x: -10.585
+    offset_y: -245.144
+    offset_z: 7.778
+    offset_rx: 179.96
+    offset_ry: -0.06
+    offset_rz: 89.938
+    tool_offset_x: 0.0
+    tool_offset_y: 0.0
+    tool_offset_z: 0.0
+    tool_offset_rx: 0.0
+    tool_offset_ry: 0.0
+    tool_offset_rz: 0.0
+    velocity: 20.0
+    max_radius_mm: 600.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+- id: 10
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 박스 집기 (티칭값 그대로)
+  params:
+    frame_mode: rz_only
+    landmark_source: latest_scan
+    source_path: data/landmark_pose
+    file_prefix: ''
+    average_count: 1
+    offset_x: -10.585
+    offset_y: -245.144
+    offset_z: -142.222
+    offset_rx: 179.96
+    offset_ry: -0.06
+    offset_rz: 89.938
+    tool_offset_x: 0.0
+    tool_offset_y: 0.0
+    tool_offset_z: 0.0
+    tool_offset_rx: 0.0
+    tool_offset_ry: 0.0
+    tool_offset_rz: 0.0
+    velocity: 8.0
+    max_radius_mm: 600.0
+    decel_zone_mm: 40.0
+    decel_velocity: 5.0
+- id: 11
+  type: schunk_grip
+  name: SCHUNK 그리퍼 파지
+  params:
+    timeout: 15.0
+- id: 12
+  type: wait
+  name: 대기
+  caption: 그리퍼 동작 완료 대기
+  params:
+    duration: 2000
+- id: 13
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 박스 들어올림 (집는 높이 +150mm)
+  params:
+    frame_mode: rz_only
+    landmark_source: latest_scan
+    source_path: data/landmark_pose
+    file_prefix: ''
+    average_count: 1
+    offset_x: -10.585
+    offset_y: -245.144
+    offset_z: 7.778
+    offset_rx: 179.96
+    offset_ry: -0.06
+    offset_rz: 89.938
+    tool_offset_x: 0.0
+    tool_offset_y: 0.0
+    tool_offset_z: 0.0
+    tool_offset_rx: 0.0
+    tool_offset_ry: 0.0
+    tool_offset_rz: 0.0
+    velocity: 8.0
+    max_radius_mm: 600.0
+    decel_zone_mm: 40.0
+    decel_velocity: 5.0
+- id: 14
+  type: move_linear
+  name: 직선 이동
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: 300.0
+    velocity: 50.0
+- id: 15
+  type: load_plate_pose
+  name: Plate Pose 불러오기
+  caption: pallet0 평면
+  params:
+    source_path: data/plate_pose_calc/pallet0
+    file_prefix: pallet0_cali
+    average_count: 10
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 16
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: 팔레트 위 접근 (놓는 높이 +100mm) — 파지면 +20mm 위 (L자, 하강 정지 1회)
+  params:
+    offset_x: 2.582
+    offset_y: 1.524
+    offset_z: 176.292
+    offset_rx: 179.673
+    offset_ry: -0.058
+    offset_rz: -90.008
+    velocity: 20.0
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 10.0
+- id: 17
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: 팔레트 놓기 (pallet0~5 성공값) — 법선 직선 20mm @3%
+  params:
+    offset_x: 2.582
+    offset_y: 1.524
+    offset_z: 156.292
+    offset_rx: 179.673
+    offset_ry: -0.058
+    offset_rz: -90.008
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 18
+  type: schunk_release
+  name: SCHUNK 그리퍼 놓기
+  params:
+    timeout: 15.0
+- id: 19
+  type: wait
+  name: 대기
+  caption: 그리퍼 동작 완료 대기
+  params:
+    duration: 2000
+- id: 20
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: 팔레트에서 빠짐 — 법선 직선 20mm @3% (상승 정지 1회)
+  params:
+    offset_x: 2.582
+    offset_y: 1.524
+    offset_z: 176.292
+    offset_rx: 179.673
+    offset_ry: -0.058
+    offset_rz: -90.008
+    velocity: 3.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 21
+  type: move_to_plane_pose
+  name: 평면 좌표계 이동
+  caption: 팔레트에서 빠짐 — 법선 직선 80mm @20%
+  params:
+    offset_x: 2.582
+    offset_y: 1.524
+    offset_z: 256.292
+    offset_rx: 179.673
+    offset_ry: -0.058
+    offset_rz: -90.008
+    velocity: 20.0
+    straight_path: true
+    max_tilt_deg: 30.0
+    max_radius_mm: 200.0
+    decel_zone_mm: 0.0
+    decel_velocity: 3.0
+- id: 22
+  type: move_to_saved_pose
+  name: 저장 자세 복귀
+  caption: 시작 자세 복귀
+  params:
+    key: start
+    velocity: 20.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+reference:
+  tm_jig_landmark:
+    X: 217.33202375000002
+    Y: 549.89312625
+    Z: 12.434276125
+    Rx: 179.87997500282557
+    Ry: 1.3337422857321757
+    Rz: -179.29989000000666

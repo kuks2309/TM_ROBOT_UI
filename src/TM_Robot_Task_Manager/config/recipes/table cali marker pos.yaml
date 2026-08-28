@@ -1,0 +1,63 @@
+# Recipe: 새 Recipe
+# TM Task Manager Recipe File
+
+name: 새 Recipe
+description: ''
+version: '1.0'
+created: '2026-08-24'
+modified: '2026-08-24'
+jobs:
+- id: 1
+  type: move_to_point
+  name: 포인트 이동
+  caption: 마커
+  params:
+    motion_type: tcp
+    X: 114.38
+    Y: 628.21
+    Z: -187.94
+    Rx: 179.94
+    Ry: -0.24
+    Rz: -90.43
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 114.38
+    Y: 628.21
+    Z: -187.94
+    Rx: 179.94
+    Ry: -0.24
+    Rz: -90.43
+- id: 2
+  type: move_to_point
+  name: 포인트 이동
+  caption: 1사분면
+  params:
+    motion_type: tcp
+    X: 77.3
+    Y: 1018.5
+    Z: -189.52
+    Rx: 179.94
+    Ry: -0.24
+    Rz: -90.43
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 77.3
+    Y: 1018.5
+    Z: -189.52
+    Rx: 179.94
+    Ry: -0.24
+    Rz: -90.43
+- id: 3
+  type: smc_grip
+  name: SMC 그리퍼 파지
+  params:
+    timeout: 30.0
+    bypass_interlock: false
+    verify_skip: false
+- id: 4
+  type: schunk_grip
+  name: SCHUNK 그리퍼 파지
+  params:
+    timeout: 15.0

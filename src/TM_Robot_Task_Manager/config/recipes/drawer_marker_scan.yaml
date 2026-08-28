@@ -1,0 +1,87 @@
+# Recipe: 드로어 마커 스캔 (MK2)
+#
+# [역할] 드로어 마커를 10회 스캔·3sigma 평균내어 «파일로» 남긴다. 로봇은 물건을
+#   건드리지 않는다. 집기/놓기는 drawer_pick · drawer_place 가 이 파일을 읽어서 한다.
+#
+# [왜 나눴나] 통짜 레시피는 스캔과 파지가 한 덩어리라, 드로어에서 집어 → 다른 작업 →
+#   다시 드로어에 놓는 흐름이 성립하지 않는다. 놓을 때 마커가 또 필요한데 이미 박스를
+#   쥐고 있어 다시 찍을 수 없기 때문이다. 파일로 남기면 레시피 경계를 넘어 살아남는다.
+#   메모리(latest_scan)는 GUI 재기동·타 레시피의 마커 스캔에 조용히 덮어써진다.
+#
+# [빈 그리퍼로 시작한다] 기존 drawer_pick 과 같은 순서다 — 열고 나서 찍는다.
+#
+# [값 출처] 기존 drawer/drawer_pick.yaml · drawer/pallet_to_drawer_pick_place.yaml 의
+#   MK2 티칭값 그대로다. 집기와 놓기의 오프셋이 실제로 동일하다(둘 다 -142.222 / 접근 7.778).
+#   MK4 에서 넘어온 숫자는 **하나도 없다** — 구조만 MK4 의 분할 방식을 따랐다.
+#
+# [그리퍼 뒤 wait 2000ms 를 왜 두는가] SCHUNK 서비스는 `received=True`(수신 확인)만
+#   돌려주고 개폐 완료를 보증하지 않는다. 이 대기를 빼면 그리퍼가 아직 움직이는 중에
+#   로봇이 이동한다. MK4 는 액션이 결과까지 블로킹해서 이 대기가 없다 — 따라 하지 말 것.
+#
+# [!! 안전 !!] 첫 이동은 Run 누른 시점의 자세에서 목표 자세로 맞춘 뒤 이동한다.
+#   반드시 팔레트·드로어 밖 안전한 높이에서 시작할 것. 첫 실행은 Step 으로.
+
+name: 드로어 마커 스캔 (MK2)
+description: 드로어 마커를 10회 스캔해 3sigma 평균을 파일로 남긴다. drawer_pick · drawer_place 가 이 파일을 읽는다.
+version: '1.0'
+created: '2026-08-23'
+modified: '2026-08-23'
+jobs:
+- id: 1
+  type: recipe_info
+  name: Recipe 개요
+  params:
+    mode: execution
+    description: 드로어 마커를 재서 파일로 남긴다
+    author: jjh
+    version: '1.0'
+    vision_origin_check: none
+- id: 2
+  type: schunk_release
+  name: SCHUNK 그리퍼 놓기
+  caption: 스캔 전 그리퍼 열기
+  params:
+    timeout: 15.0
+- id: 3
+  type: wait
+  name: 대기
+  caption: 그리퍼 동작 완료 대기
+  params:
+    duration: 2000
+- id: 4
+  type: move_to_point
+  name: 포인트 이동
+  caption: 드로어마커로 이동
+  params:
+    motion_type: tcp
+    X: 399.78
+    Y: 567.1
+    Z: 78.16
+    Rx: -180.0
+    Ry: 0.0
+    Rz: -90.0
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 399.78
+    Y: 567.1
+    Z: 78.16
+    Rx: -180.0
+    Ry: 0.0
+    Rz: -90.0
+- id: 5
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  caption: 드로어마커_기준점_스캔 (10회 · 3sigma)
+  params:
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz_rx_ry_rz
+- id: 6
+  type: save_landmark_pose
+  name: Landmark 좌표 저장
+  caption: 드로어마커_저장
+  params:
+    save_path: data/landmark_pose/drawer
+    operator: jjh

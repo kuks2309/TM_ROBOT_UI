@@ -1,0 +1,2 @@
+string request_id
+bool received

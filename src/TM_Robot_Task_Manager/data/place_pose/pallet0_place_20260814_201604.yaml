@@ -1,0 +1,44 @@
+saved_at: '2026-08-14 20:16:04'
+pallet: pallet0
+label: 'place #1'
+reference:
+  plate_pose:
+    x: 817.6521
+    y: 215.0322
+    z: -325.9502
+    rx: 0.2613
+    ry: -0.0741
+    rz: 89.5741
+  plane_normal:
+  - 0.004552
+  - -0.001326
+  - 0.999989
+  source_files:
+  - pallet0_align_pallet_plate_pose_calc_20260814_190407.yaml
+  - pallet0_align_pallet_plate_pose_calc_20260814_191846.yaml
+  - pallet0_cali_pallet_plate_pose_calc_20260814_105842.yaml
+  - pallet0_cali_pallet_plate_pose_calc_20260814_105926.yaml
+  - pallet0_cali_pallet_plate_pose_calc_20260814_110005.yaml
+  - pallet0_cali_pallet_plate_pose_calc_20260814_110041.yaml
+  - pallet0_cali_pallet_plate_pose_calc_20260814_110117.yaml
+  - pallet0_cali_pallet_plate_pose_calc_20260814_110155.yaml
+  - pallet0_cali_pallet_plate_pose_calc_20260814_110230.yaml
+  - pallet0_cali_pallet_plate_pose_calc_20260814_110331.yaml
+  - pallet0_cali_pallet_plate_pose_calc_20260814_110407.yaml
+  - pallet0_cali_pallet_plate_pose_calc_20260814_110443.yaml
+  - pallet0_cali_pallet_plate_pose_calc_20260814_110519.yaml
+  source_count: 13
+tcp_pose_base:
+  x: 816.8588
+  y: 217.4179
+  z: -169.6499
+  rx: 179.7468
+  ry: 0.2033
+  rz: -0.4338
+relative_pose:
+  x: 2.5817
+  y: 1.524
+  z: 156.2918
+  rx: 179.6728
+  ry: -0.0581
+  rz: -90.0082

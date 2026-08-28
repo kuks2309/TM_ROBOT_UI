@@ -1,0 +1,209 @@
+# Recipe: pallet0 드로어 마커 기준 4점 측정 (마스터)
+# TM Task Manager Recipe File
+#
+# [구조] 드로어 마커 1샷 → 마커 좌표계로 4점 순회 → plate_pose 저장
+#   Job 6/8/10/12 는 move_to_landmark_pose (마커 좌표계 이동) 이다.
+#   offset_* 는 마커를 원점으로 한 좌표이고, frame_mode: rz_only 이므로
+#   회전은 마커 Rz 만 쓴다 — 마커 rx/ry 측정 산포를 받지 않는다.
+#   coordinate_mode 는 쓰지 않는다(YAML 전용이라 UI 에 안 보이고,
+#   '현재위치 입력' 이 절대좌표를 덮어써 깨지는 사고가 있었다).
+#
+# [offset 값의 출처 — 전부 실측]
+#   2026-08-15 드로어 11회 측정(data/landmark_pose + data/plate_pose_calc)에서
+#   마커 좌표계(rz_only) 기준으로 역산한 평균이다. 강체 가정·회전 추정 없음.
+#   티칭 TCP1 산포: ±0.015 / ±0.003 / ±0.010 mm
+#   (마커 자세 전체를 쓴 프레임은 ±0.118 / ±0.162 / ±0.140 mm 로 10배 나쁘다)
+#
+#   접근점 간 거리 = 마크 배치 실측과 일치:
+#     1→2  137.188 mm      2→3  196.058 mm
+#     3→4  137.454 mm      4→1  196.277 mm
+#   (대각선 240.100 / 238.804, 차 1.30mm — rect_guard 상한 1.5mm 에 여유 0.2mm)
+#
+# [마커 ↔ 팔레트 상대 오프셋 — 11회 평균]
+#   plate_pose 중심:  X   0.647 ±0.118   Y 239.680 ±0.162   Z 298.179 ±0.140 mm
+#                     Rx -179.352 ±0.036  Ry 0.370 ±0.026   Rz  -0.221 ±0.005 deg
+#   ※ 드로어를 옮기지 않은 상태의 반복이므로 '불변'은 아직 미검증이다.
+#     위치·자세를 바꿔 몇 회 더 찍어야 확정된다.
+#
+# [!! 안전 !!]
+#   조그는 정지/일시정지를 확인한 뒤에만 한다. 레시피 실행 중 조그는 CommandGate
+#   대상이 아니라(ADR 2026-08-15 수동 명령 게이트) 실행 중간에 끼어들 수 있다.
+
+name: pallet0 드로어 마커 기준 4점 측정 (마스터)
+description: 드로어 마커를 1샷 측정하고, 그 마커 좌표계(Rz 기준) 오프셋으로 칼리브레이션 마크 4개를 순회 측정해 plate_pose 를 저장한다.
+  마커 좌표는 Job 5 가 따로 남긴다.
+version: '1.0'
+created: '2026-08-15'
+modified: '2026-08-15'
+jobs:
+- id: 1
+  type: recipe_info
+  name: Recipe 개요
+  params:
+    mode: execution
+    description: pallet0 드로어 마커 기준 4점 측정 마스터
+    author: jjh
+    version: '1.0'
+    vision_origin_check: none
+- id: 2
+  type: gripper_close
+  name: 그리퍼 닫기
+  params:
+    delay: 3.0
+- id: 3
+  type: move_to_point
+  name: 포인트 이동
+  caption: 드로어마커로 이동
+  params:
+    motion_type: tcp
+    X: 199.73
+    Y: 567.02
+    Z: 248.08
+    Rx: -179.99
+    Ry: -0.01
+    Rz: 0.01
+    velocity: 25.0
+    decomposed_tcp: true
+  robot_base:
+    X: 199.73
+    Y: 567.02
+    Z: 248.08
+    Rx: -179.99
+    Ry: -0.01
+    Rz: 0.01
+- id: 4
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  caption: 드로어마커_기준점_스캔
+  params:
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz_rx_ry_rz
+- id: 5
+  type: save_landmark_pose
+  name: Landmark 좌표 저장
+  caption: 드로어마커_저장
+  params:
+    save_path: data/landmark_pose
+    operator: jjh
+- id: 6
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 1사분면_마크_접근
+  params:
+    frame_mode: rz_only
+    offset_x: 57.597
+    offset_y: -222.473
+    offset_z: -28.647
+    offset_rx: 178.63
+    offset_ry: 0.9
+    offset_rz: 178.536
+    velocity: 25.0
+    max_radius_mm: 600.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+- id: 7
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: 1사분면_scan
+  params:
+    jig_number: 4
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz
+- id: 8
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 2사분면_마크_접근
+  params:
+    frame_mode: rz_only
+    offset_x: -79.527
+    offset_y: -223.123
+    offset_z: -24.499
+    offset_rx: 178.63
+    offset_ry: 0.9
+    offset_rz: 178.536
+    velocity: 25.0
+    max_radius_mm: 600.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+- id: 9
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: 2사분면_scan
+  params:
+    jig_number: 2
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz
+- id: 10
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 3사분면_마크_접근
+  params:
+    frame_mode: rz_only
+    offset_x: -80.018
+    offset_y: -419.18
+    offset_z: -24.639
+    offset_rx: 178.63
+    offset_ry: 0.9
+    offset_rz: 178.536
+    velocity: 25.0
+    max_radius_mm: 600.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+- id: 11
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: 3사분면_scan
+  params:
+    jig_number: 1
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz
+- id: 12
+  type: move_to_landmark_pose
+  name: 마커 좌표계 이동
+  caption: 4사분면_마크_접근
+  params:
+    frame_mode: rz_only
+    offset_x: 57.408
+    offset_y: -418.746
+    offset_z: -27.38
+    offset_rx: 178.63
+    offset_ry: 0.9
+    offset_rz: 178.536
+    velocity: 25.0
+    max_radius_mm: 600.0
+    decel_zone_mm: 40.0
+    decel_velocity: 10.0
+- id: 13
+  type: scan_tm_landmark_jig
+  name: TM Landmark Jig 스캔
+  caption: 4사분면_scan
+  params:
+    jig_number: 3
+    wait_after_command: 0
+    repeat_count: 10
+    outlier_method: 3sigma
+    analysis_target: xyz
+- id: 14
+  type: calculate_plate_pose
+  name: Plate Pose 계산
+  caption: pallet_plate_pose_calc
+  params:
+    operator: jjh
+    save_path: /home/amap/Project/T-Robotics/jjh/TM_Robot_MK2_ros2_ws/src/TM_Robot_Task_Manager/data/plate_pose_calc
+    rect_guard_enabled: true
+    max_side_diff_mm: 1.0
+    max_diagonal_diff_mm: 1.5
+    max_angle_error_deg: 1.0
+- id: 15
+  type: gripper_open
+  name: 그리퍼 열기
+  params:
+    delay: 3.0

@@ -1,0 +1,19 @@
+# msg format: <BC:M:AAAAAA:CCC:N:OHTOOOCS>
+# M: media 0(IR), 1(2G), 2(5G) (default: 1)
+# AAAAAA: id: 000001 ~FFFFFF (value: 000001-111111)
+# CCC: channel: 2G 0~122, 5G 128~255 (default: 000)
+# N: port: 0~4 (default: 0)
+# OHTOOO: oht: 000000 ~ ZZZZZZ (default: 000000)
+# CS: checksum
+
+string media
+string id
+string channel
+string port
+string oht
+---
+bool serial_connect_error
+bool illegal_packet
+bool checksum_error
+bool setting_error
+string data

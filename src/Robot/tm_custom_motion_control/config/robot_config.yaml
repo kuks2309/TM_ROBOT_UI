@@ -1,0 +1,28 @@
+
+motion:
+  ptp:
+    default_velocity: 25.0
+    default_acc_time: 0.2
+    default_blend: 0
+
+  linear:
+    default_velocity: 100.0
+    default_acc_time: 0.2
+    default_blend: 0
+
+  circular:
+    default_velocity: 100.0
+
+gripper:
+  module: 0
+  open_pin: 0
+  close_pin: 1
+  delay_after_action: 0.5
+
+connection:
+  motion_type: 1
+  timeout: 0
+
+safety:
+  max_speed_override: 100
+  collision_sensitivity: 5

@@ -1,0 +1,616 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PrecisionAnalyzerWindow</class>
+ <widget class="QWidget" name="PrecisionAnalyzerWindow">
+  <property name="minimumSize">
+   <size>
+    <width>1000</width>
+    <height>700</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Precision Test Analyzer</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_main">
+   <!-- 상단: 파일 열기 -->
+   <item>
+    <widget class="QGroupBox" name="groupBox_file">
+     <property name="title">
+      <string>데이터 파일</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_file">
+      <item>
+       <widget class="QPushButton" name="pushButton_openFile">
+        <property name="text">
+         <string>CSV 열기</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_recentFile">
+        <property name="text">
+         <string>최근 파일</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_fileName">
+        <property name="text">
+         <string>파일을 선택하세요</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_file">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_exportCSV">
+        <property name="text">
+         <string>CSV 내보내기</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_saveGraphs">
+        <property name="text">
+         <string>그래프 저장</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+
+   <!-- 탭 위젯 -->
+   <item>
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+
+     <!-- Tab 1: 개요 -->
+     <widget class="QWidget" name="tab_overview">
+      <attribute name="title">
+       <string>개요</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_overview">
+       <!-- 그래프 2x2 그리드 -->
+       <item>
+        <widget class="QGroupBox" name="groupBox_overviewGraphs">
+         <property name="title">
+          <string>위치 정밀도 그래프</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_overviewGraphs">
+          <item row="0" column="0">
+           <widget class="QWidget" name="widget_overviewXY" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>200</width>
+              <height>150</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QWidget" name="widget_overviewYZ" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>200</width>
+              <height>150</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QWidget" name="widget_overviewZX" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>200</width>
+              <height>150</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QWidget" name="widget_overviewRotation" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>200</width>
+              <height>150</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+
+       <!-- 통계 요약 -->
+       <item>
+        <widget class="QGroupBox" name="groupBox_overviewStats">
+         <property name="title">
+          <string>통계 요약</string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_overviewStats">
+          <!-- Position -->
+          <item>
+           <widget class="QGroupBox" name="groupBox_posStats">
+            <property name="title">
+             <string>Position (mm)</string>
+            </property>
+            <layout class="QFormLayout" name="formLayout_posStats">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_x">
+               <property name="text">
+                <string>X:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLabel" name="label_xValue">
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_y">
+               <property name="text">
+                <string>Y:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QLabel" name="label_yValue">
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="label_z">
+               <property name="text">
+                <string>Z:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QLabel" name="label_zValue">
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <!-- Rotation -->
+          <item>
+           <widget class="QGroupBox" name="groupBox_rotStats">
+            <property name="title">
+             <string>Rotation (deg)</string>
+            </property>
+            <layout class="QFormLayout" name="formLayout_rotStats">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_rx">
+               <property name="text">
+                <string>Rx:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLabel" name="label_rxValue">
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_ry">
+               <property name="text">
+                <string>Ry:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QLabel" name="label_ryValue">
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="label_rz">
+               <property name="text">
+                <string>Rz:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QLabel" name="label_rzValue">
+               <property name="text">
+                <string>-</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <!-- 3 Sigma -->
+          <item>
+           <widget class="QGroupBox" name="groupBox_3sigma">
+            <property name="title">
+             <string>3 Sigma</string>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_3sigma">
+             <item>
+              <widget class="QLabel" name="label_3sigmaPos">
+               <property name="text">
+                <string>X: - / Y: - / Z: -</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_3sigmaRot">
+               <property name="text">
+                <string>Rx: - / Ry: - / Rz: -</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+
+       <!-- 데이터 테이블 -->
+       <item>
+        <widget class="QGroupBox" name="groupBox_dataTable">
+         <property name="title">
+          <string>측정 데이터</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_dataTable">
+          <item>
+           <widget class="QTableWidget" name="tableWidget_data">
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>200</height>
+             </size>
+            </property>
+            <property name="columnCount">
+             <number>14</number>
+            </property>
+            <column>
+             <property name="text">
+              <string>No.</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>X (mm)</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Y (mm)</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Z (mm)</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Rx (deg)</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Ry (deg)</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Rz (deg)</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>TCP_X</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>TCP_Y</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>TCP_Z</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>TCP_Rx</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>TCP_Ry</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>TCP_Rz</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Time</string>
+             </property>
+            </column>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+
+     <!-- Tab 2: X-Y 분석 -->
+     <widget class="QWidget" name="tab_xy">
+      <attribute name="title">
+       <string>X-Y 분석</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_xy">
+       <item>
+        <widget class="QWidget" name="widget_graphXY" native="true">
+         <property name="minimumSize">
+          <size>
+           <width>400</width>
+           <height>400</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_xyStats">
+         <property name="title">
+          <string>X-Y 통계</string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_xyStats">
+          <item>
+           <widget class="QLabel" name="label_xyStatsX">
+            <property name="text">
+             <string>X: -</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_xyStatsY">
+            <property name="text">
+             <string>Y: -</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer_xy">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+
+     <!-- Tab 3: Y-Z 분석 -->
+     <widget class="QWidget" name="tab_yz">
+      <attribute name="title">
+       <string>Y-Z 분석</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_yz">
+       <item>
+        <widget class="QWidget" name="widget_graphYZ" native="true">
+         <property name="minimumSize">
+          <size>
+           <width>400</width>
+           <height>400</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_yzStats">
+         <property name="title">
+          <string>Y-Z 통계</string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_yzStats">
+          <item>
+           <widget class="QLabel" name="label_yzStatsY">
+            <property name="text">
+             <string>Y: -</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_yzStatsZ">
+            <property name="text">
+             <string>Z: -</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer_yz">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+
+     <!-- Tab 4: X-Z 분석 -->
+     <widget class="QWidget" name="tab_zx">
+      <attribute name="title">
+       <string>X-Z 분석</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_zx">
+       <item>
+        <widget class="QWidget" name="widget_graphZX" native="true">
+         <property name="minimumSize">
+          <size>
+           <width>400</width>
+           <height>400</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_zxStats">
+         <property name="title">
+          <string>X-Z 통계</string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_zxStats">
+          <item>
+           <widget class="QLabel" name="label_zxStatsX">
+            <property name="text">
+             <string>X: -</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_zxStatsZ">
+            <property name="text">
+             <string>Z: -</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer_zx">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+
+     <!-- Tab 5: Rotation 분석 -->
+     <widget class="QWidget" name="tab_rotation">
+      <attribute name="title">
+       <string>Rotation 분석</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_rotation">
+       <!-- Rx 그래프 -->
+       <item>
+        <widget class="QGroupBox" name="groupBox_rx">
+         <property name="title">
+          <string>Rx</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_rx">
+          <item>
+           <widget class="QWidget" name="widget_graphRx" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>400</width>
+              <height>150</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_rotStatsRx">
+            <property name="text">
+             <string>Rx: -</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <!-- Ry 그래프 -->
+       <item>
+        <widget class="QGroupBox" name="groupBox_ry">
+         <property name="title">
+          <string>Ry</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_ry">
+          <item>
+           <widget class="QWidget" name="widget_graphRy" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>400</width>
+              <height>150</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_rotStatsRy">
+            <property name="text">
+             <string>Ry: -</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <!-- Rz 그래프 -->
+       <item>
+        <widget class="QGroupBox" name="groupBox_rz">
+         <property name="title">
+          <string>Rz</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_rz">
+          <item>
+           <widget class="QWidget" name="widget_graphRz" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>400</width>
+              <height>150</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_rotStatsRz">
+            <property name="text">
+             <string>Rz: -</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
