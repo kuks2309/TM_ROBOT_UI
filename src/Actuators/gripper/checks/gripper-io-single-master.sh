@@ -26,9 +26,13 @@ BANNED_BUILD='(remote_io_hal|modbus_tcp|modbus_rtu)'
 
 # ADR-005 D4 (2026-08-29): 본 게이트의 보호 대상은 Crevis 스테이션(Modbus TCP)의 단일 쓰기
 # 마스터다. RS485 RTU 벤더 그리퍼(HITBOT 등)는 별개 버스이며 그 유일 마스터는 해당 그리퍼
-# 노드다 — 벤더 진단 도구(tools/)는 스캔에서 제외한다. 회사별 hal/ 허용은 단계④에서 갱신.
+# 노드다 — 벤더 진단 도구(tools/)는 스캔에서 제외한다. 회사별 hal/ 허용은 RTU_VENDOR_DIRS
+# 화이트리스트로 적용됨(위 정의 참조).
+# 필터는 STACK_DIR 절대경로 `^` 앵커 — grep 출력은 항상 "경로:줄:내용" 형식이므로 앵커가
+# ①중첩 스푸핑 경로(예: smc_lecp6/hitbot_zefg/hal/)와 ②매치 줄 "내용부"의 문자열 우연 일치를
+# 모두 봉쇄한다(내용부는 경로 뒤에 오므로 `^${STACK_DIR}/...` 패턴에 걸릴 수 없다).
 hits=$(grep -riEn --exclude-dir=tools "${SRC_GLOBS[@]}" "$BANNED_IO" "$STACK_DIR" 2>/dev/null \
-  | grep -vE "/(${RTU_VENDOR_DIRS})/hal/")
+  | grep -vE "^${STACK_DIR}/(${RTU_VENDOR_DIRS})/hal/")
 if [ -n "$hits" ]; then
   echo "❌ gripper-io-single-master: 스테이션 직접 접근 심볼 발견"
   echo "$hits"
@@ -36,7 +40,7 @@ if [ -n "$hits" ]; then
 fi
 
 build_hits=$(grep -riEn "${BUILD_GLOBS[@]}" "$BANNED_BUILD" "$STACK_DIR" 2>/dev/null \
-  | grep -vE "/(${RTU_VENDOR_DIRS})/hal/")
+  | grep -vE "^${STACK_DIR}/(${RTU_VENDOR_DIRS})/hal/")
 if [ -n "$build_hits" ]; then
   echo "❌ gripper-io-single-master: 빌드 그래프에 스테이션·통신 패키지 의존 선언"
   echo "$build_hits"
