@@ -11,6 +11,9 @@ STACK_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BANNED_IO='(modbus|mbapclient|iremoteiostationport|remoteiostationport|remote_io_hal/|sys/socket\.h|netinet/in\.h|arpa/inet\.h|netdb\.h|sys/un\.h|boost/asio|asio\.hpp|::socket[[:space:]]*\(|[^a-z_]socket[[:space:]]*\()'
 # ROS 결선이 허용되는 조립 패키지만 예외로 둔다 — 화이트리스트 방식이면 신규 패키지가 무검사로 샌다.
 ROS_ASSEMBLY_PKGS="gripper_ros"
+# ADR-005 D4 전면 적용(2026-08-29): RS485 RTU 벤더 스택의 hal/ 은 자기 버스의 유일 마스터로서
+# modbus_rtu 를 소비할 수 있다. Crevis 스테이션 보호는 불변 — smc_lecp6 및 그 외 전 계층은 여전히 금지.
+RTU_VENDOR_DIRS='hitbot_zefg|schunk_egu'
 BANNED_ROS='^[[:space:]]*#[[:space:]]*include[[:space:]]*[<"](rclcpp|rclcpp_lifecycle|rclcpp_action|std_msgs|sensor_msgs|geometry_msgs|nav_msgs|tc_msgs|ament_)'
 
 FAIL=0
@@ -24,14 +27,16 @@ BANNED_BUILD='(remote_io_hal|modbus_tcp|modbus_rtu)'
 # ADR-005 D4 (2026-08-29): 본 게이트의 보호 대상은 Crevis 스테이션(Modbus TCP)의 단일 쓰기
 # 마스터다. RS485 RTU 벤더 그리퍼(HITBOT 등)는 별개 버스이며 그 유일 마스터는 해당 그리퍼
 # 노드다 — 벤더 진단 도구(tools/)는 스캔에서 제외한다. 회사별 hal/ 허용은 단계④에서 갱신.
-hits=$(grep -riEn --exclude-dir=tools "${SRC_GLOBS[@]}" "$BANNED_IO" "$STACK_DIR" 2>/dev/null)
+hits=$(grep -riEn --exclude-dir=tools "${SRC_GLOBS[@]}" "$BANNED_IO" "$STACK_DIR" 2>/dev/null \
+  | grep -vE "/(${RTU_VENDOR_DIRS})/hal/")
 if [ -n "$hits" ]; then
   echo "❌ gripper-io-single-master: 스테이션 직접 접근 심볼 발견"
   echo "$hits"
   FAIL=1
 fi
 
-build_hits=$(grep -riEn "${BUILD_GLOBS[@]}" "$BANNED_BUILD" "$STACK_DIR" 2>/dev/null)
+build_hits=$(grep -riEn "${BUILD_GLOBS[@]}" "$BANNED_BUILD" "$STACK_DIR" 2>/dev/null \
+  | grep -vE "/(${RTU_VENDOR_DIRS})/hal/")
 if [ -n "$build_hits" ]; then
   echo "❌ gripper-io-single-master: 빌드 그래프에 스테이션·통신 패키지 의존 선언"
   echo "$build_hits"
