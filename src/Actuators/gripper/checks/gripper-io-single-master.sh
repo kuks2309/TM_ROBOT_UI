@@ -6,6 +6,9 @@
 # 스테이션 포트 직접 참조가 있으면 안 된다. ROS 결선은 gripper_ros(조립층)에만 허용한다.
 set -u
 STACK_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+# STACK_DIR 을 아래 grep -E/awk 정규식 앵커로 쓰기 전 이스케이프 — 경로에 정규식 특수문자가
+# 섞이면 앵커가 깨져 벤더 hal 필터가 무력화될 수 있다(최종 리뷰 Minor).
+stack_re=$(printf '%s' "$STACK_DIR" | sed 's/[][\.*^$()+?{}|]/\\&/g')
 
 # 대소문자 무시로 검사한다(-i) — ModbusMaster.h · MODBUS/tcp.hpp 류 우회 차단.
 BANNED_IO='(modbus|mbapclient|iremoteiostationport|remoteiostationport|remote_io_hal/|sys/socket\.h|netinet/in\.h|arpa/inet\.h|netdb\.h|sys/un\.h|boost/asio|asio\.hpp|::socket[[:space:]]*\(|[^a-z_]socket[[:space:]]*\()'
@@ -13,6 +16,10 @@ BANNED_IO='(modbus|mbapclient|iremoteiostationport|remoteiostationport|remote_io
 ROS_ASSEMBLY_PKGS="gripper_ros"
 # ADR-005 D4 전면 적용(2026-08-29): RS485 RTU 벤더 스택의 hal/ 은 자기 버스의 유일 마스터로서
 # modbus_rtu 를 소비할 수 있다. Crevis 스테이션 보호는 불변 — smc_lecp6 및 그 외 전 계층은 여전히 금지.
+# 면제 범위는 modbus 계열 심볼(BANNED_IO 매치 라인에 "modbus" 문자열 포함)에 한정 —
+# socket 류(sys/socket.h 등)·remote_io_hal·IRemoteIoStationPort 는 벤더 hal 이라도 계속 차단한다
+# (최종 리뷰 I1: 종전 필터는 벤더 hal 의 모든 BANNED_IO 매치를 무조건 면제해 화이트리스트가
+# 과확장되어 있었다 — 아래 hits/build_hits awk 참조).
 RTU_VENDOR_DIRS='hitbot_zefg|schunk_egu'
 BANNED_ROS='^[[:space:]]*#[[:space:]]*include[[:space:]]*[<"](rclcpp|rclcpp_lifecycle|rclcpp_action|std_msgs|sensor_msgs|geometry_msgs|nav_msgs|tc_msgs|ament_)'
 
@@ -31,16 +38,38 @@ BANNED_BUILD='(remote_io_hal|modbus_tcp|modbus_rtu)'
 # 필터는 STACK_DIR 절대경로 `^` 앵커 — grep 출력은 항상 "경로:줄:내용" 형식이므로 앵커가
 # ①중첩 스푸핑 경로(예: smc_lecp6/hitbot_zefg/hal/)와 ②매치 줄 "내용부"의 문자열 우연 일치를
 # 모두 봉쇄한다(내용부는 경로 뒤에 오므로 `^${STACK_DIR}/...` 패턴에 걸릴 수 없다).
+#
+# 벤더 hal 경로로 판정된 매치 중에서도 "modbus" 문자열을 포함하는 라인만 면제한다 — 벤더 hal
+# 이라 해도 sys/socket.h·remote_io_hal·IRemoteIoStationPort 등 비-modbus 매치는 계속 차단
+# (최종 리뷰 I1: 경로만 보고 전량 면제하던 종전 로직의 화이트리스트 과확장 봉쇄).
 hits=$(grep -riEn --exclude-dir=tools "${SRC_GLOBS[@]}" "$BANNED_IO" "$STACK_DIR" 2>/dev/null \
-  | grep -vE "^${STACK_DIR}/(${RTU_VENDOR_DIRS})/hal/")
+  | awk -v re="^${stack_re}/(${RTU_VENDOR_DIRS})/hal/" '
+      {
+        path = $0; sub(/:[0-9]+:.*/, "", path)
+        if (path ~ re) {
+          line = $0; sub(/^[^:]*:[0-9]+:/, "", line)
+          if (tolower(line) ~ /modbus/) next  # 벤더 hal + modbus 심볼만 면제
+        }
+        print
+      }')
 if [ -n "$hits" ]; then
   echo "❌ gripper-io-single-master: 스테이션 직접 접근 심볼 발견"
   echo "$hits"
   FAIL=1
 fi
 
+# build_hits 도 동일 원칙이나 면제 폭은 더 좁다 — 벤더 hal 은 modbus_rtu 의존 선언만 면제하고,
+# modbus_tcp·remote_io_hal 의존은 벤더 hal 이라도 차단한다(최종 리뷰 I1).
 build_hits=$(grep -riEn "${BUILD_GLOBS[@]}" "$BANNED_BUILD" "$STACK_DIR" 2>/dev/null \
-  | grep -vE "^${STACK_DIR}/(${RTU_VENDOR_DIRS})/hal/")
+  | awk -v re="^${stack_re}/(${RTU_VENDOR_DIRS})/hal/" '
+      {
+        path = $0; sub(/:[0-9]+:.*/, "", path)
+        if (path ~ re) {
+          line = $0; sub(/^[^:]*:[0-9]+:/, "", line)
+          if (tolower(line) ~ /modbus_rtu/) next  # 벤더 hal + modbus_rtu 의존만 면제
+        }
+        print
+      }')
 if [ -n "$build_hits" ]; then
   echo "❌ gripper-io-single-master: 빌드 그래프에 스테이션·통신 패키지 의존 선언"
   echo "$build_hits"
