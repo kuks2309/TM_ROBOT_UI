@@ -561,6 +561,8 @@ class JobExecutor:
             return self._exec_sdc_tcp_base(job)
         elif job_type == 'sdc_palette_tcp_align':
             return self._exec_sdc_palette_tcp_align(job)
+        elif job_type == 'sdc_palette_inlet_move':
+            return self._exec_sdc_palette_inlet_move(job)
         elif job_type == 'measure_point':
             return self._exec_measure_point(job)
         elif job_type == 'ai_inspection':
@@ -1732,6 +1734,61 @@ class JobExecutor:
         if wait_time > 0:
             time.sleep(wait_time)
         self._log("sdc_palette_tcp_align 완료")
+        return True
+
+    def _exec_sdc_palette_inlet_move(self, job: Job) -> bool:
+        from .services.config_manager import ConfigManager
+
+        params = job.params
+        velocity = params.get('velocity', 10.0)
+        wait_time = params.get('wait_after_command', 0.5)
+
+        if self.detected_landmark_pose is None:
+            self._log("Landmark 위치가 없습니다. scan_tm_landmark를 먼저 실행하세요.")
+            return False
+
+        entry = ConfigManager().get_position('sdc_palette_inlet_move')
+        if not entry:
+            self._log("[오류] positions.yaml 에 sdc_palette_inlet_move 항목이 없습니다")
+            return False
+
+        offsets = list(entry.get('values') or [])
+        if len(offsets) != 3:
+            self._log(f"[오류] sdc_palette_inlet_move 의 values 는 마커 frame X,Y,Z 오프셋 3개여야 합니다: {offsets}")
+            return False
+
+        if not self.ros_node:
+            self._log("ROS2 노드가 없습니다")
+            return False
+
+        if not self.ros_node.current_tcp_pose or len(self.ros_node.current_tcp_pose) < 6:
+            self._log("현재 TCP 위치를 알 수 없습니다")
+            return False
+
+        lm = self.detected_landmark_pose
+        R_marker = Rotation.from_euler(
+            'ZYX', [float(lm.get('rz', 0)), float(lm.get('ry', 0)), float(lm.get('rx', 0))],
+            degrees=True).as_matrix()
+        p_marker = np.array([float(lm.get('x', 0)), float(lm.get('y', 0)), float(lm.get('z', 0))])
+        target = p_marker + R_marker @ np.array([float(v) for v in offsets])
+
+        cur_rx, cur_ry, cur_rz = self.ros_node.current_tcp_pose[3:6]
+
+        self._log("sdc_palette_inlet_move: 자세 유지, 마커 상대 입구 위치로 이동")
+        self._log(f"  마커 위치: X={p_marker[0]:.2f}, Y={p_marker[1]:.2f}, Z={p_marker[2]:.2f}")
+        self._log(f"  목표 위치: X={target[0]:.2f}, Y={target[1]:.2f}, Z={target[2]:.2f}")
+
+        success, msg = self._move_to_position_line(
+            'tcp', float(target[0]), float(target[1]), float(target[2]),
+            cur_rx, cur_ry, cur_rz, velocity)
+        if not success:
+            self._log(f"sdc_palette_inlet_move 실패: {msg}")
+            return False
+
+        self._log(msg)
+        if wait_time > 0:
+            time.sleep(wait_time)
+        self._log("sdc_palette_inlet_move 완료")
         return True
 
     def _exec_find_landmark(self, job: Job) -> bool:

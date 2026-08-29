@@ -1,0 +1,13 @@
+saved_at: '2026-08-29 15:14:30'
+operator: drko
+note: 현재 위치 기록(등록 아님) — sdc_palette_tcp_align 실기 검증(법선 0.033°) 직후 사용자 지시로 스냅샷
+tcp_pose:
+  x: -845.1
+  y: -93.968
+  z: 412.193
+  rx: 87.441
+  ry: -22.487
+  rz: -86.63
+context:
+  landmark_at_time: {x: -1138.761, y: -115.557, z: 507.627, rx: -87.857, ry: -0.727, rz: 90.877}
+  source: /tool_pose (orin, 실기)
