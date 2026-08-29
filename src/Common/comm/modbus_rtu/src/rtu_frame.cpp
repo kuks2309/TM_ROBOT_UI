@@ -93,7 +93,8 @@ namespace
 // 공통 전위 검사: 길이·CRC·unit·예외. 통과 시 kNone.
 RtuError preflight(const std::vector<uint8_t> &frame, uint8_t unit, uint8_t fc, size_t expected_len, uint8_t *exc_out)
 {
-    if (frame.size() == kExceptionFrameLength && frame.size() >= 2 && frame[1] == (fc | 0x80))
+    // frame.size() == kExceptionFrameLength(5) 는 이미 >=2 를 함의하므로 중복 조건 제거(최종 리뷰 Minor).
+    if (frame.size() == kExceptionFrameLength && frame[1] == (fc | 0x80))
     {
         if (!checkCrc(frame))
             return RtuError::kCrcMismatch;

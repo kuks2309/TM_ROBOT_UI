@@ -25,6 +25,11 @@ struct RtuClientConfig
     Duration retry_gap{50};
 };
 
+// 최악의 경우 버스 락 점유 시간(최종 리뷰 I6): 실패 트랜잭션 1건이 버스(뮤텍스 mutex_)를 점유하는
+// 최대 시간은 대략 (retries+1)×request_timeout + retries×retry_gap 이다 — 기본값
+// (retries=2, request_timeout=500ms, retry_gap=50ms) 기준 3×500ms + 2×50ms = 1.6s. 그 사이 같은
+// 버스의 다른 트랜잭션은 mutex_ 대기로 차단된다(D2 단일 마스터 직렬화의 대가 — rtu_client.cpp 상단
+// 주석 참조).
 class RtuClient
 {
   public:

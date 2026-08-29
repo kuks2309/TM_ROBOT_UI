@@ -1,6 +1,7 @@
 #include "modbus_rtu/serial_port.hpp"
 
 #include <fcntl.h>
+#include <sys/ioctl.h>
 #include <sys/select.h>
 #include <termios.h>
 #include <unistd.h>
@@ -80,6 +81,14 @@ Result<std::unique_ptr<SerialPortLink>> SerialPortLink::open(const std::string &
         return Result<std::unique_ptr<SerialPortLink>>::err(RtuError::kNotOpen);
     }
 
+    // D4 단일 마스터 원칙을 커널 레벨로도 강제 — 같은 장치를 다른 프로세스가 동시에 열지 못하게
+    // 배타 모드로 표시한다(최종 리뷰 I9). pty 슬레이브에도 적용 가능(둘 다 tty 라인 디시플린).
+    if (::ioctl(fd, TIOCEXCL) != 0)
+    {
+        ::close(fd);
+        return Result<std::unique_ptr<SerialPortLink>>::err(RtuError::kNotOpen);
+    }
+
     return Result<std::unique_ptr<SerialPortLink>>::ok(std::unique_ptr<SerialPortLink>(new SerialPortLink(fd)));
 }
 
@@ -110,6 +119,8 @@ Result<std::vector<uint8_t>> SerialPortLink::readBytes(size_t max_len, TimePoint
     if (max_len == 0)
         return Result<std::vector<uint8_t>>::ok(std::vector<uint8_t>{});
 
+    // 루프 밖 1회 할당 — EINTR/EAGAIN/n==0 재시도마다 재할당하지 않는다(최종 리뷰 Minor).
+    std::vector<uint8_t> buf(max_len);
     for (;;)
     {
         const TimePoint now = std::chrono::steady_clock::now();
@@ -135,7 +146,6 @@ Result<std::vector<uint8_t>> SerialPortLink::readBytes(size_t max_len, TimePoint
         if (rc == 0)
             return Result<std::vector<uint8_t>>::err(RtuError::kTimeout); // select 데드라인 초과
 
-        std::vector<uint8_t> buf(max_len);
         const ssize_t n = ::read(fd_, buf.data(), max_len);
         if (n < 0)
         {

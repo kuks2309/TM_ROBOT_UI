@@ -56,7 +56,8 @@ if(BUILD_TESTING)
       add_test(NAME modbus_rtu_${t} COMMAND modbus_rtu_${t})
     endforeach()
     # sim 은 재사용 가능한 INTERFACE 타깃으로 링크(직접 include 경로 지정 대신) — I3.
-    target_link_libraries(modbus_rtu_rtu_client_test PRIVATE modbus_rtu_sim)
+    # ConcurrentCallsSerialize(I5) 가 std::thread 를 쓰므로 Threads 도 필요.
+    target_link_libraries(modbus_rtu_rtu_client_test PRIVATE modbus_rtu_sim Threads::Threads)
     # openpty(<pty.h>) 는 glibc 에서 libutil 에 있다(util 링크). RtuClientOverPty 는 별도 스레드로
     # pty 마스터를 구동하므로 Threads 도 필요.
     target_link_libraries(modbus_rtu_serial_port_test PRIVATE util Threads::Threads)

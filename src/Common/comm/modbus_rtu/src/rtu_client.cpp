@@ -29,14 +29,19 @@ Result<T> RtuClient::transact(const std::vector<uint8_t> &request, uint8_t fc, u
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
+    // 빈 요청 조기 반환보다 앞에 둔다 — 범위 밖 인자로 거부된 호출이라도 이전 호출의 잔여
+    // 예외 코드가 lastExceptionCode() 에 남아 있으면 안 된다(최종 리뷰 Minor).
+    last_exception_ = 0;
+
     if (request.empty())
         return Result<T>::err(RtuError::kOutOfRange);
 
-    last_exception_ = 0;
     const size_t base_expected_len = expectedResponseLength(fc, qty_for_len);
     RtuError last_error = RtuError::kTimeout;
+    // config 방어: retries<0 은 오설정으로 간주해 0 으로 클램프(최소 1회는 시도) — 최종 리뷰 Minor.
+    const int retries = config_.retries < 0 ? 0 : config_.retries;
 
-    for (int attempt = 0; attempt <= config_.retries; ++attempt)
+    for (int attempt = 0; attempt <= retries; ++attempt)
     {
         link_->flushInput();
         const Result<void> sent = link_->writeBytes(request);
@@ -80,7 +85,7 @@ Result<T> RtuClient::transact(const std::vector<uint8_t> &request, uint8_t fc, u
             last_error = recv_err;
         }
 
-        if (attempt < config_.retries)
+        if (attempt < retries)
             std::this_thread::sleep_for(config_.retry_gap);
     }
     return Result<T>::err(last_error);

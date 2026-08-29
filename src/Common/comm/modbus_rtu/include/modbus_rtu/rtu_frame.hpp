@@ -14,7 +14,6 @@ namespace comm::modbus_rtu
 
 inline constexpr uint16_t kMaxReadQuantity = 125;
 inline constexpr uint16_t kMaxWriteQuantity = 123;
-inline constexpr size_t kMinFrameLength = 4; // unit+fc+CRC2 — 예외 프레임(5)보다 짧으면 무의미
 inline constexpr size_t kWriteAckLength = 8;
 inline constexpr size_t kExceptionFrameLength = 5;
 

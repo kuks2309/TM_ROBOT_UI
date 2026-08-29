@@ -20,10 +20,12 @@ namespace comm::modbus_rtu::sim
 enum class Fault
 {
     kNormal,
-    kSilent,     // 응답 없음 → readBytes 가 즉시 kTimeout
-    kCorruptCrc, // 정상 응답의 말미 바이트를 훼손
-    kException,  // {unit, fc|0x80, exc_code} 예외 프레임으로 대체
-    kTruncate    // 정상 응답을 절반 길이로 잘라 저장
+    kSilent,       // 응답 없음 → readBytes 가 즉시 kTimeout
+    kCorruptCrc,   // 정상 응답의 말미 바이트를 훼손
+    kException,    // {unit, fc|0x80, exc_code} 예외 프레임으로 대체
+    kTruncate,     // 정상 응답을 절반 길이로 잘라 저장
+    kChunked,      // 정상 응답을 유지하되 readBytes 가 1바이트씩만 반환(누적 수신 루프 검증, 최종 리뷰 I5)
+    kWrongEchoAddr // fc06/fc10 ack 의 echo addr 필드를 +1 로 훼손(CRC 는 재계산해 유효 유지) — kProtocol 유도
 };
 
 class MockSlaveLink : public ISerialLink
@@ -55,6 +57,13 @@ class MockSlaveLink : public ISerialLink
         return request_count_;
     }
 
+    // 요청 프레임이 손상/인터리브된 것으로 의심되는 경우의 집계(최종 리뷰 I5 —
+    // ConcurrentCallsSerialize 가 RtuClient 뮤텍스 직렬화 회귀를 검출하는 데 사용).
+    int parseFailures() const
+    {
+        return parse_failures_;
+    }
+
     // ISerialLink
     Result<void> writeBytes(const std::vector<uint8_t> &data) override
     {
@@ -70,7 +79,10 @@ class MockSlaveLink : public ISerialLink
         // 테스트 고속화: 데드라인까지 기다리지 않고 즉시 판정(비어 있으면 kTimeout).
         if (pending_.empty())
             return Result<std::vector<uint8_t>>::err(RtuError::kTimeout);
-        const size_t n = std::min(max_len, pending_.size());
+        // kChunked: 호출측 누적 수신 루프(RtuClient::transact)를 강제로 여러 번 돌게 만들기 위해
+        // max_len 과 무관하게 항상 1바이트만 반환한다(최종 리뷰 I5).
+        const size_t cap = (fault_ == Fault::kChunked) ? 1 : max_len;
+        const size_t n = std::min(cap, pending_.size());
         std::vector<uint8_t> out(pending_.begin(), pending_.begin() + static_cast<std::ptrdiff_t>(n));
         pending_.erase(pending_.begin(), pending_.begin() + static_cast<std::ptrdiff_t>(n));
         return Result<std::vector<uint8_t>>::ok(std::move(out));
@@ -91,6 +103,13 @@ class MockSlaveLink : public ISerialLink
     std::vector<uint8_t> buildNormalResponse(uint8_t fc, const std::vector<uint8_t> &req)
     {
         std::vector<uint8_t> resp;
+        // 유닛 바이트 불일치·빈 요청은 손상/인터리브 요청 의심 — 집계(최종 리뷰 I5,
+        // ConcurrentCallsSerialize 가 RtuClient 의 뮤텍스 직렬화 회귀를 이 카운터로 검출한다).
+        if (req.empty() || req[0] != unit_)
+        {
+            ++parse_failures_;
+            return resp;
+        }
         if (fc == 0x03 && req.size() >= 6)
         {
             const uint16_t addr = static_cast<uint16_t>((req[2] << 8) | req[3]);
@@ -133,6 +152,10 @@ class MockSlaveLink : public ISerialLink
             resp.push_back(static_cast<uint8_t>(qty & 0xFF));
             appendCrc(resp);
         }
+        else
+        {
+            ++parse_failures_; // 인식 불가 fc 또는 길이 부족
+        }
         return resp;
     }
 
@@ -162,6 +185,24 @@ class MockSlaveLink : public ISerialLink
             response.resize(response.size() / 2);
             pending_ = std::move(response);
             break;
+        case Fault::kChunked:
+            // 응답 자체는 정상 — readBytes 가 전달을 1바이트씩 쪼갠다(위 readBytes 참조).
+            pending_ = std::move(response);
+            break;
+        case Fault::kWrongEchoAddr:
+            // fc06/fc10 ack 의 addr 필드(bytes[2:4])를 +1 로 훼손하고 CRC 를 재계산한다 — CRC 는
+            // 유효하되 echo 가 요청과 어긋나야 kProtocol(파서의 echo 검증)로 판정되기 때문이다.
+            if (response.size() >= 6)
+            {
+                response.resize(response.size() - 2); // 말미 CRC 제거 후 addr 변경 → 재부착
+                const uint16_t addr = static_cast<uint16_t>((response[2] << 8) | response[3]);
+                const uint16_t wrong_addr = static_cast<uint16_t>(addr + 1);
+                response[2] = static_cast<uint8_t>(wrong_addr >> 8);
+                response[3] = static_cast<uint8_t>(wrong_addr & 0xFF);
+                appendCrc(response);
+            }
+            pending_ = std::move(response);
+            break;
         }
     }
 
@@ -169,6 +210,7 @@ class MockSlaveLink : public ISerialLink
     Fault fault_ = Fault::kNormal;
     uint8_t exc_code_ = 0;
     int request_count_ = 0;
+    int parse_failures_ = 0;
     std::vector<uint8_t> pending_;
     uint8_t unit_;
 };

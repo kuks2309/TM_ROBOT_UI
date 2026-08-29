@@ -11,6 +11,7 @@
 #include <string>
 
 #include "modbus_rtu/rtu_client.hpp"
+#include "modbus_rtu/rtu_frame.hpp" // kMaxReadQuantity — qty 검증 상한을 RtuClient 와 동일 규약으로(최종 리뷰 Minor)
 #include "modbus_rtu/serial_port.hpp"
 
 using comm::modbus_rtu::ISerialLink;
@@ -24,13 +25,39 @@ namespace
 
 constexpr char kUsage[] = "usage: modbus_rtu_h0_smoke <device> [baud=115200] [unit=1] <addr> <qty>\n";
 
-// 양수 정수 파싱(0x 접두 허용 — base 0). 실패 시 false.
+// 양수 정수 파싱(0x 접두 허용 — base 0). 실패 시 false. baud·unit 전용(0 은 두 값 모두 무의미).
 bool parsePositive(const char *s, long *out)
 {
     char *end = nullptr;
     errno = 0;
     const long v = std::strtol(s, &end, 0);
     if (end == s || *end != '\0' || errno != 0 || v <= 0)
+        return false;
+    *out = v;
+    return true;
+}
+
+// 주소 전용 파싱: 0 은 유효한 레지스터 주소이므로 허용하고, 음수·uint16_t 상한(0xFFFF) 초과만 거부한다.
+bool parseAddress(const char *s, long *out)
+{
+    char *end = nullptr;
+    errno = 0;
+    const long v = std::strtol(s, &end, 0);
+    if (end == s || *end != '\0' || errno != 0 || v < 0 || v > 0xFFFF)
+        return false;
+    *out = v;
+    return true;
+}
+
+// 수량 전용 파싱: FC03 read 의 유효 범위(1..kMaxReadQuantity)만 허용 — 범위 밖 값이 uint16_t 로
+// 조용히 절단(wrap)되어 엉뚱한 레지스터를 읽는 것을 방지한다(최종 리뷰 Minor).
+bool parseQuantity(const char *s, long *out)
+{
+    char *end = nullptr;
+    errno = 0;
+    const long v = std::strtol(s, &end, 0);
+    if (end == s || *end != '\0' || errno != 0 || v < 1 ||
+        v > static_cast<long>(comm::modbus_rtu::kMaxReadQuantity))
         return false;
     *out = v;
     return true;
@@ -88,7 +115,7 @@ int main(int argc, char **argv)
         std::fputs(kUsage, stderr);
         return 2;
     }
-    if (!parsePositive(argv[idx++], &addr) || !parsePositive(argv[idx], &qty))
+    if (!parseAddress(argv[idx++], &addr) || !parseQuantity(argv[idx], &qty))
     {
         std::fputs(kUsage, stderr);
         return 2;
