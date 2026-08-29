@@ -1,6 +1,6 @@
 # modbus_rtu 함수표 (모듈 로컬 원본)
 
-갱신: 2026-08-29 (Task 4 구현 완료 — SerialPortLink/pty SIL/H0 스모크 도구, 줄 앵커 grep -n 실측 정정)
+갱신: 2026-08-29 (Task 5 구현 완료 — ros-free 게이트 체크 스크립트, 줄 앵커 grep -n 실측 정정 + 최종 일괄 검증 완료)
 
 전역 변수: **없음** (상수만 — kMaxReadQuantity·kMaxWriteQuantity·kMinFrameLength·kWriteAckLength·kExceptionFrameLength)
 
@@ -47,3 +47,4 @@
 | `rtu_h0_smoke::parsePositive/errorName` (익명 namespace) | tools/rtu_h0_smoke.cpp:28,39 | s·out 또는 RtuError | bool 또는 const char* | strtol base0(0x 접두 허용) 양수 검증 / RtuError→문자열 |
 | `rtu_frame_test.cpp` (GTest, 9케이스) | test/rtu_frame_test.cpp:19,32,40,49,57,66,73,80,91 | — | — | BuildMatchesManualVectors/QuantityRangeGuardsReturnEmpty/ExpectedResponseLength/ParseReadHappyPath/ParseReadTwoWordsBigEndian/ParseDetectsCrcMismatch/ParseDetectsShortFrame/ParseExceptionFrameExposesCode/ParseRejectsWrongUnitOrHeader — 전 케이스 PASS |
 | `rtu_client_test.cpp` (GTest, 7케이스) | test/rtu_client_test.cpp:21,34,43,53,62,72,80 | — | — | ReadHappyPath/WriteSingleAndMultipleAck/SilentSlaveTimesOutAfterRetries/CorruptCrcRetriesThenFails/ExceptionIsNotRetriedAndExposesCode/OutOfRangeRejectedWithoutTransmission/TruncatedResponseIsFrameShortAfterRetries — 전 케이스 PASS |
+| `modbus-rtu-ros-free.sh` | checks/modbus-rtu-ros-free.sh:5(PKG_DIR)·6-7(HITS 스캔)·8-9(❌ 분기)·11-12(✅ 분기) | — | rc 0/1 | 형제 `modbus_tcp/checks/modbus-tcp-ros-free.sh` 와 동일 구조(경로·패키지명만 교체) — include/src/test 에서 rclcpp·tc_msgs·pio_hal include 검색, 발견 시 ❌+rc=1, 0건이면 ✅+rc=0. 실행 결과 ✅ rclcpp·tc_msgs·pio_hal include 0(2026-08-29 실측) |
