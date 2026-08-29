@@ -12,7 +12,7 @@ MARKER = {'x': -1195.283, 'y': -103.21854, 'z': 738.9024,
 ENTRY = {'description': '팔래트 입구 마커 frame 오프셋', 'type': 'marker_frame_offset',
          'values': [65.4, 220.74, -310.54]}
 INLET_TAUGHT = (-886.82, -14.21, 523.57)
-YAML_OFFSET = [62.55, 220.88, -310.18]
+YAML_OFFSET = [68.73, 243.08, -310.39]
 
 
 @pytest.fixture
