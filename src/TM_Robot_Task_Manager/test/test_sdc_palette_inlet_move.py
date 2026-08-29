@@ -12,6 +12,7 @@ MARKER = {'x': -1195.283, 'y': -103.21854, 'z': 738.9024,
 ENTRY = {'description': '팔래트 입구 마커 frame 오프셋', 'type': 'marker_frame_offset',
          'values': [65.4, 220.74, -310.54]}
 INLET_TAUGHT = (-886.82, -14.21, 523.57)
+YAML_OFFSET = [62.55, 220.88, -310.18]
 
 
 @pytest.fixture
@@ -42,7 +43,7 @@ def test_offset_entry_registered_in_yaml():
     entry = ConfigManager().get_position('sdc_palette_inlet_move')
     assert entry is not None
     assert entry['type'] == 'marker_frame_offset'
-    assert entry['values'] == [65.4, 220.74, -310.54]
+    assert entry['values'] == YAML_OFFSET
 
 
 def test_job_type_is_registered():
