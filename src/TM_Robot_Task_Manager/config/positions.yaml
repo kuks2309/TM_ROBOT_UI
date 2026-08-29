@@ -131,6 +131,13 @@ positions:
     - 0.0
     - 90.0
     - 0.0
+  sdc_palette_tcp_align:
+    description: palette 마커 수직 정렬 offset (rx,ry,rz deg — 목표 = (-마커rx+o_rx, 마커ry+o_ry, -마커rz+o_rz), 위치 유지)
+    type: tcp_orientation_offset
+    values:
+    - 0.0
+    - -22.0
+    - 0.0
   sdc_tcp_base:
     description: SDC 기본 TCP 자세 (rx,ry,rz deg — 위치는 현 위치 유지, 자세만 적용)
     type: tcp_orientation
