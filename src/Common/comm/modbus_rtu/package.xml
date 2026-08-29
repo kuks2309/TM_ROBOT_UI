@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>modbus_rtu</name>
+  <version>0.1.0</version>
+  <description>Modbus RTU (RS485) master kernel — ROS-free plain CMake (ADR-005 D2: RS485 RTU 마스터 공용 계층, 사용자 승인 2026-08-28). CRC16 framing + FC3/FC6/FC16 synchronous master only; device register semantics live in each vendor consumer's HAL impl (hitbot_zefg, schunk_egu).</description>
+  <maintainer email="drko0808@gmail.com">T-Robotics SW</maintainer>
+  <license>Proprietary</license>
+  <buildtool_depend>cmake</buildtool_depend>
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>

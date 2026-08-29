@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-#include "mock_slave.hpp" // sim/
+#include "modbus_rtu/mock_slave.hpp" // sim/include/modbus_rtu/ — modbus_rtu_sim 링크로 경로 제공(I3)
 
 namespace
 {

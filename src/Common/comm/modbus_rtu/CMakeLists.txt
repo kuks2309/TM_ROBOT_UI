@@ -16,9 +16,24 @@ target_include_directories(modbus_rtu_impl PUBLIC
 target_compile_features(modbus_rtu_impl PUBLIC cxx_std_17)
 target_link_libraries(modbus_rtu_impl PRIVATE modbus_rtu_warnings)
 set_target_properties(modbus_rtu_impl PROPERTIES POSITION_INDEPENDENT_CODE ON)
+# find_package(modbus_rtu) 소비자도 modbus_rtu::impl 별칭을 그대로 쓸 수 있도록 EXPORT_NAME 을
+# 별칭 타깃명과 맞춘다(최종 리뷰 Minor — add_subdirectory 경로는 ALIAS 로 이미 동작하지만 설치된
+# modbus_rtuConfig.cmake 를 find_package 로 소비하는 경로에는 ALIAS 가 없다).
+set_target_properties(modbus_rtu_impl PROPERTIES EXPORT_NAME impl)
+
+# sim — 결함 주입 가능한 헤더 온리 MockSlaveLink(SIL). rtu_client_test 뿐 아니라 향후 벤더 hal 테스트도
+# 재사용할 수 있도록 modbus_tcp::sim 형과 동일한 INTERFACE 타깃 + 설치 배선으로 분리한다(최종 리뷰 I3).
+add_library(modbus_rtu_sim INTERFACE)
+add_library(modbus_rtu::sim ALIAS modbus_rtu_sim)
+set_target_properties(modbus_rtu_sim PROPERTIES EXPORT_NAME sim)
+target_include_directories(modbus_rtu_sim INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/sim/include>
+  $<INSTALL_INTERFACE:include>)
+target_link_libraries(modbus_rtu_sim INTERFACE modbus_rtu_impl)
 
 install(DIRECTORY include/ DESTINATION include)
-install(TARGETS modbus_rtu_impl modbus_rtu_warnings EXPORT modbus_rtuTargets)
+install(DIRECTORY sim/include/ DESTINATION include)
+install(TARGETS modbus_rtu_impl modbus_rtu_warnings modbus_rtu_sim EXPORT modbus_rtuTargets)
 install(EXPORT modbus_rtuTargets
   FILE modbus_rtuConfig.cmake
   NAMESPACE modbus_rtu::
@@ -40,7 +55,8 @@ if(BUILD_TESTING)
         PRIVATE modbus_rtu_impl modbus_rtu_warnings GTest::gtest GTest::gtest_main)
       add_test(NAME modbus_rtu_${t} COMMAND modbus_rtu_${t})
     endforeach()
-    target_include_directories(modbus_rtu_rtu_client_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/sim)
+    # sim 은 재사용 가능한 INTERFACE 타깃으로 링크(직접 include 경로 지정 대신) — I3.
+    target_link_libraries(modbus_rtu_rtu_client_test PRIVATE modbus_rtu_sim)
     # openpty(<pty.h>) 는 glibc 에서 libutil 에 있다(util 링크). RtuClientOverPty 는 별도 스레드로
     # pty 마스터를 구동하므로 Threads 도 필요.
     target_link_libraries(modbus_rtu_serial_port_test PRIVATE util Threads::Threads)
