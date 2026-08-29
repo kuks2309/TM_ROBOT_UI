@@ -131,6 +131,13 @@ positions:
     - 0.0
     - 90.0
     - 0.0
+  sdc_tcp_base:
+    description: SDC 기본 TCP 자세 (rx,ry,rz deg — 위치는 현 위치 유지, 자세만 적용)
+    type: tcp_orientation
+    values:
+    - 90.0
+    - -22.0
+    - -90.0
   tcp_pick_palette:
     description: 팔레트 픽 자세 (2026-08-29 실기 티칭, mm/deg)
     type: tcp
