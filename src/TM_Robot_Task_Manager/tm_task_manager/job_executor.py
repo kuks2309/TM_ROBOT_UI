@@ -557,6 +557,8 @@ class JobExecutor:
             return self._exec_move_to_ar_center(job)
         elif job_type == 'align_tm_landmark':
             return self._exec_align_tm_landmark(job)
+        elif job_type == 'sdc_tcp_base':
+            return self._exec_sdc_tcp_base(job)
         elif job_type == 'measure_point':
             return self._exec_measure_point(job)
         elif job_type == 'ai_inspection':
@@ -1605,6 +1607,52 @@ class JobExecutor:
         self._log(f"대기 중 ({wait_time}초)...")
         time.sleep(wait_time)
         self._log("align_tm_landmark 완료")
+        return True
+
+    def _exec_sdc_tcp_base(self, job: Job) -> bool:
+        from .services.config_manager import ConfigManager
+
+        params = job.params
+        velocity = params.get('velocity', 10.0)
+        wait_time = params.get('wait_after_command', 0.5)
+
+        entry = ConfigManager().get_position('sdc_tcp_base')
+        if not entry:
+            self._log("[오류] positions.yaml 에 sdc_tcp_base 자세가 없습니다")
+            return False
+
+        values = list(entry.get('values') or [])
+        if len(values) != 3:
+            self._log(f"[오류] sdc_tcp_base 의 values 는 rx,ry,rz 3개여야 합니다: {values}")
+            return False
+
+        target_rx, target_ry, target_rz = (float(v) for v in values)
+
+        if not self.ros_node:
+            self._log("ROS2 노드가 없습니다")
+            return False
+
+        if not self.ros_node.current_tcp_pose or len(self.ros_node.current_tcp_pose) < 6:
+            self._log("현재 TCP 위치를 알 수 없습니다")
+            return False
+
+        current_x, current_y, current_z = self.ros_node.current_tcp_pose[:3]
+
+        self._log("sdc_tcp_base 위치: 위치 유지, 자세만 변경")
+        self._log(f"  현재 위치: X={current_x:.2f}, Y={current_y:.2f}, Z={current_z:.2f}")
+        self._log(f"  목표 자세: Rx={target_rx:.2f}, Ry={target_ry:.2f}, Rz={target_rz:.2f}")
+
+        success, msg = self._move_to_position_line(
+            'tcp', current_x, current_y, current_z,
+            target_rx, target_ry, target_rz, velocity)
+        if not success:
+            self._log(f"sdc_tcp_base 실패: {msg}")
+            return False
+
+        self._log(msg)
+        if wait_time > 0:
+            time.sleep(wait_time)
+        self._log("sdc_tcp_base 완료")
         return True
 
     def _exec_find_landmark(self, job: Job) -> bool:

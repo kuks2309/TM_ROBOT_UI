@@ -341,6 +341,14 @@ class RecipeManager:
                 'wait_after_command': {'type': 'float', 'default': 0.5, 'step': 0.1, 'description': '명령 후 대기 시간 (초)'}
             }
         },
+        'sdc_tcp_base': {
+            'name': 'sdc_tcp_base 위치',
+            'category': 'Motion',
+            'params': {
+                'velocity': {'type': 'float', 'default': 10.0, 'step': 5.0, 'description': '속도 (%)'},
+                'wait_after_command': {'type': 'float', 'default': 0.5, 'step': 0.1, 'description': '명령 후 대기 시간 (초)'}
+            }
+        },
         'save_landmark_pose': {
             'name': 'Landmark 좌표 저장',
             'category': 'Landmark',

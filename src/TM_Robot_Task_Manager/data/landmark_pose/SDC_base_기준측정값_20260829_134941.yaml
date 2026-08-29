@@ -1,0 +1,22 @@
+operator: drko
+recipe: null
+task_caption: SDC_base 기준 측정값 등록 (수동)
+saved_at: '2026-08-29 13:49:41'
+landmark:
+  x: -1138.781
+  y: -115.556
+  z: 507.55
+  rx: -87.513
+  ry: -0.691
+  rz: 90.802
+measurement_context:
+  source: g_TM_Landmark (ask_item/TMSVR, 2026-08-29 13:39 KST)
+  tcp_pose:
+    x: -845.103
+    y: -73.961
+    z: 412.213
+    rx: 88.105
+    ry: -20.008
+    rz: -90.587
+  camera_tilt_deg: -22.0
+  note: 카메라가 약 -22도 기울어진 상태에서 측정. 이 프로젝트(MK4)의 기본 자세는 약 (90, -22, -90).
