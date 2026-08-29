@@ -8,7 +8,7 @@ target_compile_options(modbus_rtu_warnings INTERFACE
   -Werror=return-type -Werror=switch
   -Werror=maybe-uninitialized -Werror=implicit-fallthrough)
 
-add_library(modbus_rtu_impl STATIC src/rtu_frame.cpp)
+add_library(modbus_rtu_impl STATIC src/rtu_frame.cpp src/rtu_client.cpp)
 add_library(modbus_rtu::impl ALIAS modbus_rtu_impl)
 target_include_directories(modbus_rtu_impl PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -28,12 +28,13 @@ include(CTest)
 if(BUILD_TESTING)
   find_package(GTest QUIET)
   if(GTest_FOUND)
-    foreach(t rtu_frame_test)
+    foreach(t rtu_frame_test rtu_client_test)
       add_executable(modbus_rtu_${t} test/${t}.cpp)
       target_link_libraries(modbus_rtu_${t}
         PRIVATE modbus_rtu_impl modbus_rtu_warnings GTest::gtest GTest::gtest_main)
       add_test(NAME modbus_rtu_${t} COMMAND modbus_rtu_${t})
     endforeach()
+    target_include_directories(modbus_rtu_rtu_client_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/sim)
   else()
     message(WARNING "modbus_rtu: GTest 미발견 — 단위테스트 제외")
   endif()
