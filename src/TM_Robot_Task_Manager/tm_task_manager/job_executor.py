@@ -559,6 +559,8 @@ class JobExecutor:
             return self._exec_align_tm_landmark(job)
         elif job_type == 'sdc_tcp_base':
             return self._exec_sdc_tcp_base(job)
+        elif job_type == 'sdc_palette_tcp_align':
+            return self._exec_sdc_palette_tcp_align(job)
         elif job_type == 'measure_point':
             return self._exec_measure_point(job)
         elif job_type == 'ai_inspection':
@@ -1653,6 +1655,63 @@ class JobExecutor:
         if wait_time > 0:
             time.sleep(wait_time)
         self._log("sdc_tcp_base 완료")
+        return True
+
+    def _exec_sdc_palette_tcp_align(self, job: Job) -> bool:
+        from .services.config_manager import ConfigManager
+
+        params = job.params
+        velocity = params.get('velocity', 10.0)
+        wait_time = params.get('wait_after_command', 0.5)
+
+        if self.detected_landmark_pose is None:
+            self._log("Landmark 위치가 없습니다. scan_tm_landmark를 먼저 실행하세요.")
+            return False
+
+        entry = ConfigManager().get_position('sdc_palette_tcp_align')
+        if not entry:
+            self._log("[오류] positions.yaml 에 sdc_palette_tcp_align 항목이 없습니다")
+            return False
+
+        offsets = list(entry.get('values') or [])
+        if len(offsets) != 3:
+            self._log(f"[오류] sdc_palette_tcp_align 의 values 는 rx,ry,rz offset 3개여야 합니다: {offsets}")
+            return False
+
+        marker_rx = float(self.detected_landmark_pose.get('rx', 0))
+        marker_ry = float(self.detected_landmark_pose.get('ry', 0))
+        marker_rz = float(self.detected_landmark_pose.get('rz', 0))
+
+        # 마커와 수직 = rx·rz 부호 반전, ry offset 은 카메라 회전 보상
+        target_rx = -marker_rx + float(offsets[0])
+        target_ry = marker_ry + float(offsets[1])
+        target_rz = -marker_rz + float(offsets[2])
+
+        if not self.ros_node:
+            self._log("ROS2 노드가 없습니다")
+            return False
+
+        if not self.ros_node.current_tcp_pose or len(self.ros_node.current_tcp_pose) < 6:
+            self._log("현재 TCP 위치를 알 수 없습니다")
+            return False
+
+        current_x, current_y, current_z = self.ros_node.current_tcp_pose[:3]
+
+        self._log("sdc_palette_tcp_align: 위치 유지, 자세를 마커 수직으로")
+        self._log(f"  마커 자세: Rx={marker_rx:.2f}, Ry={marker_ry:.2f}, Rz={marker_rz:.2f}")
+        self._log(f"  목표 자세: Rx={target_rx:.2f}, Ry={target_ry:.2f}, Rz={target_rz:.2f}")
+
+        success, msg = self._move_to_position_line(
+            'tcp', current_x, current_y, current_z,
+            target_rx, target_ry, target_rz, velocity)
+        if not success:
+            self._log(f"sdc_palette_tcp_align 실패: {msg}")
+            return False
+
+        self._log(msg)
+        if wait_time > 0:
+            time.sleep(wait_time)
+        self._log("sdc_palette_tcp_align 완료")
         return True
 
     def _exec_find_landmark(self, job: Job) -> bool:
