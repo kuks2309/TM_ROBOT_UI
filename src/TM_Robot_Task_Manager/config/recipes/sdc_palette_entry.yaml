@@ -7,8 +7,9 @@
 #   positions.sdc_palette_inlet_move 를 각 Job 이 실행 시마다 재독한다 — 재티칭은 YAML 만
 #   수정하면 되고 이 레시피는 손대지 않는다.
 #
-# [!! 진입량 !!] 마지막 move_linear 의 offset Z(50mm)는 보수적 초기값이다 — 지그 깊이에
-#   맞게 조정할 것. 입구는 마커 평면에서 310mm 앞이므로 50mm 진입은 접촉 전 여유 구간.
+# [!! 진입량 !!] 마지막 sdc_marker_move 의 dz(+50mm, 마커 법선 방향)는 보수적 초기값이다 —
+#   지그 깊이에 맞게 조정할 것. 입구는 마커 평면에서 310mm 앞이므로 50mm 진입은 접촉 전
+#   여유 구간. dx·dy 는 마커 표면 평행 이동(debt-025: move_linear 는 좌표계 미검증으로 대체됨).
 #
 # [!! 안전 !!] 첫 실행은 Step 으로, 마커가 카메라 시야에 있는 상태에서 시작할 것.
 
@@ -32,8 +33,8 @@ jobs:
   name: TM Landmark 스캔
   params:
     wait_after_command: 100
-    repeat_count: 1
-    outlier_method: none
+    repeat_count: 5
+    outlier_method: 3sigma
 - id: 3
   type: sdc_palette_tcp_align
   name: 법선 자세 정렬
@@ -47,10 +48,11 @@ jobs:
     velocity: 10.0
     wait_after_command: 0.5
 - id: 5
-  type: move_linear
-  name: 공구 Z+ 진입
+  type: sdc_marker_move
+  name: 마커 법선 방향 진입
   params:
-    offset X: 0.0
-    offset Y: 0.0
-    offset Z: 50.0
-    velocity: 20.0
+    dx: 0.0
+    dy: 0.0
+    dz: 50.0
+    velocity: 10.0
+    wait_after_command: 0.5

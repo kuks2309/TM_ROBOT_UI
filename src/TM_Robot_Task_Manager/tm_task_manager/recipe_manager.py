@@ -365,6 +365,17 @@ class RecipeManager:
                 'wait_after_command': {'type': 'float', 'default': 0.5, 'step': 0.1, 'description': '명령 후 대기 시간 (초)'}
             }
         },
+        'sdc_marker_move': {
+            'name': 'sdc_marker_move',
+            'category': 'Landmark',
+            'params': {
+                'dx': {'type': 'float', 'default': 0.0, 'step': 1.0, 'description': '마커 frame X 이동 (mm, 표면 평행)'},
+                'dy': {'type': 'float', 'default': 0.0, 'step': 1.0, 'description': '마커 frame Y 이동 (mm, 표면 평행)'},
+                'dz': {'type': 'float', 'default': 0.0, 'step': 1.0, 'description': '마커 frame Z 이동 (mm, 양수=마커/법선 방향 진입)'},
+                'velocity': {'type': 'float', 'default': 10.0, 'step': 5.0, 'description': '속도 (%)'},
+                'wait_after_command': {'type': 'float', 'default': 0.5, 'step': 0.1, 'description': '명령 후 대기 시간 (초)'}
+            }
+        },
         'save_landmark_pose': {
             'name': 'Landmark 좌표 저장',
             'category': 'Landmark',
