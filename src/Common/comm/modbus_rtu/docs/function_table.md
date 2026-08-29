@@ -1,6 +1,6 @@
 # modbus_rtu 함수표 (모듈 로컬 원본)
 
-갱신: 2026-08-29 (Task 3 구현 완료 — 줄 앵커 grep -n 실측 정정)
+갱신: 2026-08-29 (Task 4 구현 완료 — SerialPortLink/pty SIL/H0 스모크 도구, 줄 앵커 grep -n 실측 정정)
 
 전역 변수: **없음** (상수만 — kMaxReadQuantity·kMaxWriteQuantity·kMinFrameLength·kWriteAckLength·kExceptionFrameLength)
 
@@ -34,6 +34,16 @@
 | `sim::MockSlaveLink::flushInput/isOpen` | sim/mock_slave.hpp:79,84 | — | void/bool | pending_ 비움 / 항상 true |
 | `sim::MockSlaveLink::buildNormalResponse` | sim/mock_slave.hpp:91 | fc·req | vector<uint8_t> | fc03 조회(부재 주소 0)/fc06 갱신+echo/fc10 갱신+ack, CRC 조립은 modbus_rtu::appendCrc(crc16) 재사용 |
 | `sim::MockSlaveLink::applyFault` | sim/mock_slave.hpp:139 | response&·fc | void | kSilent→비움·kCorruptCrc→말미바이트 ^0x01·kException→{unit,fc\|0x80,code}+CRC·kTruncate→절반 절단 |
-| `SerialPortLink` | serial_port.hpp:1 | device·baud | ISerialLink | POSIX termios 8N1 + select 데드라인 (Task 4, 미구현) |
+| `SerialPortLink` (class) | serial_port.hpp:21 | — | ISerialLink | final, 복사·이동 금지, 생성자 private(fd 주입) — open() 팩토리만 공개 |
+| `SerialPortLink::open` | serial_port.hpp:33 (선언) / serial_port.cpp:49 (구현) | device·baud | Result<unique_ptr<SerialPortLink>> | 지원 baud 9600/19200/38400/57600/115200(그 외 kOutOfRange, open 시도 없이) — cfmakeraw+8N1+VMIN0/VTIME0, 장치 열기·termios 설정 실패 kNotOpen |
+| `SerialPortLink::writeBytes` | serial_port.hpp:35 (선언) / serial_port.cpp:86 (구현) | data | Result<void> | 전량 기록 루프(부분 write 재개, EINTR 재시도), write 실패 kNotOpen |
+| `SerialPortLink::readBytes` | serial_port.hpp:38 (선언) / serial_port.cpp:106 (구현) | max_len·deadline | Result<vector<uint8_t>> | select() 로 데드라인까지 대기 후 read(1바이트 이상 반환) — select rc==0/read 실패 kTimeout |
+| `SerialPortLink::flushInput` | serial_port.hpp:39 (선언) / serial_port.cpp:154 (구현) | — | void | tcflush(fd, TCIFLUSH) |
+| `SerialPortLink::isOpen` | serial_port.hpp:40 (선언) / serial_port.cpp:160 (구현) | — | bool | fd_ >= 0 |
+| `SerialPortLink` (ctor/dtor) | serial_port.hpp:24,43 (선언) / serial_port.cpp:39,43 (구현) | fd | — | 소멸자 close(fd_) |
+| `baudToSpeed` (익명 namespace) | serial_port.cpp:18 | baud | speed_t | 9600/19200/38400/57600/115200 → B9600..B115200, 그 외 0 |
+| `serial_port_test.cpp` (GTest, 5케이스) | test/serial_port_test.cpp:47,54,66,108,129 | — | — | OpenFailsForMissingDevice/OpenRejectsUnsupportedBaud/RoundtripThroughPty/ReadTimesOutOnSilence/RtuClientOverPty — openpty(`<pty.h>`) 기반 SIL, 전 케이스 PASS. **SIL 한계**: pty 는 baud 를 무시하므로 이 스위트는 프레이밍·데드라인만 검증(실 UART 물리신호·보레이트 정합은 Step 5 실기 스모크 소관) |
+| `rtu_h0_smoke` (tool, main) | tools/rtu_h0_smoke.cpp:65 | device·[baud=115200]·[unit=1]·addr·qty | rc 0/1/2 | 실기 H0 읽기 전용 스모크 — readHoldingRegisters 1회만 호출(쓰기 API 호출 금지, H0 규율), 인자 파싱 실패 usage+rc=2 |
+| `rtu_h0_smoke::parsePositive/errorName` (익명 namespace) | tools/rtu_h0_smoke.cpp:28,39 | s·out 또는 RtuError | bool 또는 const char* | strtol base0(0x 접두 허용) 양수 검증 / RtuError→문자열 |
 | `rtu_frame_test.cpp` (GTest, 9케이스) | test/rtu_frame_test.cpp:19,32,40,49,57,66,73,80,91 | — | — | BuildMatchesManualVectors/QuantityRangeGuardsReturnEmpty/ExpectedResponseLength/ParseReadHappyPath/ParseReadTwoWordsBigEndian/ParseDetectsCrcMismatch/ParseDetectsShortFrame/ParseExceptionFrameExposesCode/ParseRejectsWrongUnitOrHeader — 전 케이스 PASS |
 | `rtu_client_test.cpp` (GTest, 7케이스) | test/rtu_client_test.cpp:21,34,43,53,62,72,80 | — | — | ReadHappyPath/WriteSingleAndMultipleAck/SilentSlaveTimesOutAfterRetries/CorruptCrcRetriesThenFails/ExceptionIsNotRetriedAndExposesCode/OutOfRangeRejectedWithoutTransmission/TruncatedResponseIsFrameShortAfterRetries — 전 케이스 PASS |
