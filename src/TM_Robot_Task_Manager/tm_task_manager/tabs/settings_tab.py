@@ -1,4 +1,5 @@
-from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtWidgets import (QComboBox, QGroupBox, QMessageBox, QPushButton,
+                             QVBoxLayout)
 
 from .base_tab import BaseTab
 from tm_task_manager.tools.landmark_parser import parse_tm_landmark
@@ -83,12 +84,58 @@ class SettingsTab(BaseTab):
             self.mw.lineEdit_robotIp.setText(robot_ip)
 
         self._init_tcp_pose_radiobuttons()
+        self._init_named_position_ui()
 
         self.mw.checkBox_enableTF.setChecked(False)
         self.mw.label_tfStatus.setText("상태: 비활성")
 
         self._update_reference_display()
 
+    def _init_named_position_ui(self):
+        group = QGroupBox("등록 자세 이동 (positions.yaml)")
+        layout = QVBoxLayout()
+        self.combo_named_positions = QComboBox()
+        btn_refresh = QPushButton("목록 새로고침")
+        btn_move = QPushButton("선택 자세로 이동")
+        layout.addWidget(self.combo_named_positions)
+        layout.addWidget(btn_refresh)
+        layout.addWidget(btn_move)
+        layout.addStretch(1)
+        group.setLayout(layout)
+        self.mw.horizontalLayout_settings.addWidget(group)
+
+        btn_refresh.clicked.connect(self._refresh_named_positions)
+        btn_move.clicked.connect(self._on_move_to_named_position)
+        self._refresh_named_positions()
+
+    def _refresh_named_positions(self):
+        self.combo_named_positions.clear()
+        self.combo_named_positions.addItems(self.config_manager.get_position_names())
+
+    def _on_move_to_named_position(self):
+        name = self.combo_named_positions.currentText().strip()
+        if not name:
+            self._log("이동할 등록 자세가 없습니다")
+            return
+
+        entry = self.config_manager.get_position(name)
+        values = list((entry or {}).get('values') or [])
+        if len(values) < 6:
+            self._log(f"[오류] 자세 [{name}] 정의가 올바르지 않습니다 (values 6개 필요)")
+            return
+
+        # type: joint → 관절각(deg) PTP_J, tcp → TCP 6값(mm/deg) PTP_T
+        motion_type = 'joint' if str((entry or {}).get('type', 'joint')) == 'joint' else 'tcp'
+        reply = QMessageBox.question(
+            self.mw, "등록 자세 이동",
+            f"[{name}] ({motion_type}) 자세로 이동할까요?\n{values[:6]}",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply != QMessageBox.Yes:
+            return
+
+        success, msg = self.mw.teaching_service.move_to_position(
+            motion_type, values[:6], 10.0, self.mw._move_to_position)
+        self._log(f"등록 자세 이동 [{name}]: {msg}")
 
     def _on_connect(self):
         if not self.mw.connection_manager:

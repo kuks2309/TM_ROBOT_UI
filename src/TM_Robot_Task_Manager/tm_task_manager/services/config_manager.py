@@ -1,6 +1,6 @@
 import os
 import yaml
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from .. import paths
 
@@ -54,6 +54,14 @@ class ConfigManager:
             config['robot'] = {}
         config['robot']['ip'] = ip
         self._save_config(config)
+
+    def get_position(self, name: str) -> Optional[dict]:
+        config = self._load_config()
+        return (config.get('positions') or {}).get(name)
+
+    def get_position_names(self) -> List[str]:
+        config = self._load_config()
+        return sorted((config.get('positions') or {}).keys())
 
     def get_home_position(self) -> Optional[dict]:
         config = self._load_config()

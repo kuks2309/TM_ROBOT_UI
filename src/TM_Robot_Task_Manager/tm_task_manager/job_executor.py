@@ -515,6 +515,8 @@ class JobExecutor:
             return self._exec_save_pose(job)
         elif job_type == 'move_to_saved_pose':
             return self._exec_move_to_saved_pose(job)
+        elif job_type == 'move_to_named_position':
+            return self._exec_move_to_named_position(job)
         elif job_type == 'measure_plane_distance':
             return self._exec_measure_plane_distance(job)
         elif job_type == 'generate_runtime':
@@ -2539,6 +2541,35 @@ class JobExecutor:
             params.get('decel_zone_mm', POSE_KEEP_DECEL_ZONE_MM),
             params.get('decel_velocity', POSE_KEEP_DECEL_VELOCITY),
         )
+
+    def _exec_move_to_named_position(self, job: Job) -> bool:
+        from .services.config_manager import ConfigManager
+
+        params = job.params
+        name = str(params.get('name', '') or '').strip()
+        if not name:
+            self._log("[오류] 자세 이름(name)이 비어 있습니다")
+            return False
+
+        entry = ConfigManager().get_position(name)
+        if not entry:
+            self._log(f"[오류] positions.yaml 에 등록된 자세가 없습니다 [{name}]")
+            return False
+
+        values = list(entry.get('values') or [])
+        if len(values) < 6:
+            self._log(f"[오류] 자세 [{name}] 의 values 는 6개여야 합니다: {values}")
+            return False
+
+        # type: joint → 관절각(deg) PTP_J, tcp → TCP 6값(mm/deg) PTP_T
+        motion_type = 'joint' if str(entry.get('type', 'joint')) == 'joint' else 'tcp'
+        velocity = float(params.get('velocity', 10.0))
+
+        success, msg = self._move_to_position(
+            motion_type, values[0], values[1], values[2],
+            values[3], values[4], values[5], velocity)
+        self._log(f"등록 자세 이동 [{name}] ({motion_type}): {msg}")
+        return success
 
     def _exec_move_to_plane_pose(self, job: Job) -> bool:
         params = job.params

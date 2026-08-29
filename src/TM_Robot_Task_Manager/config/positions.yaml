@@ -131,6 +131,16 @@ positions:
     - 0.0
     - 90.0
     - 0.0
+  tcp_pick_palette:
+    description: 팔레트 픽 자세 (2026-08-29 실기 티칭, mm/deg)
+    type: tcp
+    values:
+    - -840.92
+    - -0.16
+    - 512.3
+    - 90.0
+    - -22.0
+    - -90.0
 reference_check:
   landmark:
     rx: 179.90308
