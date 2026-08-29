@@ -529,6 +529,10 @@ class JobExecutor:
             return self._exec_gripper_close(job)
         elif job_type == 'gripper_home':
             return self._exec_gripper_home(job)
+        elif job_type == 'sdc_gripper_open':
+            return self._exec_sdc_gripper(job, opening=True)
+        elif job_type == 'sdc_gripper_close':
+            return self._exec_sdc_gripper(job, opening=False)
         elif job_type == 'schunk_grip':
             return self._exec_schunk_gripper(job, 1)
         elif job_type == 'schunk_release':
@@ -1162,6 +1166,22 @@ class JobExecutor:
 
         time.sleep(delay)
         return True
+
+    def _exec_sdc_gripper(self, job: Job, opening: bool) -> bool:
+        # SDC 호기 Z-EFG-C35 직결 RTU — 기본값·판정 근거는 hardware/zefg_serial.py 헤더 인용 참조
+        from tm_task_manager.hardware import zefg_serial
+
+        params = job.params
+        position = float(params.get('position', 0.0 if opening else 16.56))
+        speed = float(params.get('speed', zefg_serial.SPEED_DEFAULT_MMS))
+        current = float(params.get('current', zefg_serial.CURRENT_DEFAULT_A))
+        timeout = float(params.get('timeout', 5.0))
+        label = 'SDC 그리퍼 열기' if opening else 'SDC 그리퍼 닫기'
+
+        self._log(f"{label}: position={position}mm speed={speed}mm/s current={current}A timeout={timeout}s")
+        ok, detail = zefg_serial.move_to(position, speed, current, timeout)
+        self._log(f"{label} {'성공' if ok else '실패'}: {detail}")
+        return ok
 
     def _exec_smc_grip(self, job: Job) -> bool:
         return self._exec_smc_gripper(job, 'grip')

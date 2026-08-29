@@ -789,6 +789,26 @@ class RecipeManager:
                 'delay': {'type': 'float', 'default': 0.5, 'description': '동작 후 대기 시간 (초)'}
             }
         },
+        'sdc_gripper_open': {
+            'name': 'SDC 그리퍼 열기',
+            'category': 'Gripper',
+            'params': {
+                'position': {'type': 'float', 'default': 0.0, 'description': '열림 목표 위치 (mm, 0~35 — 0=완전 열림, 실측 영점)'},
+                'speed': {'type': 'float', 'default': 20.0, 'description': '이동 속도 (mm/s, 1~100)'},
+                'current': {'type': 'float', 'default': 0.3, 'description': '파지 전류 (A, 0.1~0.5)'},
+                'timeout': {'type': 'float', 'default': 5.0, 'description': '완료 대기 최대 시간 (초)'}
+            }
+        },
+        'sdc_gripper_close': {
+            'name': 'SDC 그리퍼 닫기',
+            'category': 'Gripper',
+            'params': {
+                'position': {'type': 'float', 'default': 16.56, 'description': '닫힘 목표 위치 (mm, 0~35) — 기본 16.56=실측 물체 파지 위치(2026-08-29 10회 평균, σ0.035mm). 전류 제한이라 물체에서 Clamping 정지'},
+                'speed': {'type': 'float', 'default': 20.0, 'description': '이동 속도 (mm/s, 1~100)'},
+                'current': {'type': 'float', 'default': 0.3, 'description': '파지 전류 (A, 0.1~0.5)'},
+                'timeout': {'type': 'float', 'default': 5.0, 'description': '완료 대기 최대 시간 (초)'}
+            }
+        },
         'smc_grip': {
             'name': 'SMC 그리퍼 파지',
             'category': 'Gripper',
