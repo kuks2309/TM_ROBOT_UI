@@ -80,20 +80,14 @@ class TeachingService(QObject):
             elif axis == 'rz':
                 target_pos[5] += step
         else:
-            tool_delta = [0.0, 0.0, 0.0]
+            # 병진 조그는 베이스 좌표계 기준 — 공구 자세와 무관하게 현재 베이스 축과 평행 이동
+            # (x+→+X, y+→+Y, z+→+Z. PTP_T 목표는 로봇의 현재 활성 베이스에서 해석된다)
             if axis == 'x':
-                tool_delta[0] = step
+                target_pos[0] += step
             elif axis == 'y':
-                tool_delta[1] = step
+                target_pos[1] += step
             elif axis == 'z':
-                tool_delta[2] = -step
-
-            current_orientation = [current_tcp_pose[3], current_tcp_pose[4], current_tcp_pose[5]]
-            base_delta = CoordinateTransformer.transform_tool_to_base(tool_delta, current_orientation)
-
-            target_pos[0] += base_delta[0]
-            target_pos[1] += base_delta[1]
-            target_pos[2] += base_delta[2]
+                target_pos[2] += step
 
         target_pos_service = CoordinateTransformer.convert_tcp_to_service_format(target_pos)
 
@@ -144,20 +138,14 @@ class TeachingService(QObject):
             elif axis == 'rz':
                 target_pos[5] += step
         else:
-            tool_delta = [0.0, 0.0, 0.0]
+            # 병진 조그는 베이스 좌표계 기준 — 공구 자세와 무관하게 현재 베이스 축과 평행 이동
+            # (x+→+X, y+→+Y, z+→+Z. PTP_T 목표는 로봇의 현재 활성 베이스에서 해석된다)
             if axis == 'x':
-                tool_delta[0] = step
+                target_pos[0] += step
             elif axis == 'y':
-                tool_delta[1] = step
+                target_pos[1] += step
             elif axis == 'z':
-                tool_delta[2] = -step
-
-            current_orientation = [current_tcp_pose[3], current_tcp_pose[4], current_tcp_pose[5]]
-            base_delta = CoordinateTransformer.transform_tool_to_base(tool_delta, current_orientation)
-
-            target_pos[0] += base_delta[0]
-            target_pos[1] += base_delta[1]
-            target_pos[2] += base_delta[2]
+                target_pos[2] += step
 
         target_pos_service = CoordinateTransformer.convert_tcp_to_service_format(target_pos)
 

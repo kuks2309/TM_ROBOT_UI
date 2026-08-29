@@ -605,6 +605,14 @@ class RecipeManager:
                 'key': {'type': 'str', 'default': 'start', 'description': '저장 이름표 (move_to_saved_pose 에서 같은 이름으로 복귀)'}
             }
         },
+        'move_to_named_position': {
+            'name': '등록 자세로 이동',
+            'category': 'Motion',
+            'params': {
+                'name': {'type': 'str', 'default': 'home', 'description': 'positions.yaml positions: 절의 자세 이름 (type: joint→PTP_J, tcp→PTP_T)'},
+                'velocity': {'type': 'float', 'default': 10.0, 'description': '속도 (%)'}
+            }
+        },
         'move_to_saved_pose': {
             'name': '저장 자세 복귀',
             'category': 'Motion',
