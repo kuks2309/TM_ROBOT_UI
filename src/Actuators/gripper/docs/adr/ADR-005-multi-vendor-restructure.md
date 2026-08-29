@@ -72,6 +72,8 @@ src/Actuators/gripper/
   - RS485 물리 경로(USB-RS485 컨버터·포트 장치명) 미정 ⚠ — Open Question.
   - Z-EFG-C35 근거 문서가 브로슈어(Product Manual 요약본) 1종뿐 — 상세 User Manual 확보 전 레지스터 맵 외 동작 단정 금지(추정 금지 원칙).
   - 설치(install) export 미결합 — gripper_common·벤더 hal 은 add_subdirectory 소비 전용(빌드 인터페이스만). 설치 기반 배포 지원 여부는 단계③ 착수 전 결정(최종 리뷰 I5, 2026-08-29).
+  - 단계③ 구현 각주(2026-08-29): D2 의 parity 포함 시리얼 설정 소유는 현재 8N1 고정(HITBOT 실측 기준) — schunk_egu 착수 전 SerialConfig{parity·stop_bits} 확장 필요(최종 리뷰 I4).
+  - D2 의 `IRtuClient` 인터페이스는 구체 `RtuClient` + `ISerialLink` 심으로 대체 구현 — 바이트 레벨 결함 주입이 가능한 더 낮은 심이 우월(최종 리뷰 판단).
 
 ## Rollback
 
