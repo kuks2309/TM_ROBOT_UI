@@ -7,6 +7,7 @@
   - `recipe_manager.py` — JOB_TYPES `sdc_palette_tcp_align`(Landmark, velocity·wait) 등록(52종).
 - **테스트**: `test/test_sdc_palette_tcp_align.py` 신설 9건 전부 PASS(YAML 실등록·부호반전 식·기준 실측값 사용). 전체 회귀 892 passed / 42 skipped / 1 failed(선재 결함 scan_ar_tag — 무관).
 - **미실행**: 커밋·orin 배포·실기 구동 미수행. 실기에서 잔차 ~2°가 지그 공차를 넘으면 o_ry를 -20으로 튜닝(YAML).
+- **개정(2026-08-29 15:00)**: 실기 실측 법선 오차 2.52°(공차 ~0.4° 초과) → 목표 계산을 오일러 근사에서 **회전행렬 스냅**(근사식 Z축을 마커 법선에 정확 일치)으로 교체. 법선각 0.0000°(수치)·테스트 0.01° 고정, 10건 PASS·회귀 893 passed. 상세: issues_and_fixes 2026-08-29 [Fix], ADR §개정.
 - **연계**: 함수표 `docs/function_table.md` — job_executor 56b 행·JOB_TYPES 행(52종)·test_sdc_palette_tcp_align 절.
 
 Session: 8748628e-e7f8-4230-9548-cf3f978111a3

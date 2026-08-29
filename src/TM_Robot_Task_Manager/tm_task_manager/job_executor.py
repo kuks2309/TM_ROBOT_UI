@@ -1682,10 +1682,30 @@ class JobExecutor:
         marker_ry = float(self.detected_landmark_pose.get('ry', 0))
         marker_rz = float(self.detected_landmark_pose.get('rz', 0))
 
-        # 마커와 수직 = rx·rz 부호 반전, ry offset 은 카메라 회전 보상
-        target_rx = -marker_rx + float(offsets[0])
-        target_ry = marker_ry + float(offsets[1])
-        target_rz = -marker_rz + float(offsets[2])
+        # 마커와 수직: 근사식(-rx,+ry,-rz + offset) 자세의 Z축을 마커 법선에
+        # 정확히 일치시키는 최소 회전을 합성(스냅) — 법선 주위 회전(카메라
+        # 보상 ry offset 포함)은 유지된다. 오일러 성분 근사만으로는 마커가
+        # 축에서 벗어난 만큼(예: rx -87.9) 법선 오차로 새어 지그 진입 공차
+        # (~0.4°)를 초과한다.
+        R_marker = Rotation.from_euler(
+            'ZYX', [marker_rz, marker_ry, marker_rx], degrees=True).as_matrix()
+        R_approx = Rotation.from_euler(
+            'ZYX', [-marker_rz + float(offsets[2]),
+                    marker_ry + float(offsets[1]),
+                    -marker_rx + float(offsets[0])], degrees=True).as_matrix()
+        z_marker = R_marker[:, 2]
+        z_approx = R_approx[:, 2]
+        axis = np.cross(z_approx, z_marker)
+        sin_a = float(np.linalg.norm(axis))
+        cos_a = float(np.dot(z_approx, z_marker))
+        if sin_a > 1e-12:
+            snap = Rotation.from_rotvec(
+                axis / sin_a * math.atan2(sin_a, cos_a)).as_matrix()
+        else:
+            snap = np.eye(3)
+        rz_t, ry_t, rx_t = Rotation.from_matrix(
+            snap @ R_approx).as_euler('ZYX', degrees=True)
+        target_rx, target_ry, target_rz = float(rx_t), float(ry_t), float(rz_t)
 
         if not self.ros_node:
             self._log("ROS2 노드가 없습니다")

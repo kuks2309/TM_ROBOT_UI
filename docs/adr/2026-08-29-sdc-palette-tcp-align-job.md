@@ -37,3 +37,12 @@ Job `sdc_palette_tcp_align`("sdc_palette_tcp_align", category Landmark)을 신�
 ## Rollback
 
 N/A (가역) — JOB_TYPES 항목·dispatch 분기·실행 함수·테스트·positions.yaml 항목 제거로 원복. 영속 상태·스키마 변경 없음.
+
+## 개정 (2026-08-29 15:00 — 법선 스냅)
+
+실기 실측에서 §Decision 1 오일러 근사식의 목표가 마커 법선과 2.52° 어긋남이 확인됨(지그 진입 공차 ~0.4° 초과, 사용자 보고). 명령 수행은 목표 대비 0.10°로 정확 — 목표 정의의 결함. §Decision 1 을 다음으로 대체한다:
+
+1. **목표 자세는 회전행렬로 구성**: 근사식 자세 R_approx 의 Z축을 마커 법선(R_marker 의 Z축)에 정확히 일치시키는 최소 회전을 합성(스냅)한 `R_target = R_snap @ R_approx` 를 euler 역변환해 명령한다. 법선 주위 회전(카메라 ry offset 보상)은 유지된다. 목표 법선각 2.44° → 0.0000°(수치 검증), 테스트로 0.01° 이내 고정.
+2. offset 의미·출처(positions.yaml)·마커 출처·정본 이동 경로·실패 처리는 유지.
+
+기록: `docs/issues_and_fixes/issues_and_fixes.md` 2026-08-29 [Fix] entry.

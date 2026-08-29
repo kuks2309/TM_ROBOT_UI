@@ -4,6 +4,14 @@
 
 ## 2026-08-29
 
+### [Fix] sdc_palette_tcp_align 법선 오차 2.52° — 오일러 근사식을 회전행렬 스냅으로 교체
+
+- **문제**: `sdc_palette_tcp_align` 실기 실행 후 공구 Z축 ↔ 마커 법선 사이각 2.52° — 지그 진입 공차(~0.4°, 사용자 명시) 초과로 진입 불가. 명령 수행 자체는 목표 대비 0.10°로 정확(실기 실측) — 목표 "정의"의 결함.
+- **원인**: 목표 자세를 오일러 성분 조작 `(-rx_m+o_rx, ry_m+o_ry, -rz_m+o_rz)` 으로 만드는 근사식(`job_executor.py` `_exec_sdc_palette_tcp_align`, 변경 전) — 부호반전은 마커가 축 정렬일 때만 정확하고, 마커 rx=-87.9(−90 에서 2.1° 이탈)의 이탈분이 법선 오차 2.44°로 새어 나옴(수치 재현 일치).
+- **해결**: 근사식 자세의 Z축을 마커 법선에 정확히 일치시키는 최소 회전을 합성(스냅)해 회전행렬로 목표를 구성, 법선 주위 회전(카메라 -22° 보상)은 유지 — scipy Rotation('ZYX', 기존 `_create_transform_matrix` 와 동일 규약) 사용, 약 20줄 교체. 목표 법선각 2.44° → 0.0000°(수치 검증).
+- **파일**: `src/TM_Robot_Task_Manager/tm_task_manager/job_executor.py`(`_exec_sdc_palette_tcp_align` 목표 계산부), `test/test_sdc_palette_tcp_align.py`(법선 일치 0.01° 테스트 추가·기대값 갱신, 10건 PASS)
+- **상태**: 코드 수정·단위 검증 완료(sim, 2026-08-29 15:00 — 전체 회귀 893 passed). 실기 재검증 잔여(2026-08-29 기준 — orin 재배포 후 사용자 실행 대기)
+
 ### [Issue] 카메라 탭 이미지 캡처 불능 — tm_camera_bridge 미기동(복구) + TMflow External Detection URL 확인 대기
 
 - **문제**: UI 캡처 버튼·직접 쓰기(g_robot_command=3) 모두 TMflow 쪽 촬영은 진행되나 UI 화면에 이미지가 오지 않음.

@@ -58,16 +58,37 @@ def test_dispatch_reaches_handler(executor):
     executor._move_to_position_line.assert_called_once()
 
 
-def test_applies_sign_flip_and_ry_offset(executor):
+def test_keeps_position_and_reaches_expected_target(executor):
     executor._move_to_position_line = MagicMock(return_value=(True, '이동 완료'))
 
     with _patch_entry(dict(ENTRY)):
         assert executor._exec_sdc_palette_tcp_align(_job()) is True
 
-    executor._move_to_position_line.assert_called_once_with(
-        'tcp', CURRENT_TCP[0], CURRENT_TCP[1], CURRENT_TCP[2],
-        pytest.approx(87.513), pytest.approx(-22.691), pytest.approx(-90.802), 10.0)
+    args = executor._move_to_position_line.call_args[0]
+    assert args[0] == 'tcp'
+    assert args[1:4] == (CURRENT_TCP[0], CURRENT_TCP[1], CURRENT_TCP[2])
+    assert args[4] == pytest.approx(87.3066, abs=0.01)
+    assert args[5] == pytest.approx(-22.5795, abs=0.01)
+    assert args[6] == pytest.approx(-88.1332, abs=0.01)
+    assert args[7] == 10.0
     assert 'sdc_palette_tcp_align 완료' in _logs(executor)
+
+
+def test_target_z_axis_matches_marker_normal(executor):
+    import math
+    import numpy as np
+    from scipy.spatial.transform import Rotation
+
+    executor._move_to_position_line = MagicMock(return_value=(True, '이동 완료'))
+    with _patch_entry(dict(ENTRY)):
+        assert executor._exec_sdc_palette_tcp_align(_job()) is True
+
+    _, _, _, _, rx, ry, rz, _ = executor._move_to_position_line.call_args[0]
+    z_target = Rotation.from_euler('ZYX', [rz, ry, rx], degrees=True).as_matrix()[:, 2]
+    z_marker = Rotation.from_euler(
+        'ZYX', [MARKER['rz'], MARKER['ry'], MARKER['rx']], degrees=True).as_matrix()[:, 2]
+    angle = math.degrees(math.acos(min(1.0, float(np.dot(z_target, z_marker)))))
+    assert angle < 0.01, f"법선 정렬 오차 {angle:.4f}° (지그 진입 공차 0.4° 대비)"
 
 
 def test_fails_without_landmark_scan(executor):
