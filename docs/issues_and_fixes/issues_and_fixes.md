@@ -4,6 +4,20 @@
 
 ## 2026-08-29
 
+### [Issue] 카메라 탭 이미지 캡처 불능 — tm_camera_bridge 미기동(복구) + TMflow External Detection URL 확인 대기
+
+- **문제**: UI 캡처 버튼·직접 쓰기(g_robot_command=3) 모두 TMflow 쪽 촬영은 진행되나 UI 화면에 이미지가 오지 않음.
+- **원인 1 (확정·복구 완료)**: orin(nx-orin-1) 스택 기동 시 tm_driver·task_manager_node 만 띄우고 **tm_camera_bridge(포트 6189) 를 빠뜨림**. 브리지는 TMflow External Detection HTTP POST 를 받아 `techman_image` 토픽으로 재발행하는 유일한 경로라, 없으면 캡처 명령이 성공해도 이미지가 UI 에 도달 불가(`/techman_image` 발행자 0, UI 로그 "수신 대기 시작" 후 타임아웃 실측). 부수: orin 에 flask·waitress·pip 자체가 없어 `python3 get-pip.py --user` 부트스트랩 후 워크스페이스 `vendor/pylibs` 에 설치(launch 파일의 vendor 경로 규약 준수, PYTHONNOUSERSITE 유지). 기동 후 6189 리슨·발행자 1 확인.
+- **원인 2 (확정 — 참조 저장소 대조)**: kuks2309/TM_Robot_ros2_ws 워크로그(2026-07-07 §10·07-09)에 파이프라인이 기록됨 — 비전 잡 `TM_IMG_Send` 의 외부 감지 URL 이 **`169.254.183.100:6189/api/DET`(옛 ROS PC)** 로 설정되어 있고, 현 orin eth0 은 `169.254.183.1` 이라 이미지가 없는 주소로 전송됨. Ethernet Slave 일시정지 포함 UI 동일 순서 재시험에서도 브리지 HTTP 무수신으로 방증. 해결 선택지: ① orin 에 IP 별칭 추가 `sudo ip addr add 169.254.183.100/16 dev eth0`(TMflow 무수정, 재부팅 시 소멸 — netplan 영속화 별도) ② TMflow 에서 URL 을 169.254.183.1 로 수정.
+- **후속 개선 후보(참조 저장소 검증본)**: 캡처 트리거를 `g_robot_command=3`+`ScriptExit()`(Listen 종료 위험) 대신 `Vision_DoJob_PTP("TM_IMG_Send",100,500)` 로 교체 — 참조 저장소 image_capture_service.py 에 구현·실기 PASS 기록 있음.
+- **파일**: 코드 변경 없음(운영 절차). 재발 방지 — orin 기동 절차에 카메라 브리지 포함:
+  `env PYTHONNOUSERSITE=1 PYTHONPATH=$WS/vendor/pylibs python3 $WS/src/TM_Robot_Task_Manager/scripts/tm_camera_bridge.py`
+- **해결 (2026-08-29 13:25)**: 사용자가 orin 에서 `sudo ip addr add 169.254.183.100/32 dev eth0` 실행(옛 ROS PC 의 IP 를 orin 이 이어받음 — `/16` 은 기존 169.254.183.1/16 과 프리픽스 중복으로 RTNETLINK Invalid argument, `/32` 로 성공). 직후 캡처 실측: Ethernet Slave 일시정지 → g_robot_command=3 → **`/techman_image` 이미지 도착 확인** → 재개. TMflow 무수정으로 종결.
+- **잔여**: ① IP 별칭은 재부팅 시 소멸 — netplan 영속화 필요(사용자 승인 대기) ② 캡처 트리거를 참조 저장소 검증본(`Vision_DoJob_PTP`)으로 교체할지 선택 대기
+- **상태**: 해결 — UI Image Capture 버튼 정상 동작 사용자 확인(2026-08-29 13:28). 잔여 선택 2건(IP 별칭 netplan 영속화 / Vision_DoJob_PTP 트리거 교체)은 별도 지시 대기
+
+---
+
 ### [Fix] 조그 x/y/z 가 베이스 축과 평행하게 움직이지 않음 — 공구 좌표계 조그를 베이스 좌표계로 교체
 
 - **문제**: 공구가 기울어진 자세(rx 90°, ry -22°, rz -90°)에서 조그 x/y/z 버튼을 누르면 로봇이 베이스 축과 평행하지 않게 대각선으로 이동. 사용자 요구는 "robot base 기준으로 좌표축과 수평 이동".
