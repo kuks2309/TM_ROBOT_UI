@@ -1,0 +1,56 @@
+# Recipe: SDC 팔래트 진입 (MK4)
+#
+# [역할] 팔래트 마커 스캔 → 자세를 마커 법선에 정렬 → 마커 상대 입구 위치로 이동 →
+#   공구 Z(+) 직진 진입.
+#
+# [값 출처] 자세·입구 오프셋은 config/positions.yaml 의 positions.sdc_palette_tcp_align /
+#   positions.sdc_palette_inlet_move 를 각 Job 이 실행 시마다 재독한다 — 재티칭은 YAML 만
+#   수정하면 되고 이 레시피는 손대지 않는다.
+#
+# [!! 진입량 !!] 마지막 move_linear 의 offset Z(50mm)는 보수적 초기값이다 — 지그 깊이에
+#   맞게 조정할 것. 입구는 마커 평면에서 310mm 앞이므로 50mm 진입은 접촉 전 여유 구간.
+#
+# [!! 안전 !!] 첫 실행은 Step 으로, 마커가 카메라 시야에 있는 상태에서 시작할 것.
+
+name: SDC 팔래트 진입
+description: 마커 스캔 → 법선 자세 정렬 → 마커 상대 입구 이동 → 공구 Z+ 직진 진입 (2026-08-29 실기 검증 시퀀스)
+version: '1.0'
+created: '2026-08-29'
+modified: '2026-08-29'
+jobs:
+- id: 1
+  type: recipe_info
+  name: Recipe 개요
+  params:
+    mode: execution
+    description: SDC 팔래트 진입 — 자세·입구값은 positions.yaml 재독
+    author: drko
+    version: '1.0'
+    vision_origin_check: none
+- id: 2
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  params:
+    wait_after_command: 100
+    repeat_count: 1
+    outlier_method: none
+- id: 3
+  type: sdc_palette_tcp_align
+  name: 법선 자세 정렬
+  params:
+    velocity: 10.0
+    wait_after_command: 0.5
+- id: 4
+  type: sdc_palette_inlet_move
+  name: 입구 위치 이동
+  params:
+    velocity: 10.0
+    wait_after_command: 0.5
+- id: 5
+  type: move_linear
+  name: 공구 Z+ 진입
+  params:
+    offset X: 0.0
+    offset Y: 0.0
+    offset Z: 50.0
+    velocity: 20.0
