@@ -563,6 +563,8 @@ class JobExecutor:
             return self._exec_sdc_palette_tcp_align(job)
         elif job_type == 'sdc_palette_inlet_move':
             return self._exec_sdc_palette_inlet_move(job)
+        elif job_type == 'sdc_marker_move':
+            return self._exec_sdc_marker_move(job)
         elif job_type == 'measure_point':
             return self._exec_measure_point(job)
         elif job_type == 'ai_inspection':
@@ -1789,6 +1791,52 @@ class JobExecutor:
         if wait_time > 0:
             time.sleep(wait_time)
         self._log("sdc_palette_inlet_move 완료")
+        return True
+
+    def _exec_sdc_marker_move(self, job: Job) -> bool:
+        params = job.params
+        dx = float(params.get('dx', 0.0))
+        dy = float(params.get('dy', 0.0))
+        dz = float(params.get('dz', 0.0))
+        velocity = params.get('velocity', 10.0)
+        wait_time = params.get('wait_after_command', 0.5)
+
+        if self.detected_landmark_pose is None:
+            self._log("Landmark 위치가 없습니다. scan_tm_landmark를 먼저 실행하세요.")
+            return False
+
+        if not self.ros_node:
+            self._log("ROS2 노드가 없습니다")
+            return False
+
+        if not self.ros_node.current_tcp_pose or len(self.ros_node.current_tcp_pose) < 6:
+            self._log("현재 TCP 위치를 알 수 없습니다")
+            return False
+
+        lm = self.detected_landmark_pose
+        # 마커 frame 축 기준 상대 이동(X·Y=표면 평행, Z+=법선/마커 방향) —
+        # TM 스크립트 상대 이동의 좌표계 의미에 의존하지 않는다(debt-025)
+        R_marker = Rotation.from_euler(
+            'ZYX', [float(lm.get('rz', 0)), float(lm.get('ry', 0)), float(lm.get('rx', 0))],
+            degrees=True).as_matrix()
+        cur = self.ros_node.current_tcp_pose
+        target = np.array(cur[:3], dtype=float) + R_marker @ np.array([dx, dy, dz])
+
+        self._log("sdc_marker_move: 자세 유지, 마커 frame 상대 이동")
+        self._log(f"  이동량(마커 frame): dX={dx:.2f}, dY={dy:.2f}, dZ={dz:.2f}")
+        self._log(f"  목표 위치: X={target[0]:.2f}, Y={target[1]:.2f}, Z={target[2]:.2f}")
+
+        success, msg = self._move_to_position_line(
+            'tcp', float(target[0]), float(target[1]), float(target[2]),
+            cur[3], cur[4], cur[5], velocity)
+        if not success:
+            self._log(f"sdc_marker_move 실패: {msg}")
+            return False
+
+        self._log(msg)
+        if wait_time > 0:
+            time.sleep(wait_time)
+        self._log("sdc_marker_move 완료")
         return True
 
     def _exec_find_landmark(self, job: Job) -> bool:

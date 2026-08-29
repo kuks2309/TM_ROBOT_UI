@@ -13,4 +13,6 @@
 
 | debt-013 | 이해 | src/IOs/Remote_IO_Station/remote_io_hal/include/remote_io_hal/remote_io_station_port.hpp:14 부근, src/IOs/Remote_IO_Station/remote_io_hal/src/remote_io_station_port.cpp:71 부근 | 0x1100 발효 조건·0x80 물리 클리어의 매뉴얼 문면 미확정 — 소프트웨어 반복 제한만 수행 중(HIL 실측 대기). 원 코드 마커 `TODO(debt-013)` 2건은 2026-08-28 프로젝트 전체 주석 제거 작업(사용자 지시)으로 삭제됨 — 본 registry 행이 유일 추적처 | 2026-08-28 (마커 이관) | 미해결 | remote_io HIL 벤치에서 0x1100 발효 조건·0x80 물리 클리어 실측 후 코드 반영. 이식 전 저장소의 원 등록 내용 확인 필요 |
 
+| debt-025 | 이해 | src/TM_Robot_Task_Manager/tm_task_manager/services/tm_robot_script_motion.py:136 부근 (`move_line_relative` docstring "Move_Line(\"TPP\") 공구 좌표계 상대 직선 이동") | TM 스크립트 `Move_Line("TPP")` 의 좌표계 의미가 벤더 매뉴얼 원문으로 미검증 — 2026-08-29 실기에서 docstring 주장(공구 frame)과 다른 방향 이동으로 충돌 사고(mistake 2026-08-29-003). 로컬에 TM Expression 매뉴얼 부재 | 2026-08-29 | 미해결 | TM Expression Editor 매뉴얼(사용자 제공 예정) 원문 대조로 TPP/CPP 의미 확정 → docstring 정정 + 실기 저속 검증. 검증 전까지 팔래트 레시피에서 move_linear 사용 금지(sdc_marker_move 로 대체) |
+
 <!-- 새 부채는 위 표에 행 추가. 유형: 기술 / 이해 / 의도. 상태: 미해결 / 해결(해결일·커밋 병기). -->

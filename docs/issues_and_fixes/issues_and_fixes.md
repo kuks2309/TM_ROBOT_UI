@@ -4,6 +4,14 @@
 
 ## 2026-08-29
 
+### [Fix] move_linear(Move_Line "TPP") 좌표계 오단정으로 실기 충돌 — sdc_marker_move(마커 frame 이동)로 대체
+
+- **문제**: 팔래트 진입 레시피의 `move_linear` 실행에서 X·Y 이동이 기대(마커 표면 평행)와 다른 방향으로 나가 실기 충돌 사고(2026-08-29 16:38 사용자 보고). 로봇 에러·비상정지 없음 확인.
+- **원인**: TM 스크립트 `Move_Line("TPP")` 의 좌표계 의미가 벤더 매뉴얼로 미검증 — 코드 docstring(`tm_robot_script_motion.py` "공구 좌표계 상대 직선 이동")만 근거로 안내·사용했고, 실기 거동은 그 주장과 불일치. 로컬에 TM Expression 매뉴얼 부재로 원문 대조 불가(이해 부채 debt-025, mistake `docs/claude-mistake/2026-08-29-003.md`).
+- **해결**: 스크립트 의미에 무의존한 Job `sdc_marker_move` 신설 — 파라미터 (dx,dy,dz)를 마커 frame 기준으로 받아 목표 = 현 위치 + R_marker@(dx,dy,dz) 를 절대 좌표 LINE_T(정본 `_move_to_position_line`, MotionGuard 경유)로 이동, 자세 유지. X·Y=표면 평행·Z+=법선 방향이 좌표 변환으로 보장(테스트로 법선 성분 0 고정). 레시피 5번 스텝을 move_linear → sdc_marker_move(dz=+50, 10%)로 교체, move_linear 는 debt-025 해소 전까지 팔래트 레시피 사용 금지.
+- **파일**: `tm_task_manager/job_executor.py`(`_exec_sdc_marker_move`), `tm_task_manager/recipe_manager.py`(JOB_TYPES 54종), `config/recipes/sdc_palette_entry.yaml`(스텝 교체), `test/test_sdc_marker_move.py`(신설 7건), `docs/debt/registry.md`(debt-025)
+- **상태**: 코드·단위 검증 완료(sim, 2026-08-29 16:50 — 7건 PASS, 전체 회귀 915 passed). 실기 재검증 잔여(2026-08-29 기준 — 배포 후 저속 Step 실행 대기)
+
 ### [Fix] sdc_palette_tcp_align 법선 오차 2.52° — 오일러 근사식을 회전행렬 스냅으로 교체
 
 - **문제**: `sdc_palette_tcp_align` 실기 실행 후 공구 Z축 ↔ 마커 법선 사이각 2.52° — 지그 진입 공차(~0.4°, 사용자 명시) 초과로 진입 불가. 명령 수행 자체는 목표 대비 0.10°로 정확(실기 실측) — 목표 "정의"의 결함.
