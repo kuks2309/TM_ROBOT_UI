@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-08-29
+
+### [Fix] 조그 x/y/z 가 베이스 축과 평행하게 움직이지 않음 — 공구 좌표계 조그를 베이스 좌표계로 교체
+
+- **문제**: 공구가 기울어진 자세(rx 90°, ry -22°, rz -90°)에서 조그 x/y/z 버튼을 누르면 로봇이 베이스 축과 평행하지 않게 대각선으로 이동. 사용자 요구는 "robot base 기준으로 좌표축과 수평 이동".
+- **원인**: `teaching_service.py` 의 `jog_tcp`(단발)·`jog_tcp_continuous`(연속) 둘 다 x/y/z 스텝을 공구 좌표계 증분(`tool_delta`, z 는 `-step` 부호 반전 포함)으로 만들고 `CoordinateTransformer.transform_tool_to_base`(coordinate_transformer.py:50) 로 현재 TCP 자세 회전을 곱해 보냈다 — 설계 자체가 공구 축 조그. 수직 하향 자세(rx≈180°)에서는 공구 축과 베이스 축이 부호만 다르고 일치해 결함이 보이지 않았고, 기울인 자세에서 드러났다. 로봇 활성 베이스 선택(`change_to_robot_base`/`change_to_vision_base`, 현재 robot_base)과 무관하게 공구 회전이 한 번 더 끼는 것이 핵심.
+- **해결**: 두 메서드의 병진 분기에서 tool_delta + 회전변환을 제거하고 베이스 축 직접 증분(`target_pos[0..2] += step`)으로 교체(x+→+X, y+→+Y, z+→+Z). PTP_T 목표는 로봇의 현재 활성 베이스에서 해석되므로 조그는 선택된 베이스 축과 평행하게 움직인다. 회전 조그(rx/ry/rz)는 무변경. 사용자 승인(베이스 고정, 토글 없음) 후 구현.
+- **부수 수정**: `test_robot_ip_probe.py::test_no_infinite_recursion` 이 실 config 디렉터리를 읽어 이번에 배치한 `config/robots/active.txt` 존재로 실패 → 빈 임시 디렉터리로 격리(전제: 아무 설정도 없음).
+- **파일**: `src/TM_Robot_Task_Manager/tm_task_manager/services/teaching_service.py`(`jog_tcp`·`jog_tcp_continuous` 병진 분기), `test/test_teaching_jog_base_frame.py`(신설 10건 — 기울인 자세에서 병진 조그가 단일 베이스 축만 변경·자세 불변 검증), `test/test_robot_ip_probe.py`(격리)
+- **검증**: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest test/ -q` → **1 failed, 887 passed, 20 skipped**. 실패 1건 `test_recipe_manager.py::test_manager_get_job_types_by_category` 는 2026-08-15·08-17 항목에 기록된 선재 결함(본 건 무관). 실기 조그 검증은 orin 배포 후 사용자 확인 대기.
+- **상태**: 완료(실기 확인 대기)
+
+---
+
 ## 2026-08-18
 
 ### [Fix] 팔레트 순회 실패의 진짜 원인은 레시피 종류 차이 — 미사용·결함 레시피 13개 제거, 검증본 개명
