@@ -11,3 +11,16 @@ tool:
   enabled: true
   radius_mm: 45.0
   length_mm: null
+
+# 조인트 각도 한계 (카르테시안 구역과 독립) — TM20M 벤더 URDF 기준, J3 는 TM14 보수값
+joint_limits:
+  enabled: true
+  margin_deg: 5.0
+  auto_stop: true
+  limits_deg:
+    j1: [-270.0, 270.0]
+    j2: [-180.0, 180.0]
+    j3: [-163.0, 163.0]
+    j4: [-180.0, 180.0]
+    j5: [-180.0, 180.0]
+    j6: [-270.0, 270.0]
