@@ -19,6 +19,21 @@ DEFAULT_TOOL = {
     'length_mm': None,
 }
 
+DEFAULT_JOINT_LIMITS = {
+    'enabled': False,
+    'margin_deg': 5.0,
+    'auto_stop': True,
+    # TM20M 벤더 URDF(tm20-nominal) 기준, J3 는 TM14 와의 보수값(±163°) 채택
+    'limits_deg': {
+        'j1': [-270.0, 270.0],
+        'j2': [-180.0, 180.0],
+        'j3': [-163.0, 163.0],
+        'j4': [-180.0, 180.0],
+        'j5': [-180.0, 180.0],
+        'j6': [-270.0, 270.0],
+    },
+}
+
 DEFAULT_AREA = {
     'enabled': False,
     'margin_mm': 20.0,
@@ -26,6 +41,8 @@ DEFAULT_AREA = {
     'keep_out_boxes': [],
     'keep_out_auto_stop': True,
     'tool': dict(DEFAULT_TOOL),
+    'joint_limits': {k: (dict(v) if isinstance(v, dict) else v)
+                     for k, v in DEFAULT_JOINT_LIMITS.items()},
 }
 
 
@@ -58,6 +75,15 @@ def load_area(path: Optional[str] = None) -> dict:
     tool = dict(DEFAULT_TOOL)
     tool.update(area.get('tool') or {})
     area['tool'] = tool
+
+    jl = {k: (dict(v) if isinstance(v, dict) else v)
+          for k, v in DEFAULT_JOINT_LIMITS.items()}
+    user_jl = area.get('joint_limits') or {}
+    limits = dict(jl['limits_deg'])
+    limits.update(user_jl.get('limits_deg') or {})
+    jl.update({k: v for k, v in user_jl.items() if k != 'limits_deg'})
+    jl['limits_deg'] = limits
+    area['joint_limits'] = jl
     return area
 
 
@@ -129,6 +155,73 @@ def validate_area(area: dict) -> Tuple[bool, str]:
         if length is not None and (not isinstance(length, (int, float)) or length <= 0):
             return False, 'tool.length_mm 은 null(=TCP 까지) 이거나 0 보다 큰 숫자여야 합니다'
 
+    return True, 'ok'
+
+
+def joint_limits_config(area: dict) -> dict:
+    """joint_limits 절을 돌려준다 (없으면 기본값 사본)."""
+    jl = area.get('joint_limits')
+    if isinstance(jl, dict):
+        return jl
+    return {k: (dict(v) if isinstance(v, dict) else v)
+            for k, v in DEFAULT_JOINT_LIMITS.items()}
+
+
+def joint_limits_enabled(area: dict) -> bool:
+    """조인트 한계 검사 활성 여부 — 카르테시안 구역(enabled)과 독립."""
+    return bool(joint_limits_config(area).get('enabled'))
+
+
+def validate_joint_limits(area: dict) -> Tuple[bool, str]:
+    """joint_limits 절 구조·값을 검사한다 (비활성이면 통과)."""
+    jl = joint_limits_config(area)
+    if not jl.get('enabled'):
+        return True, 'ok (조인트 한계 비활성)'
+
+    margin = jl.get('margin_deg', 0.0)
+    if not isinstance(margin, (int, float)) or margin < 0:
+        return False, 'joint_limits.margin_deg 은 0 이상의 숫자여야 합니다'
+
+    limits = jl.get('limits_deg') or {}
+    for i in range(6):
+        key = f'j{i + 1}'
+        pair = limits.get(key)
+        if not (isinstance(pair, (list, tuple)) and len(pair) == 2):
+            return False, f'joint_limits.limits_deg.{key} 는 [min, max] 2원소 배열이어야 합니다'
+        lo, hi = pair
+        if not (isinstance(lo, (int, float)) and isinstance(hi, (int, float))):
+            return False, f'joint_limits.limits_deg.{key} 값이 숫자가 아닙니다'
+        if hi <= lo:
+            return False, f'joint_limits.limits_deg.{key} 범위가 뒤집혔습니다 (min={lo} >= max={hi})'
+        if 2 * margin >= (hi - lo):
+            return False, f'joint_limits.limits_deg.{key}: margin({margin}°) 이 범위보다 큽니다'
+    return True, 'ok'
+
+
+def check_joints(area: dict, joints_deg: Sequence[float],
+                 extra_margin_deg: float = 0.0) -> Tuple[bool, str]:
+    """조인트 6축(deg)이 (모델 한계 − margin) 안인지 판정한다.
+
+    비활성이거나 값이 6개 미만이면 통과. extra_margin_deg 는 재무장
+    이력(hysteresis) 용 추가 여유.
+    """
+    jl = joint_limits_config(area)
+    if not jl.get('enabled'):
+        return True, 'ok (조인트 한계 비활성)'
+    if not joints_deg or len(joints_deg) < 6:
+        return True, 'ok (조인트 값 부족 — 판정 생략)'
+
+    margin = float(jl.get('margin_deg', 0.0)) + float(extra_margin_deg)
+    limits = jl.get('limits_deg') or {}
+    for i in range(6):
+        pair = limits.get(f'j{i + 1}')
+        if not (isinstance(pair, (list, tuple)) and len(pair) == 2):
+            continue
+        lo, hi = float(pair[0]), float(pair[1])
+        v = float(joints_deg[i])
+        if v < lo + margin or v > hi - margin:
+            return False, (f'J{i + 1}={v:.1f}° 허용범위 [{lo + margin:.0f}, {hi - margin:.0f}]° 이탈 '
+                           f'(모델한계 [{lo:.0f}, {hi:.0f}]°, margin {margin:.0f}°)')
     return True, 'ok'
 
 

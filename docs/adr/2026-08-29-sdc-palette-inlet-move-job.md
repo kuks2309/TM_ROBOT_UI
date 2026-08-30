@@ -26,6 +26,10 @@ Job `sdc_palette_inlet_move`(category Landmark)를 신설한다.
 
 N/A (가역) — JOB_TYPES 항목·dispatch 분기·실행 함수·테스트·positions.yaml 항목 제거로 원복. 영속 상태·스키마 변경 없음.
 
+## 개정 2 (2026-08-30 15:10 — 마커 자세 내장)
+
+사용자 질문("inlet에 움직일 때 자세도 mark 자세 유지하도록 되어 있나요?")에 대한 선택 ②(내장) 승인. §Decision 2 의 "자세는 현재 유지"를 대체한다: 실행 시마다 정렬 job 과 동일한 계산(마커 법선 스냅 + positions.yaml `sdc_palette_tcp_align` offset)으로 **목표 자세를 만들어 위치와 함께 LINE_T 로 명령** — 정렬 순서를 빠뜨려도 항상 마커 자세로 입구 도착(자기완결). 계산은 공용 헬퍼 `_marker_perpendicular_orientation` 로 추출해 정렬 job 과 중복 없이 공유. `sdc_palette_tcp_align` 항목 부재 시 거부.
+
 ## 개정 (2026-08-30 10:39 — 보정 파라미터)
 
 사용자 요구: "옵셋으로 이동하는데 수정할 필요가 있어서 기준 옵셋에서 보정을 넣고 싶은 것임". Job 에 **dx/dy/dz 보정 파라미터**(float, 기본 0.0, 마커 frame mm)를 추가한다 — 목표 = 마커위치 + R_marker@(YAML 기준 오프셋 + (dx,dy,dz)). 기본값 0 이라 기존 레시피 동작 불변(하위 호환). 기준(티칭)은 YAML, 레시피별·슬롯별 가감은 job 파라미터로 역할 분리.

@@ -1,3 +1,4 @@
+import math
 import os
 import time
 from PyQt5.QtWidgets import (
@@ -147,6 +148,7 @@ class TaskManagerNode(Node):
         from .safety import safety_area as sa
         from .safety.boundary_monitor import BoundaryMonitor
         from .safety.motion_guard import MotionGuard
+        from .safety.joint_guard import JointGuard
         from .services.motion_gateway import MotionGateway
         from .services.robot_stop_service import RobotStopService
 
@@ -168,6 +170,20 @@ class TaskManagerNode(Node):
             monitor=self.boundary_monitor,
             log_callback=log,
         )
+        self.safety_area_config = area
+        self.joint_guard = JointGuard(
+            area, stop_fn=self.robot_stop_service.stop, log_callback=log)
+        if sa.joint_limits_enabled(area):
+            jl_ok, jl_reason = sa.validate_joint_limits(area)
+            if jl_ok:
+                jl = sa.joint_limits_config(area)
+                self.get_logger().info(
+                    f"[조인트한계] 활성 — margin {jl.get('margin_deg')}°, "
+                    f"auto_stop {jl.get('auto_stop')}")
+            else:
+                self.get_logger().error(f'[조인트한계] 설정이 올바르지 않습니다 — {jl_reason}')
+        else:
+            self.get_logger().warn('[조인트한계] 비활성 — 조인트 범위 검사 없이 동작합니다')
 
         if sa.is_enabled(area):
             ok, reason = sa.validate_area(area)
@@ -236,6 +252,9 @@ class TaskManagerNode(Node):
     def _on_joint_state(self, msg):
         if is_tm_joint_state(msg.name, msg.position):
             self.motion_service.update_joint_state(list(msg.position[:6]))
+            guard = getattr(self, 'joint_guard', None)
+            if guard is not None:
+                guard.update(self.current_joint_position)
             if self.joint_position_callback:
                 self.joint_position_callback(self.current_joint_position)
 
@@ -339,12 +358,21 @@ class TaskManagerNode(Node):
 
     def _call_set_positions(self, motion_type, positions, velocity, acc_time, blend_percentage=0, fine_goal=False):
         from .safety import motion_guard as mg
+        from .safety import safety_area as sa
 
         kind = self._motion_kind_of(motion_type)
         self._log_motion_command(kind, positions, velocity)
         target_mm = None
         if kind == mg.MOTION_LINE and len(positions) >= 3:
             target_mm = [float(positions[i]) * 1000.0 for i in range(3)]
+
+        area = getattr(self, 'safety_area_config', None)
+        if kind == mg.MOTION_PTP_JOINT and area is not None and len(positions) >= 6:
+            targets_deg = [math.degrees(float(p)) for p in positions[:6]]
+            jl_ok, jl_reason = sa.check_joints(area, targets_deg)
+            if not jl_ok:
+                self.get_logger().warn(f'[조인트한계] 목표 거부 — {jl_reason}')
+                return False, f'[조인트한계] 목표 거부 — {jl_reason}'
 
         return self.motion_gateway.send(
             kind,

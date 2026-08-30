@@ -11,8 +11,29 @@ MARKER = {'x': -1195.283, 'y': -103.21854, 'z': 738.9024,
           'rx': -90.78737, 'ry': -0.954692, 'rz': 93.685646}
 ENTRY = {'description': '팔래트 입구 마커 frame 오프셋', 'type': 'marker_frame_offset',
          'values': [65.4, 220.74, -310.54]}
+ALIGN_ENTRY = {'description': '정렬 offset', 'type': 'tcp_orientation_offset',
+               'values': [0.0, -22.0, 0.0]}
 INLET_TAUGHT = (-886.82, -14.21, 523.57)
 YAML_OFFSET = [68.73, 243.08, -310.39]
+
+
+def _expected_marker_orientation():
+    import numpy as np
+    from scipy.spatial.transform import Rotation
+
+    R_m = Rotation.from_euler(
+        'ZYX', [MARKER['rz'], MARKER['ry'], MARKER['rx']], degrees=True).as_matrix()
+    R_a = Rotation.from_euler(
+        'ZYX', [-MARKER['rz'] + 0.0, MARKER['ry'] - 22.0, -MARKER['rx'] + 0.0],
+        degrees=True).as_matrix()
+    z_m, z_a = R_m[:, 2], R_a[:, 2]
+    axis = np.cross(z_a, z_m)
+    s = float(np.linalg.norm(axis))
+    c = float(np.dot(z_a, z_m))
+    snap = Rotation.from_rotvec(axis / s * __import__('math').atan2(s, c)).as_matrix() \
+        if s > 1e-12 else np.eye(3)
+    rz, ry, rx = Rotation.from_matrix(snap @ R_a).as_euler('ZYX', degrees=True)
+    return float(rx), float(ry), float(rz)
 
 
 @pytest.fixture
@@ -35,8 +56,12 @@ def _logs(executor):
     return "\n".join(executor.logs)
 
 
-def _patch_entry(entry):
-    return patch.object(ConfigManager, 'get_position', return_value=entry)
+def _patch_entry(entry, align_entry='default'):
+    if align_entry == 'default':
+        align_entry = dict(ALIGN_ENTRY)
+    table = {'sdc_palette_inlet_move': entry, 'sdc_palette_tcp_align': align_entry}
+    return patch.object(ConfigManager, 'get_position',
+                        side_effect=lambda name: table.get(name))
 
 
 def test_offset_entry_registered_in_yaml():
@@ -64,7 +89,7 @@ def test_dispatch_reaches_handler(executor):
     executor._move_to_position_line.assert_called_once()
 
 
-def test_moves_to_marker_relative_inlet_keeping_orientation(executor):
+def test_moves_to_marker_relative_inlet_with_marker_orientation(executor):
     executor._move_to_position_line = MagicMock(return_value=(True, '이동 완료'))
 
     with _patch_entry(dict(ENTRY)):
@@ -75,9 +100,20 @@ def test_moves_to_marker_relative_inlet_keeping_orientation(executor):
     assert args[1] == pytest.approx(INLET_TAUGHT[0], abs=0.1)
     assert args[2] == pytest.approx(INLET_TAUGHT[1], abs=0.1)
     assert args[3] == pytest.approx(INLET_TAUGHT[2], abs=0.1)
-    assert args[4:7] == (CURRENT_TCP[3], CURRENT_TCP[4], CURRENT_TCP[5])
+    exp_rx, exp_ry, exp_rz = _expected_marker_orientation()
+    assert args[4] == pytest.approx(exp_rx, abs=0.01)
+    assert args[5] == pytest.approx(exp_ry, abs=0.01)
+    assert args[6] == pytest.approx(exp_rz, abs=0.01)
     assert args[7] == 10.0
     assert 'sdc_palette_inlet_move 완료' in _logs(executor)
+
+
+def test_fails_when_align_entry_missing(executor):
+    executor._move_to_position_line = MagicMock()
+    with _patch_entry(dict(ENTRY), align_entry=None):
+        assert executor._exec_sdc_palette_inlet_move(_job()) is False
+    executor._move_to_position_line.assert_not_called()
+    assert '마커 자세 계산용' in _logs(executor)
 
 
 def test_correction_params_shift_target_in_marker_frame(executor):

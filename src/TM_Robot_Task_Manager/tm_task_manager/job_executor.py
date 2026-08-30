@@ -1681,6 +1681,38 @@ class JobExecutor:
         self._log("sdc_tcp_base 완료")
         return True
 
+    def _marker_perpendicular_orientation(self, align_offsets):
+        """직전 스캔 마커에 수직인 목표 자세(rx, ry, rz deg)를 만든다.
+
+        마커와 수직: 근사식(-rx,+ry,-rz + offset) 자세의 Z축을 마커 법선에
+        정확히 일치시키는 최소 회전을 합성(스냅) — 법선 주위 회전(카메라
+        보상 ry offset 포함)은 유지된다. 오일러 성분 근사만으로는 마커가
+        축에서 벗어난 만큼 법선 오차로 새어 지그 진입 공차(~0.4°)를 초과한다.
+        """
+        lm = self.detected_landmark_pose
+        marker_rx = float(lm.get('rx', 0))
+        marker_ry = float(lm.get('ry', 0))
+        marker_rz = float(lm.get('rz', 0))
+        R_marker = Rotation.from_euler(
+            'ZYX', [marker_rz, marker_ry, marker_rx], degrees=True).as_matrix()
+        R_approx = Rotation.from_euler(
+            'ZYX', [-marker_rz + float(align_offsets[2]),
+                    marker_ry + float(align_offsets[1]),
+                    -marker_rx + float(align_offsets[0])], degrees=True).as_matrix()
+        z_marker = R_marker[:, 2]
+        z_approx = R_approx[:, 2]
+        axis = np.cross(z_approx, z_marker)
+        sin_a = float(np.linalg.norm(axis))
+        cos_a = float(np.dot(z_approx, z_marker))
+        if sin_a > 1e-12:
+            snap = Rotation.from_rotvec(
+                axis / sin_a * math.atan2(sin_a, cos_a)).as_matrix()
+        else:
+            snap = np.eye(3)
+        rz_t, ry_t, rx_t = Rotation.from_matrix(
+            snap @ R_approx).as_euler('ZYX', degrees=True)
+        return float(rx_t), float(ry_t), float(rz_t)
+
     def _exec_sdc_palette_tcp_align(self, job: Job) -> bool:
         from .services.config_manager import ConfigManager
 
@@ -1706,30 +1738,7 @@ class JobExecutor:
         marker_ry = float(self.detected_landmark_pose.get('ry', 0))
         marker_rz = float(self.detected_landmark_pose.get('rz', 0))
 
-        # 마커와 수직: 근사식(-rx,+ry,-rz + offset) 자세의 Z축을 마커 법선에
-        # 정확히 일치시키는 최소 회전을 합성(스냅) — 법선 주위 회전(카메라
-        # 보상 ry offset 포함)은 유지된다. 오일러 성분 근사만으로는 마커가
-        # 축에서 벗어난 만큼(예: rx -87.9) 법선 오차로 새어 지그 진입 공차
-        # (~0.4°)를 초과한다.
-        R_marker = Rotation.from_euler(
-            'ZYX', [marker_rz, marker_ry, marker_rx], degrees=True).as_matrix()
-        R_approx = Rotation.from_euler(
-            'ZYX', [-marker_rz + float(offsets[2]),
-                    marker_ry + float(offsets[1]),
-                    -marker_rx + float(offsets[0])], degrees=True).as_matrix()
-        z_marker = R_marker[:, 2]
-        z_approx = R_approx[:, 2]
-        axis = np.cross(z_approx, z_marker)
-        sin_a = float(np.linalg.norm(axis))
-        cos_a = float(np.dot(z_approx, z_marker))
-        if sin_a > 1e-12:
-            snap = Rotation.from_rotvec(
-                axis / sin_a * math.atan2(sin_a, cos_a)).as_matrix()
-        else:
-            snap = np.eye(3)
-        rz_t, ry_t, rx_t = Rotation.from_matrix(
-            snap @ R_approx).as_euler('ZYX', degrees=True)
-        target_rx, target_ry, target_rz = float(rx_t), float(ry_t), float(rz_t)
+        target_rx, target_ry, target_rz = self._marker_perpendicular_orientation(offsets)
 
         if not self.ros_node:
             self._log("ROS2 노드가 없습니다")
@@ -1782,6 +1791,16 @@ class JobExecutor:
             self._log(f"[오류] sdc_palette_inlet_move 의 values 는 마커 frame X,Y,Z 오프셋 3개여야 합니다: {offsets}")
             return False
 
+        align_entry = ConfigManager().get_position('sdc_palette_tcp_align')
+        if not align_entry:
+            self._log("[오류] positions.yaml 에 sdc_palette_tcp_align 항목이 없습니다 (마커 자세 계산용)")
+            return False
+
+        align_offsets = list(align_entry.get('values') or [])
+        if len(align_offsets) != 3:
+            self._log(f"[오류] sdc_palette_tcp_align 의 values 는 rx,ry,rz offset 3개여야 합니다: {align_offsets}")
+            return False
+
         if not self.ros_node:
             self._log("ROS2 노드가 없습니다")
             return False
@@ -1798,17 +1817,18 @@ class JobExecutor:
         total_offset = np.array([float(v) for v in offsets]) + np.array([dx, dy, dz])
         target = p_marker + R_marker @ total_offset
 
-        cur_rx, cur_ry, cur_rz = self.ros_node.current_tcp_pose[3:6]
+        target_rx, target_ry, target_rz = self._marker_perpendicular_orientation(align_offsets)
 
-        self._log("sdc_palette_inlet_move: 자세 유지, 마커 상대 입구 위치로 이동")
+        self._log("sdc_palette_inlet_move: 마커 자세로 정렬하며 마커 상대 입구 위치로 이동")
         self._log(f"  마커 위치: X={p_marker[0]:.2f}, Y={p_marker[1]:.2f}, Z={p_marker[2]:.2f}")
         if dx or dy or dz:
             self._log(f"  보정(마커 frame): dX={dx:.2f}, dY={dy:.2f}, dZ={dz:.2f}")
         self._log(f"  목표 위치: X={target[0]:.2f}, Y={target[1]:.2f}, Z={target[2]:.2f}")
+        self._log(f"  목표 자세: Rx={target_rx:.2f}, Ry={target_ry:.2f}, Rz={target_rz:.2f}")
 
         success, msg = self._move_to_position_line(
             'tcp', float(target[0]), float(target[1]), float(target[2]),
-            cur_rx, cur_ry, cur_rz, velocity)
+            target_rx, target_ry, target_rz, velocity)
         if not success:
             self._log(f"sdc_palette_inlet_move 실패: {msg}")
             return False
