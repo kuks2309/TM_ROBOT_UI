@@ -1,6 +1,6 @@
 # gripper 스택 함수표 **집계** (coding SOP §2/§6 이중 기록)
 
-갱신: 2026-08-29 (ADR-005 단계①·② 마감 — SMC 스택 `smc_lecp6/{hal,motion,sim}` 재배치 + `gripper_common` 신설·`magazine_port` 이관 반영. 직전: 2026-08-13 M1)
+갱신: 2026-08-30 (ADR-005 단계④ 마감 — HITBOT `hitbot_zefg/{hal,motion,sim}` 벤더 스택 행 추가. 직전: 2026-08-29 단계①·② — SMC 스택 `smc_lecp6/{hal,motion,sim}` 재배치 + `gripper_common` 신설·`magazine_port` 이관)
 
 > **본 문서는 집계본이다.** 각 패키지의 **모듈 로컬 원본**이 권위이며, 변경 시 두 곳을 함께 갱신한다
 > (자매 선례: `Actuators/drawer/docs/functions-index.md`, `Sensors/PIO/docs/functions-index.md`).
@@ -12,6 +12,7 @@
 > | gripper_motion | (M2 예정) | 비어 있음 |
 > | gripper_ros | (M4 예정 — 단 `GripperCommand.action`·config 스키마는 M0) | 계약만 |
 > | gripper_sim | (M3 예정) | 비어 있음 |
+> | hitbot_zefg | [../hitbot_zefg/docs/function_table.md](../hitbot_zefg/docs/function_table.md) | ✅ 단계④ — hal(레지스터 계약+`ZefgHal`)·sim(`ZefgPlant`)·motion(`ZefgSequencer`)+H0 도구, 심볼 #1~#108 실측 앵커 |
 >
 > 전역 변수: **없음** (전 상태는 클래스/구조체 소유 — conventions 전역 규율)
 
