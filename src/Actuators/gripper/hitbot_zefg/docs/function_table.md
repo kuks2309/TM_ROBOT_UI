@@ -38,10 +38,10 @@
 | 20 | MotionTarget (struct) | — | — | position_mm/speed_mms/current_a | src/Actuators/gripper/hitbot_zefg/hal/include/hitbot_zefg/zefg_hal.hpp:26 |
 | 21 | ZefgHal::ZefgHal (선언) | client: shared_ptr&lt;RtuClient&gt; | — | 생성자 | src/Actuators/gripper/hitbot_zefg/hal/include/hitbot_zefg/zefg_hal.hpp:36 |
 | 22 | ZefgHal::commandInitialize (선언) | — | Result&lt;void&gt; | 0x0000=1 write single | src/Actuators/gripper/hitbot_zefg/hal/include/hitbot_zefg/zefg_hal.hpp:38 |
-| 23 | ZefgHal::writeTargets (선언) | target: MotionTarget | Result&lt;void&gt; | 범위검증 후 speed→current→position write_multiple 3회 | src/Actuators/gripper/hitbot_zefg/hal/include/hitbot_zefg/zefg_hal.hpp:39 |
-| 24 | ZefgHal::readSnapshot (선언) | — | Result&lt;ZefgSnapshot&gt; | 0x0040~0x0047 8워드 1회 read+해석 | src/Actuators/gripper/hitbot_zefg/hal/include/hitbot_zefg/zefg_hal.hpp:40 |
-| 25 | ZefgHal::health (선언, const) | — | Health | 호출 통계 보고 | src/Actuators/gripper/hitbot_zefg/hal/include/hitbot_zefg/zefg_hal.hpp:41 |
-| 26 | ZefgHal::lastExceptionCode (선언, const) | — | uint8_t | 마지막 슬레이브 예외 코드 별도 보고(Health.last_error 는 코드 보존 불가 — Global Constraints) | src/Actuators/gripper/hitbot_zefg/hal/include/hitbot_zefg/zefg_hal.hpp:45 |
+| 23 | ZefgHal::writeTargets (선언) | target: MotionTarget | Result&lt;void&gt; | 범위검증 후 speed→current→position write_multiple 3회 | src/Actuators/gripper/hitbot_zefg/hal/include/hitbot_zefg/zefg_hal.hpp:41 |
+| 24 | ZefgHal::readSnapshot (선언) | — | Result&lt;ZefgSnapshot&gt; | 0x0040~0x0047 8워드 1회 read+해석 | src/Actuators/gripper/hitbot_zefg/hal/include/hitbot_zefg/zefg_hal.hpp:42 |
+| 25 | ZefgHal::health (선언, const) | — | Health | 호출 통계 보고 | src/Actuators/gripper/hitbot_zefg/hal/include/hitbot_zefg/zefg_hal.hpp:43 |
+| 26 | ZefgHal::lastExceptionCode (선언, const) | — | uint8_t | 마지막 슬레이브 예외 코드 별도 보고(Health.last_error 는 코드 보존 불가 — Global Constraints) | src/Actuators/gripper/hitbot_zefg/hal/include/hitbot_zefg/zefg_hal.hpp:47 |
 
 ### src/Actuators/gripper/hitbot_zefg/hal/src/zefg_hal.cpp
 
@@ -60,7 +60,7 @@
 | 36 | ZefgHal::writeTargets (정의) | target | Result&lt;void&gt; | 범위검증(무송신 kOutOfRange)+3회 write_multiple | src/Actuators/gripper/hitbot_zefg/hal/src/zefg_hal.cpp:113 |
 | 37 | ZefgHal::readSnapshot (정의) | — | Result&lt;ZefgSnapshot&gt; | readHoldingRegisters(0x0040,8)+디코드 | src/Actuators/gripper/hitbot_zefg/hal/src/zefg_hal.cpp:142 |
 | 38 | ZefgHal::health (정의) | — | Health | link_up/error_count/last_error 보고 | src/Actuators/gripper/hitbot_zefg/hal/src/zefg_hal.cpp:160 |
-| 39 | ZefgHal::lastExceptionCode (정의) | — | uint8_t | last_exception_code_ 반환 | src/Actuators/gripper/hitbot_zefg/hal/src/zefg_hal.cpp:169 |
+| 39 | ZefgHal::lastExceptionCode (정의) | — | uint8_t | last_exception_code_ 반환 | src/Actuators/gripper/hitbot_zefg/hal/src/zefg_hal.cpp:171 |
 
 ### src/Actuators/gripper/hitbot_zefg/hal/test/zefg_hal_test.cpp
 
