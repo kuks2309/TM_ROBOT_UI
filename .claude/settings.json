@@ -163,6 +163,16 @@
           }
         ],
         "matcher": "Bash"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/bash-file-write-guard.py\"",
+            "timeout": 5
+          }
+        ],
+        "matcher": "Bash"
       }
     ],
     "PostToolUse": [
@@ -244,6 +254,15 @@
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-record-gate.py\"",
             "timeout": 10
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-rule-review.py\"",
+            "timeout": 15
           }
         ]
       }
