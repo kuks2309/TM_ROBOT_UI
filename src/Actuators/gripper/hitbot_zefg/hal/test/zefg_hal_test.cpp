@@ -93,8 +93,8 @@ TEST(ZefgHal, WriteTargetsWritesThreeRegistersInOrder)
 
     EXPECT_FLOAT_EQ(wordsToFloat(link->reg(kRegTargetSpeed), link->reg(static_cast<uint16_t>(kRegTargetSpeed + 1))),
                     20.0F);
-    EXPECT_FLOAT_EQ(
-        wordsToFloat(link->reg(kRegTargetCurrent), link->reg(static_cast<uint16_t>(kRegTargetCurrent + 1))), 0.3F);
+    EXPECT_FLOAT_EQ(wordsToFloat(link->reg(kRegTargetCurrent), link->reg(static_cast<uint16_t>(kRegTargetCurrent + 1))),
+                    0.3F);
     EXPECT_FLOAT_EQ(
         wordsToFloat(link->reg(kRegTargetPosition), link->reg(static_cast<uint16_t>(kRegTargetPosition + 1))), 0.0F);
 }
@@ -153,6 +153,29 @@ TEST(ZefgHal, ErrorMappingTimeoutAndException)
         EXPECT_EQ(snap_r.value().exception_code, 0x02);
         EXPECT_EQ(hal.lastExceptionCode(), 0x02);
     }
+}
+
+// link_up = 성공 트랜잭션 1회 이상 && last_error ∉ {kTimeout, kNotReady} (리뷰 F4).
+// 케이블 분리·무전원 슬레이브는 kTimeout 으로 나타난다 — 생성 직후(트래픽 0)와 타임아웃 중에는
+// link_up=false 여야 한다.
+TEST(ZefgHal, HealthLinkUpRequiresObservedSuccess)
+{
+    auto link = std::make_shared<sim::MockSlaveLink>(1);
+    ZefgHal hal(makeClient(link));
+
+    EXPECT_FALSE(hal.health().link_up); // 생성 직후 — 성공 관측 전이므로 낙관 보고 금지
+
+    link->setRegister(kRegInitStatus, 5);
+    ASSERT_TRUE(hal.readSnapshot());
+    EXPECT_TRUE(hal.health().link_up); // 성공 판독 후
+
+    link->setFault(sim::Fault::kSilent); // 케이블 분리 모형 — 응답 없음
+    EXPECT_FALSE(hal.readSnapshot());
+    EXPECT_FALSE(hal.health().link_up); // last_error=kTimeout
+
+    link->setFault(sim::Fault::kNormal);
+    ASSERT_TRUE(hal.readSnapshot());
+    EXPECT_TRUE(hal.health().link_up); // 회복
 }
 
 } // namespace

@@ -71,10 +71,11 @@ src/Actuators/gripper/
   - 구 ADR-008 원문 부재로 supersede 절차 불완전 ⚠ — 원문 이관 시 본 ADR 과 대조 필요. README 의 ADR-008·조사 정본·SMC 매뉴얼 링크가 dangling(이관 누락) — `references/smc/` 재확보 필요.
   - RS485 물리 경로(USB-RS485 컨버터·포트 장치명) 미정 ⚠ — Open Question.
   - Z-EFG-C35 근거 문서가 브로슈어(Product Manual 요약본) 1종뿐 — 상세 User Manual 확보 전 레지스터 맵 외 동작 단정 금지(추정 금지 원칙).
-  - 설치(install) export 미결합 — gripper_common·벤더 hal 은 add_subdirectory 소비 전용(빌드 인터페이스만). 설치 기반 배포 지원 여부는 단계③ 착수 전 결정(최종 리뷰 I5, 2026-08-29).
+  - 설치(install) export 미결합 — gripper_common·벤더 hal 은 add_subdirectory 소비 전용(빌드 인터페이스만). 설치 기반 배포 지원 여부는 단계③ 착수 전 결정(최종 리뷰 I5, 2026-08-29). → 단계④ 최종 리뷰 F8(2026-08-30)로 **제거 확정**: hitbot 3패키지(hal·sim·motion)의 install(TARGETS/EXPORT/DIRECTORY) 선언을 삭제 — add_subdirectory 소비 전용. 소비자 없는 설치 export 는 광고하지 않는다(재도입은 설치 배포 결정 시).
   - 단계③ 구현 각주(2026-08-29): D2 의 parity 포함 시리얼 설정 소유는 현재 8N1 고정(HITBOT 실측 기준) — schunk_egu 착수 전 SerialConfig{parity·stop_bits} 확장 필요(최종 리뷰 I4).
   - D2 의 `IRtuClient` 인터페이스는 구체 `RtuClient` + `ISerialLink` 심으로 대체 구현 — 바이트 레벨 결함 주입이 가능한 더 낮은 심이 우월(최종 리뷰 판단).
-  - 단계④-2 fix wave 각주(2026-08-30): D4 게이트(`checks/gripper-io-single-master.sh`) 화이트리스트 정밀화 — 벤더 면제를 `hal/` 단독에서 `hal/·sim/·motion/test/` 로 확장(sim=SIL 슬레이브 플랜트, motion/test=SIL 조립 테스트는 검증 자산; motion/src 등 런타임 층은 계속 차단해 단일 쓰기 마스터 원칙 유지). 음성 프로브 2종(벤더 루트 x.cpp·motion/src/y.cpp 의 modbus include) rc=1 실증 후 정리 rc=0 — D1 승인 골격(hal·motion·sim 3형제)과 게이트의 충돌 해소.
+  - 단계④-2 fix wave 각주(2026-08-30): D4 게이트(`checks/gripper-io-single-master.sh`) 화이트리스트 정밀화 — 벤더 면제를 `hal/` 단독에서 `hal/·sim/·motion/test/` 로 확장(sim=SIL 슬레이브 플랜트, motion/test=SIL 조립 테스트는 검증 자산; motion/src 등 런타임 층은 계속 차단해 단일 쓰기 마스터 원칙 유지). 음성 프로브 2종(벤더 루트 x.cpp·motion/src/y.cpp 의 modbus include) rc=1 실증 후 정리 rc=0 — D1 승인 골격(hal·motion·sim 3형제)과 게이트의 충돌 해소. → 단계④ 최종 리뷰 F5(2026-08-30): `--exclude-dir=tools` 전면 제외(어떤 심볼도 무검사)를 폐지하고 벤더 `tools/`·스택 최상위 `tools/` 를 같은 2-tier 규칙(modbus 매치 라인만 면제, socket·remote_io_hal 등 비-modbus 차단)에 편입 — 음성 프로브(tools 내 sys/socket.h) rc=1 실증.
+  - 단계④ 최종 리뷰 각주(2026-08-30): SDC 호기에는 task-manager 의 python 직결 RTU 경로(`src/TM_Robot_Task_Manager/tm_task_manager/hardware/zefg_serial.py`)가 본 C++ 스택과 병존한다 — 현재 gripper_ros 미결선이라 동일 버스(/dev/ttyUSB0) 동시 점유는 없으나, 결선 시 단일 마스터 재판정이 필요하다(본 게이트 스코프 밖 — checks 는 gripper 스택 내부만 스캔). 장치 계약 이중 정의는 debt-026 으로 추적.
 
 ## Rollback
 

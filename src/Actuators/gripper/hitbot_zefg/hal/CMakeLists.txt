@@ -46,9 +46,13 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR HITBOT_ZEFG_HAL_BUILD_T
   endif()
 endif()
 
-install(DIRECTORY include/ DESTINATION include)
-install(TARGETS hitbot_zefg_hal hitbot_zefg_hal_warnings EXPORT hitbot_zefg_halTargets)
-install(EXPORT hitbot_zefg_halTargets
-  FILE hitbot_zefg_halTargets.cmake
-  NAMESPACE hitbot_zefg::
-  DESTINATION share/hitbot_zefg_hal/cmake)
+# 실기 H0 스모크(관측·읽기 전용, tools/zefg_hal_h0_smoke.cpp) — 평시 SIL 빌드에서 제외(기본 OFF),
+# 실기 검증 시 -DHITBOT_ZEFG_BUILD_TOOLS=ON 으로 빌드한다(리뷰 Minor — 소스만 있고 타깃이 없던 도구).
+option(HITBOT_ZEFG_BUILD_TOOLS "Z-EFG-C35 실기 H0 스모크 도구 빌드" OFF)
+if(HITBOT_ZEFG_BUILD_TOOLS)
+  add_executable(zefg_hal_h0_smoke "${CMAKE_CURRENT_SOURCE_DIR}/../tools/zefg_hal_h0_smoke.cpp")
+  target_link_libraries(zefg_hal_h0_smoke PRIVATE hitbot_zefg_hal modbus_rtu_impl hitbot_zefg_hal_warnings)
+endif()
+
+# install(TARGETS/EXPORT/DIRECTORY) 없음 — 본 패키지는 add_subdirectory 소비 전용으로 확정
+# (ADR-005 Consequences 각주, 단계④ 최종 리뷰 F8: 소비자 없는 설치 export 는 광고하지 않는다).

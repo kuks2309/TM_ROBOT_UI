@@ -20,7 +20,9 @@ struct ZefgSnapshot
     float position_mm = 0.0F;
     float speed_mms = 0.0F;
     float current_a = 0.0F;
-    uint8_t exception_code = 0; // 마지막 통신의 슬레이브 예외(있을 때) — 없으면 0
+    // 마지막으로 관측된 슬레이브 예외 코드(래치) — 이후 통신이 성공해도 지워지지 않고 유지된다
+    // (0=관측 이력 없음). 관측용 진단 필드이며 "직전 통신의 예외"가 아니다(리뷰 F3 정정).
+    uint8_t exception_code = 0;
 };
 
 struct MotionTarget
@@ -55,6 +57,7 @@ class ZefgHal
     gripper::hal::HalError last_error_ = gripper::hal::HalError::kNone;
     uint32_t error_count_ = 0;
     uint8_t last_exception_code_ = 0;
+    bool had_success_ = false; // 성공 트랜잭션 1회 이상 관측 — health().link_up 의 필요조건(리뷰 F4)
 };
 
 } // namespace gripper::hitbot

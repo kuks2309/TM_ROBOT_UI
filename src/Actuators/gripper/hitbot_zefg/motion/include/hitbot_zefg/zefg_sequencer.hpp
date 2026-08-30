@@ -36,7 +36,9 @@ enum class SeqOutcome : uint8_t
     kDropped,
     kTimeout,
     kCommError,
-    kNotInitialized
+    kNotInitialized,
+    kObstructed, // 파지 조건 밖의 Clamping(열기 방향 등) — 경로 걸림(리뷰 F1, 컨트롤러 승인 확장)
+    kRejected // 목표 값 거부(범위 밖 로컬 거부·장치 거부) — 통신 오류와 구분(리뷰 Minor1)
 };
 
 struct SeqConfig
@@ -98,6 +100,7 @@ class ZefgSequencer
     ZefgSnapshot last_snapshot_{};
     bool init_command_pending_ = false; // kCheckInit 이 예약한 초기화 명령(hal 호출 ≤1회/tick 유지)
     bool moving_seen_ = false;          // kWaitMotion 에서 Moving 관측 여부 — 신선도 게이트 해제 조건
+    float motion_start_position_mm_ = 0.0F; // 목표 write 직전 판독 위치 — 닫힘/열기 방향 판정 기준(리뷰 F1)
     gripper::hal::TimePoint init_deadline_{};      // 초기화 예약 tick 기점 + init_timeout
     gripper::hal::TimePoint motion_deadline_{};    // 목표 write tick 기점 + motion_timeout
     gripper::hal::TimePoint status_fresh_after_{}; // 목표 write tick 기점 + status_grace

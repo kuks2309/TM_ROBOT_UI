@@ -9,6 +9,9 @@
 //   Dropping 을 그대로 읽은 실기 관측). 본 플랜트도 write 즉시가 아니라 다음 step() 에서 kMoving 전이.
 // - 파지(Clamping) 유지 전류는 전류 제한 부근에서 변동(§백드라이브) — 모형은 목표 전류로 고정.
 // - Dropping 은 다음 모션 시작까지 래치(H0 재수행: 유휴 중에도 clamp=Dropping 유지 관측).
+// - 한계(모형 단순화): 실기 Clamping 은 외력이 사라지면 목표로 복귀해 InPlace 가 되는 과도 상태
+//   이기도 하다(§백드라이브·힘 순응 실측: 외력 제거 시 자동 복귀 관측) — 본 플랜트는 장애물 도달
+//   시 kClamping 종결(위치 고정)로 단순화한다. 복귀 거동 모형화는 후속 필요 시(리뷰 F2).
 #ifndef HITBOT_ZEFG_ZEFG_PLANT_HPP_
 #define HITBOT_ZEFG_ZEFG_PLANT_HPP_
 
@@ -28,7 +31,7 @@ namespace gripper::hitbot::sim
 
 struct PlantConfig
 {
-    float initial_position_mm = 35.0F;   // 초기화 완료 시 위치 — HIL H0: 전원 인가 후 표시 35.0mm 관측
+    float initial_position_mm = 35.0F; // 초기화 완료 시 위치 — HIL H0: 전원 인가 후 표시 35.0mm 관측
     comm::modbus_rtu::Duration tick{10}; // step() 1회가 진행시키는 모형 시간
 };
 
@@ -82,7 +85,7 @@ class ZefgPlant
     bool moving_ = false;
     float motion_start_mm_ = 0.0F;
     float motion_target_mm_ = 0.0F;
-    float motion_step_mm_ = 0.0F;    // 부호 포함(진행 방향) — 위치 램프용
+    float motion_step_mm_ = 0.0F;     // 부호 포함(진행 방향) — 위치 램프용
     double motion_step_abs_mm_ = 0.0; // 크기(double) — tick 수 산출 전용(결정론 계약, 리뷰 Minor)
     float motion_current_a_ = 0.0F;
     int motion_tick_ = 0;

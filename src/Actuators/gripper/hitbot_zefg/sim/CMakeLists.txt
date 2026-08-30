@@ -41,9 +41,5 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR HITBOT_ZEFG_SIM_BUILD_T
   endif()
 endif()
 
-install(DIRECTORY include/ DESTINATION include)
-install(TARGETS hitbot_zefg_sim EXPORT hitbot_zefg_simTargets)
-install(EXPORT hitbot_zefg_simTargets
-  FILE hitbot_zefg_simTargets.cmake
-  NAMESPACE hitbot_zefg::
-  DESTINATION share/hitbot_zefg_sim/cmake)
+# install(TARGETS/EXPORT/DIRECTORY) 없음 — add_subdirectory 소비 전용 확정(ADR-005 Consequences
+# 각주, 단계④ 최종 리뷰 F8).

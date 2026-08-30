@@ -15,4 +15,6 @@
 
 | debt-025 | 이해 | src/TM_Robot_Task_Manager/tm_task_manager/services/tm_robot_script_motion.py:136 부근 (`move_line_relative` docstring "Move_Line(\"TPP\") 공구 좌표계 상대 직선 이동") | TM 스크립트 `Move_Line("TPP")` 의 좌표계 의미가 벤더 매뉴얼 원문으로 미검증 — 2026-08-29 실기에서 docstring 주장(공구 frame)과 다른 방향 이동으로 충돌 사고(mistake 2026-08-29-003). 로컬에 TM Expression 매뉴얼 부재 | 2026-08-29 | 미해결 | TM Expression Editor 매뉴얼(사용자 제공 예정) 원문 대조로 TPP/CPP 의미 확정 → docstring 정정 + 실기 저속 검증. 검증 전까지 팔래트 레시피에서 move_linear 사용 금지(sdc_marker_move 로 대체) |
 
+| debt-026 | 기술 | src/TM_Robot_Task_Manager/tm_task_manager/hardware/zefg_serial.py ↔ src/Actuators/gripper/hitbot_zefg/ (hal/include/hitbot_zefg/zefg_registers.hpp · motion/include/hitbot_zefg/zefg_sequencer.hpp) | Z-EFG-C35 장치 계약이 python 직결 경로와 C++ 벤더 스택에 **이중 정의** — 레지스터 주소·범위(0~35mm·1~100mm/s·0.1~0.5A)·상태 신선도 유예(0.3s)·위치 톨러런스(0.5mm)·Dropping/Clamping 판정 규약이 양쪽에 별도 존재, 단일 SSOT 부재. 한쪽 수정 시 다른 쪽 동기화 의무(단계④ 최종 리뷰 F7, ADR-005 Consequences 각주 참조) | 2026-08-30 | 미해결 | gripper_ros 결선 시 python 경로 폐지 또는 계약 상수 단일원 도입. 그 전까지 양쪽 파일 수정 시 교차 검토 필수(양쪽 머리주석에 상호 역참조 기재) |
+
 <!-- 새 부채는 위 표에 행 추가. 유형: 기술 / 이해 / 의도. 상태: 미해결 / 해결(해결일·커밋 병기). -->

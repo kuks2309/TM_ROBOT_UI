@@ -24,8 +24,13 @@ ROS_ASSEMBLY_PKGS="gripper_ros"
 # motion/test/(SIL 조립 테스트)는 검증 자산으로서 modbus_rtu 소비를 면제한다 — 회사 폴더의
 # 승인 골격(hal·motion·sim 3형제, ADR-005 D1)을 게이트가 왜곡하지 않게 하기 위함.
 # motion/src 등 런타임 층은 계속 차단(단일 쓰기 마스터 원칙 유지).
+# 단계④ 최종 리뷰 F5: 종전 --exclude-dir=tools 전면 제외(tools 는 어떤 심볼도 무검사)를 폐지 —
+# 벤더 tools/(실기 진단 도구)와 스택 최상위 tools/(교차 벤더 HIL·프로브 스크립트)를 스캔에 편입
+# 하되 같은 2-tier 규칙(modbus 매치 라인만 면제, socket·remote_io_hal 등 비-modbus 는 차단)을
+# 적용한다. RTU_EXEMPT_RE 가 hits/build_hits awk 공용 면제 경로다.
 RTU_VENDOR_DIRS='hitbot_zefg|schunk_egu'
-RTU_VENDOR_EXEMPT_SUB='((hal|sim)/|motion/test/)'
+RTU_VENDOR_EXEMPT_SUB='((hal|sim|tools)/|motion/test/)'
+RTU_EXEMPT_RE="((${RTU_VENDOR_DIRS})/${RTU_VENDOR_EXEMPT_SUB}|tools/)"
 BANNED_ROS='^[[:space:]]*#[[:space:]]*include[[:space:]]*[<"](rclcpp|rclcpp_lifecycle|rclcpp_action|std_msgs|sensor_msgs|geometry_msgs|nav_msgs|tc_msgs|ament_)'
 
 FAIL=0
@@ -38,8 +43,8 @@ BANNED_BUILD='(remote_io_hal|modbus_tcp|modbus_rtu)'
 
 # ADR-005 D4 (2026-08-29): 본 게이트의 보호 대상은 Crevis 스테이션(Modbus TCP)의 단일 쓰기
 # 마스터다. RS485 RTU 벤더 그리퍼(HITBOT 등)는 별개 버스이며 그 유일 마스터는 해당 그리퍼
-# 노드다 — 벤더 진단 도구(tools/)는 스캔에서 제외한다. 회사별 hal·sim·motion/test 허용은
-# RTU_VENDOR_DIRS × RTU_VENDOR_EXEMPT_SUB 화이트리스트로 적용됨(위 정의 참조).
+# 노드다. 회사별 hal·sim·tools·motion/test + 스택 tools/ 허용은 RTU_EXEMPT_RE 화이트리스트로
+# 적용됨(위 정의 참조 — 면제 경로에서도 modbus 매치 라인만 면제, F5).
 # 필터는 STACK_DIR 절대경로 `^` 앵커 — grep 출력은 항상 "경로:줄:내용" 형식이므로 앵커가
 # ①중첩 스푸핑 경로(예: smc_lecp6/hitbot_zefg/hal/)와 ②매치 줄 "내용부"의 문자열 우연 일치를
 # 모두 봉쇄한다(내용부는 경로 뒤에 오므로 `^${STACK_DIR}/...` 패턴에 걸릴 수 없다).
@@ -47,8 +52,8 @@ BANNED_BUILD='(remote_io_hal|modbus_tcp|modbus_rtu)'
 # 벤더 면제 경로로 판정된 매치 중에서도 "modbus" 문자열을 포함하는 라인만 면제한다 — 면제
 # 경로라 해도 sys/socket.h·remote_io_hal·IRemoteIoStationPort 등 비-modbus 매치는 계속 차단
 # (최종 리뷰 I1: 경로만 보고 전량 면제하던 종전 로직의 화이트리스트 과확장 봉쇄).
-hits=$(grep -riEn --exclude-dir=tools "${SRC_GLOBS[@]}" "$BANNED_IO" "$STACK_DIR" 2>/dev/null \
-  | awk -v re="^${stack_re}/(${RTU_VENDOR_DIRS})/${RTU_VENDOR_EXEMPT_SUB}" '
+hits=$(grep -riEn "${SRC_GLOBS[@]}" "$BANNED_IO" "$STACK_DIR" 2>/dev/null \
+  | awk -v re="^${stack_re}/${RTU_EXEMPT_RE}" '
       {
         path = $0; sub(/:[0-9]+:.*/, "", path)
         if (path ~ re) {
@@ -67,7 +72,7 @@ fi
 # modbus_rtu 의존 선언만 면제하고, modbus_tcp·remote_io_hal 의존은 면제 경로라도 차단한다
 # (최종 리뷰 I1).
 build_hits=$(grep -riEn "${BUILD_GLOBS[@]}" "$BANNED_BUILD" "$STACK_DIR" 2>/dev/null \
-  | awk -v re="^${stack_re}/(${RTU_VENDOR_DIRS})/${RTU_VENDOR_EXEMPT_SUB}" '
+  | awk -v re="^${stack_re}/${RTU_EXEMPT_RE}" '
       {
         path = $0; sub(/:[0-9]+:.*/, "", path)
         if (path ~ re) {

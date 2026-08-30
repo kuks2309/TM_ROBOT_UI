@@ -93,6 +93,7 @@ gripper::hal::HalError ZefgHal::mapAndRecord(comm::modbus_rtu::RtuError e)
 void ZefgHal::recordSuccess()
 {
     last_error_ = gripper::hal::HalError::kNone;
+    had_success_ = true;
 }
 
 void ZefgHal::recordLocalRejection(gripper::hal::HalError e)
@@ -160,7 +161,12 @@ gripper::hal::Result<ZefgSnapshot> ZefgHal::readSnapshot()
 gripper::hal::Health ZefgHal::health() const
 {
     gripper::hal::Health h;
-    h.link_up = (last_error_ != gripper::hal::HalError::kNotReady);
+    // link_up = "성공 트랜잭션을 1회 이상 관측했고, 마지막 오류가 링크 부재를 시사하지 않음".
+    // 케이블 분리·무전원 슬레이브는 RtuError::kTimeout(→HalError::kTimeout)으로, 포트 미개방은
+    // kNotReady 로 나타나므로 두 오류는 link_up 을 내린다(리뷰 F4 — 종전 "kNotReady 아님" 단독
+    // 판정은 생성 직후·타임아웃 중에도 true 로 낙관 보고했다).
+    h.link_up = had_success_ && last_error_ != gripper::hal::HalError::kTimeout &&
+                last_error_ != gripper::hal::HalError::kNotReady;
     h.error_count = error_count_;
     h.last_error = last_error_;
     // snapshot_age·last_seq 는 기본값(0) 유지 — RtuClient 가 타임스탬프·시퀀스를 노출하지 않아

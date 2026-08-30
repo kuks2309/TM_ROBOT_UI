@@ -46,9 +46,5 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR HITBOT_ZEFG_MOTION_BUIL
   endif()
 endif()
 
-install(DIRECTORY include/ DESTINATION include)
-install(TARGETS hitbot_zefg_motion EXPORT hitbot_zefg_motionTargets)
-install(EXPORT hitbot_zefg_motionTargets
-  FILE hitbot_zefg_motionTargets.cmake
-  NAMESPACE hitbot_zefg::
-  DESTINATION share/hitbot_zefg_motion/cmake)
+# install(TARGETS/EXPORT/DIRECTORY) 없음 — add_subdirectory 소비 전용 확정(ADR-005 Consequences
+# 각주, 단계④ 최종 리뷰 F8).

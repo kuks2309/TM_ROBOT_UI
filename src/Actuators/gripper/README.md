@@ -5,7 +5,7 @@
 
 - **용어**: HAL(Hardware Abstraction Layer), ADR(Architecture Decision Record), SSOT(Single Source of Truth), DL(Deviation Ledger), SIL(Software In the Loop), HIL(Hardware In the Loop), DI/DO(Digital Input/Output), MGZ(Magazine), BOM(Bill of Materials), NC(Normally Closed), AMR(Autonomous Mobile Robot), IDL(Interface Definition Language). 단자명(`IN0~IN5`·`SETUP`·`HOLD`·`DRIVE`·`RESET`·`SVON`·`LOCK_OFF` 등)은 도면 표기 리터럴이다.
 - **결정 기록**: [../../../docs/adr/ADR-008-gripper-stack-and-robot-gripping-structure.md](../../../docs/adr/ADR-008-gripper-stack-and-robot-gripping-structure.md) (Proposed)
-- **회사별 재배치 결정**: [docs/adr/ADR-005-multi-vendor-restructure.md](docs/adr/ADR-005-multi-vendor-restructure.md) (Accepted 2026-08-28) — SMC 스택은 `smc_lecp6/`, 공용은 `gripper_common/`(단계②), HITBOT `hitbot_zefg/`·SCHUNK `schunk_egu/` 는 후속 단계
+- **회사별 재배치 결정**: [docs/adr/ADR-005-multi-vendor-restructure.md](docs/adr/ADR-005-multi-vendor-restructure.md) (Accepted 2026-08-28) — SMC 스택은 `smc_lecp6/`, 공용은 `gripper_common/`(단계②), HITBOT `hitbot_zefg/` 는 단계④ 벤더 스택(hal·motion·sim) 구현 완료(SIL green, gripper_ros 결선은 후속), SCHUNK `schunk_egu/` 는 후속 단계
 - **조사 정본**: [../../../../docs/analysis/gripper_tx_wiring_and_drive_2026-08-12.md](../../../../docs/analysis/gripper_tx_wiring_and_drive_2026-08-12.md) — 배선 8페이지 실물 열람 + legacy `tc_gripper` 전수 + 실기 로그 실측 (2026-08-12)
 - **참조 아키텍처**: [../../../docs/architecture/2026-07-24-hal-reference-and-roadmap.md](../../../docs/architecture/2026-07-24-hal-reference-and-roadmap.md) §1.1-1.2(계층·경계), §4(그리퍼 = 단일 계약 + 백엔드 2종)
 

@@ -7,6 +7,8 @@
 레지스터·범위 근거: references/hitbot/z-efg-c35/Z-EFG-C35 Brochure_V20240120.pdf p4-5.
 영점·기본값 실측 정본: src/Actuators/gripper/docs/hil/2026-08-29-zefg-c35-h0.md
 (표시 0mm=실물 완전 열림·35mm=완전 닫힘, float 상위워드 우선, 속도 20mm/s·전류 0.3A 실사용).
+장치 계약은 C++ 벤더 스택(src/Actuators/gripper/hitbot_zefg/ 의 zefg_registers.hpp·
+zefg_sequencer.hpp)과 이중 정의다(debt-026) — 한쪽 수정 시 다른 쪽 동기화 필수.
 """
 import struct
 import time

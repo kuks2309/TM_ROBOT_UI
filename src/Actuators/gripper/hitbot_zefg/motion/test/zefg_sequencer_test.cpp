@@ -273,4 +273,48 @@ TEST(ZefgSequencer, RestartAfterDropIgnoresLatchedDroppingSample)
     EXPECT_NEAR(seq.lastSnapshot().position_mm, 0.0F, 0.5F);
 }
 
+// ⑨ 열기 방향 걸림: 닫힘(35mm)에서 열기(0mm) 경로의 장애물 — fresh Clamping 이지만 닫힘 방향이
+// 아니므로 파지 성공이 아니라 kFailed(kObstructed). 실기 Clamping 은 외력 저항 중의 과도 상태이기도
+// 해서(HIL §백드라이브: 외력 소멸 시 InPlace 복귀) 열기 방향 파지 오판을 코드 조건이 막는다(리뷰 F1).
+TEST(ZefgSequencer, OpenDirectionObstructionFailsAsObstructed)
+{
+    ZefgPlant plant; // 기본: 초기화 완료·표시 35.0mm(실물 닫힘)
+    auto hal = makeHal(plant);
+    ZefgSequencer seq(*hal);
+    gripper::hal::TimePoint now{};
+
+    plant.insertObstacleAt(20.0F); // 열기 이동 경로(시작 35mm·목표 0mm) 위의 장애물
+    ASSERT_TRUE(seq.start(openTarget(), now));
+    ASSERT_TRUE(runToTerminal(seq, plant, now));
+
+    EXPECT_EQ(seq.state(), SeqState::kFailed);
+    EXPECT_EQ(seq.outcome(), SeqOutcome::kObstructed);
+    EXPECT_EQ(seq.lastSnapshot().clamp, ClampStatus::kClamping);
+    EXPECT_FLOAT_EQ(seq.lastSnapshot().position_mm, 20.0F);
+}
+
+// ⑩ 범위 밖 목표: 40mm(>35mm)는 hal 이 무송신 kOutOfRange 로 거부 — 시퀀서는 통신 오류로 뭉개지
+// 않고 kFailed(kRejected)로 구분 보고한다(리뷰 Minor1). 무송신은 목 요청 카운트로 단언.
+TEST(ZefgSequencer, OutOfRangeTargetFailsAsRejectedWithoutTransmission)
+{
+    auto slave = std::make_shared<comm::modbus_rtu::sim::MockSlaveLink>(sim::kPlantUnitId);
+    slave->setRegister(kRegInitStatus, 5); // 초기화 완료 [p5]
+    slave->setRegister(kRegClampStatus, 0);
+    const auto pos = floatToWords(35.0F);
+    slave->setRegister(kRegPositionFb, pos[0]);
+    slave->setRegister(static_cast<uint16_t>(kRegPositionFb + 1), pos[1]);
+    auto hal = std::make_shared<ZefgHal>(std::make_shared<RtuClient>(slave, fastConfig()));
+    ZefgSequencer seq(*hal);
+    gripper::hal::TimePoint now{};
+
+    ASSERT_TRUE(seq.start(MotionTarget{40.0F, 20.0F, 0.3F}, now));
+    ASSERT_EQ(seq.tick(now), SeqState::kWriteTargets); // kCheckInit 판독 1회
+    const int requests_before_write = slave->requestCount();
+
+    now += kPlantTick;
+    EXPECT_EQ(seq.tick(now), SeqState::kFailed);
+    EXPECT_EQ(seq.outcome(), SeqOutcome::kRejected);
+    EXPECT_EQ(slave->requestCount(), requests_before_write); // 무송신 — 로컬 거부
+}
+
 } // namespace

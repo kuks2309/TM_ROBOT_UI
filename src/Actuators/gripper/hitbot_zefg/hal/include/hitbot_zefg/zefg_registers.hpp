@@ -1,7 +1,9 @@
 // zefg_registers.hpp — HITBOT Z-EFG-C35 Modbus RTU 레지스터 계약 (전 항목 인용, ADR-005 단계④-1).
 // 1차 source: Z-EFG-C35 Product Manual V20240120 (references/hitbot/z-efg-c35/).
-// 영점 매핑은 HIL 실측이 정본(근거: gripper HIL H0 실측 기록, src/Actuators/gripper/docs/hil/) —
+// 영점 매핑은 HIL 실측이 정본(근거: src/Actuators/gripper/docs/hil/ 의 zefg-c35-h0 실측 기록) —
 // 매뉴얼 p6 예제와 방향이 반대이므로 아래 주석에 명시한다.
+// 주의: 아래 decode·float 헬퍼는 선언만이다 — 정의는 zefg_hal.cpp 에 있으므로 이 헤더만 include
+// 하는 TU 도 hitbot_zefg_hal 라이브러리 링크가 필요하다(리뷰 Minor 정정).
 #ifndef HITBOT_ZEFG_ZEFG_REGISTERS_HPP_
 #define HITBOT_ZEFG_ZEFG_REGISTERS_HPP_
 
