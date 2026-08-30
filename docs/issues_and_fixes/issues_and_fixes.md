@@ -999,6 +999,17 @@
 
 ---
 
+## 2026-08-30
+
+### [Issue] sdc_gripper Job 오탐 — 직전 모션 래치 상태를 첫 폴링이 오판
+- **문제**: `zefg_serial.move_to` 가 명령 직후 첫 폴링에서 직전 모션의 래치된 파지 상태(0x0041)를 읽고 오판 — 래치 Dropping → 즉시 "낙하 감지" 오탐 실패(실기 재현: pos 0.1mm 시점 실패 보고 후 실물은 35mm 정상 완주), 래치 Clamping → open 을 "파지 완료"로 오탐 성공(동일 원인 잠재 경로).
+- **원인**: 슬레이브는 새 위치 명령 후에도 직전 모션의 최종 상태를 유지 응답(실기 관측 — HIL 정본 `src/Actuators/gripper/docs/hil/2026-08-29-zefg-c35-h0.md` §백드라이브·힘 순응 실측). 폴링 루프가 상태 신선도를 확인하지 않고 첫 표본부터 판정 사용.
+- **해결**: Dropping/Clamping 판정을 Moving 관측 후 또는 `STATUS_GRACE_S`(0.3s) 경과 후에만 유효화(In place 는 위치 대조 있어 예외). 단위 테스트 래치 재현 2종 추가 — 8/8 PASS. Clamping 오탐 경로 동시 수정은 동일 근본 원인으로 포함(보고 완료). C++ 벤더 스택(ZefgSequencer)에도 동일 신선도 게이트 설계 반영(status_grace{300}, 변이 프로브 검증).
+- **파일**: `src/TM_Robot_Task_Manager/tm_task_manager/hardware/zefg_serial.py`, `test/test_sdc_gripper.py` (상세: `src/TM_Robot_Task_Manager/docs/code_updates/2026-08-30-sdc-gripper-stale-status-fix.md`)
+- **상태**: 완료 — orin 재배포 후 실기 오탐 재현 조건(래치 Dropping·35mm)에서 open 성공 확인 (2026-08-30 11:27)
+
+---
+
 ## Template
 
 ### [Issue] 이슈 제목
