@@ -169,7 +169,72 @@ modbus_rtu 3 엔트리) 무손상.
 은 `$<BUILD_INTERFACE:...>` 한정 링크(hal 의 "설치 export 는 add_subdirectory 소비 전용" 선례). 테스트
 `hitbot_zefg_plant_test` 는 top-level 가드.
 
+## Task 3: motion — ZefgSequencer FSM (단계④-3)
+
+**배치**: `hitbot_zefg/motion/` 독립 CMake 패키지(smc_lecp6/motion 선례, 3형제 골격 ADR-005 D1).
+motion/src·include 는 ZefgHal 만 소비(하위 버스 심볼 금지 — 게이트가 차단), motion/test 만
+플랜트+실제 RTU 클라이언트를 직접 조립(게이트 면제 경로). 계획 인터페이스 블록 그대로 +
+브리프 승인 확장 `SeqConfig.status_grace{300}`(상태 신선도 게이트 — HIL 정본 §백드라이브·힘 순응
+실측의 래치 오탐 부수 발견 근거, python 선례 zefg_serial.py move_to).
+
+### src/Actuators/gripper/hitbot_zefg/motion/include/hitbot_zefg/zefg_sequencer.hpp
+
+| # | 함수/심볼 | 입력 | 출력 | 기능 | 위치(file:line) |
+|---|---|---|---|---|---|
+| 82 | SeqState (enum) | — | — | kIdle/kCheckInit/kInitializing/kWriteTargets/kWaitMotion/kSucceeded/kFailed | src/Actuators/gripper/hitbot_zefg/motion/include/hitbot_zefg/zefg_sequencer.hpp:20 |
+| 83 | SeqOutcome (enum) | — | — | kNone/kReached/kClamped/kDropped/kTimeout/kCommError/kNotInitialized | src/Actuators/gripper/hitbot_zefg/motion/include/hitbot_zefg/zefg_sequencer.hpp:31 |
+| 84 | SeqConfig (struct) | — | — | init_timeout{5000}⚠·motion_timeout{4000}·position_tolerance_mm=0.5·auto_initialize=true·**status_grace{300}(브리프 승인 확장)** | src/Actuators/gripper/hitbot_zefg/motion/include/hitbot_zefg/zefg_sequencer.hpp:42 |
+| 85 | ZefgSequencer::ZefgSequencer (선언) | hal: ZefgHal&, cfg: SeqConfig={} | — | 생성자 — hal 참조 보관(소유 없음) | src/Actuators/gripper/hitbot_zefg/motion/include/hitbot_zefg/zefg_sequencer.hpp:61 |
+| 86 | ZefgSequencer::start (선언) | target: MotionTarget, now: TimePoint | bool | kIdle/터미널에서만 수락 — 목표·상태 리셋 후 kCheckInit | src/Actuators/gripper/hitbot_zefg/motion/include/hitbot_zefg/zefg_sequencer.hpp:64 |
+| 87 | ZefgSequencer::tick (선언) | now: TimePoint | SeqState | 비블로킹 1스텝 — 상태 전이 + hal 호출 ≤1회·내부 sleep 없음 | src/Actuators/gripper/hitbot_zefg/motion/include/hitbot_zefg/zefg_sequencer.hpp:67 |
+| 88 | ZefgSequencer::state (inline, const) | — | SeqState | 현재 상태 | src/Actuators/gripper/hitbot_zefg/motion/include/hitbot_zefg/zefg_sequencer.hpp:69 |
+| 89 | ZefgSequencer::outcome (inline, const) | — | SeqOutcome | 최근 완주/실패 사유 | src/Actuators/gripper/hitbot_zefg/motion/include/hitbot_zefg/zefg_sequencer.hpp:74 |
+| 90 | ZefgSequencer::lastSnapshot (inline, const) | — | ZefgSnapshot | 마지막 성공 판독 스냅샷(판독 실패 시 직전 값 유지) | src/Actuators/gripper/hitbot_zefg/motion/include/hitbot_zefg/zefg_sequencer.hpp:80 |
+
+### src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp
+
+| # | 함수 | 입력 | 출력 | 기능 | 위치(file:line) |
+|---|---|---|---|---|---|
+| 91 | ZefgSequencer::ZefgSequencer (정의) | hal, cfg | — | 멤버 초기화 | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:11 |
+| 92 | ZefgSequencer::start (정의) | target, now | bool | 진행 중 재진입 거부·터미널 재사용 | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:15 |
+| 93 | ZefgSequencer::tick (정의) | now | SeqState | 상태별 핸들러 디스패치(switch) | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:28 |
+| 94 | ZefgSequencer::tickCheckInit (private) | now | void | readSnapshot 1회 — 완료→kWriteTargets / auto_initialize→kInitializing(명령 예약) / 아니면 kFailed(kNotInitialized) | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:52 |
+| 95 | ZefgSequencer::tickInitializing (private) | now | void | 예약 명령 송신(1회) 또는 폴링 — 완료→kWriteTargets / init_timeout→kFailed(kTimeout) | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:77 |
+| 96 | ZefgSequencer::tickWriteTargets (private) | now | void | writeTargets 1회 → kWaitMotion(모션 데드라인·신선도 유예 기점 설정) | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:105 |
+| 97 | ZefgSequencer::tickWaitMotion (private) | now | void | 폴링 — InPlace+위치 대조(게이트 예외)→kReached / **신선도 게이트**(Moving 관측 후 또는 status_grace 경과 후에만) Clamping→kClamped·Dropping→kDropped / motion_timeout→kTimeout | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:119 |
+| 98 | ZefgSequencer::fail (private) | why: SeqOutcome | void | kFailed 전이+사유 기록 | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:161 |
+| 99 | ZefgSequencer::succeed (private) | how: SeqOutcome | void | kSucceeded 전이+사유 기록 | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:167 |
+
+### src/Actuators/gripper/hitbot_zefg/motion/test/zefg_sequencer_test.cpp
+
+| # | 테스트/헬퍼 | 기능 | 위치(file:line) |
+|---|---|---|---|
+| 100 | fastConfig/makeHal/openTarget/closeTarget/runToTerminal (헬퍼) | ZefgPlant.link()→RtuClient→ZefgHal→ZefgSequencer 실조립 + tick→step→시계전진 완주 루프 | src/Actuators/gripper/hitbot_zefg/motion/test/zefg_sequencer_test.cpp:31 |
+| 101 | TEST(ZefgSequencer, OpenMoveReachesTarget) | ① 정상 열기 35→0mm — kSucceeded(kReached) | src/Actuators/gripper/hitbot_zefg/motion/test/zefg_sequencer_test.cpp:75 |
+| 102 | TEST(ZefgSequencer, ObstacleGripSucceedsAsClamped) | ② 장애물 20mm 파지 — kSucceeded(kClamped)·위치 고정 | src/Actuators/gripper/hitbot_zefg/motion/test/zefg_sequencer_test.cpp:92 |
+| 103 | TEST(ZefgSequencer, DropDuringMotionFailsAsDropped) | ③ kWaitMotion 중(Moving 관측 후) 낙하 주입 — kFailed(kDropped) | src/Actuators/gripper/hitbot_zefg/motion/test/zefg_sequencer_test.cpp:112 |
+| 104 | TEST(ZefgSequencer, FrozenPlantTimesOut) | ④ 플랜트 step 정지 — motion_timeout 에 kFailed(kTimeout) | src/Actuators/gripper/hitbot_zefg/motion/test/zefg_sequencer_test.cpp:137 |
+| 105 | TEST(ZefgSequencer, AutoInitializeRecoversUninitializedStart) | ⑤ 미초기화 시작 → auto init 경유 kSucceeded(kReached) | src/Actuators/gripper/hitbot_zefg/motion/test/zefg_sequencer_test.cpp:160 |
+| 106 | TEST(ZefgSequencer, UninitializedFailsWhenAutoInitDisabled) | ⑥ auto_initialize=false — kFailed(kNotInitialized) | src/Actuators/gripper/hitbot_zefg/motion/test/zefg_sequencer_test.cpp:181 |
+| 107 | TEST(ZefgSequencer, CommLossFailsAsCommError) | ⑦ 목 링크 무응답 전환(플랜트 없이 목 슬레이브 직접 조립) — kFailed(kCommError) | src/Actuators/gripper/hitbot_zefg/motion/test/zefg_sequencer_test.cpp:200 |
+| 108 | TEST(ZefgSequencer, RestartAfterDropIgnoresLatchedDroppingSample) | ⑧ 래치 함정 재start — write 직후 첫 폴링=Dropping 표본을 단언하고 오탐 없이 kSucceeded(kReached) 완주 | src/Actuators/gripper/hitbot_zefg/motion/test/zefg_sequencer_test.cpp:226 |
+
+전 케이스 GREEN 확인: `hitbot_zefg_sequencer_test` 직접 실행 `[  PASSED  ] 8 tests.` (gtest), ctest 1 엔트리
+`100% tests passed ... out of 1`. 변이 프로브: 신선도 게이트 무력화(`fresh = true` 일시 변이) 시
+RestartAfterDropIgnoresLatchedDroppingSample 이 함정 tick 에서 실패함을 확인 후 원복 — 우연 통과 아님.
+회귀: hal 패키지 ctest 4/4(hitbot_zefg_hal_test 7 + modbus_rtu 3 엔트리 9+12+5=26)·sim 패키지 ctest 1/1(7) 무손상.
+
+### src/Actuators/gripper/hitbot_zefg/motion/CMakeLists.txt
+
+빌드 그래프(함수 아님) — 독립 패키지 `hitbot_zefg_motion`(smc_lecp6/motion·hitbot sim 선례).
+형제 hal 을 add_subdirectory 가드로 소비, `hitbot_zefg_hal`(PUBLIC)·warnings(PRIVATE)는
+`$<BUILD_INTERFACE:...>` 한정 링크. 테스트 `hitbot_zefg_sequencer_test` 만 형제 sim 을 추가로
+조립(top-level 가드) — 목 링크 헤더 경로는 hitbot_zefg_sim 이 전이 제공(본 CMake 파일은 게이트
+면제 경로가 아니므로 하위 통신 타깃을 직접 명명하지 않는다).
+
 ### 전역 변수
 
 없음 (전 상태는 인스턴스 멤버 — ZefgHal: client_/last_error_/error_count_/last_exception_code_,
-ZefgPlant: cfg_/slave_/pending_/observer_/init_raw_/clamp_raw_/position_mm_/모션 램프 상태).
+ZefgPlant: cfg_/slave_/pending_/observer_/init_raw_/clamp_raw_/position_mm_/모션 램프 상태,
+ZefgSequencer: hal_/cfg_/state_/outcome_/target_/last_snapshot_/init_command_pending_/moving_seen_/
+start_time_/init_deadline_/motion_deadline_/status_fresh_after_).
