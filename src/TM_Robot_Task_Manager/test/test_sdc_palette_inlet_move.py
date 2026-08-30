@@ -50,8 +50,11 @@ def test_job_type_is_registered():
     spec = RecipeManager.JOB_TYPES['sdc_palette_inlet_move']
     assert spec['name'] == 'sdc_palette_inlet_move'
     assert spec['category'] == 'Landmark'
-    assert set(spec['params']) == {'velocity', 'wait_after_command'}
+    assert set(spec['params']) == {'dx', 'dy', 'dz', 'velocity', 'wait_after_command'}
     assert spec['params']['velocity']['default'] == 10.0
+    assert spec['params']['dx']['default'] == 0.0
+    assert spec['params']['dy']['default'] == 0.0
+    assert spec['params']['dz']['default'] == 0.0
 
 
 def test_dispatch_reaches_handler(executor):
@@ -75,6 +78,24 @@ def test_moves_to_marker_relative_inlet_keeping_orientation(executor):
     assert args[4:7] == (CURRENT_TCP[3], CURRENT_TCP[4], CURRENT_TCP[5])
     assert args[7] == 10.0
     assert 'sdc_palette_inlet_move 완료' in _logs(executor)
+
+
+def test_correction_params_shift_target_in_marker_frame(executor):
+    import numpy as np
+    from scipy.spatial.transform import Rotation
+
+    executor._move_to_position_line = MagicMock(return_value=(True, '이동 완료'))
+
+    with _patch_entry(dict(ENTRY)):
+        assert executor._exec_sdc_palette_inlet_move(_job(dx=5.0, dy=-3.0, dz=10.0)) is True
+
+    args = executor._move_to_position_line.call_args[0]
+    R_m = Rotation.from_euler(
+        'ZYX', [MARKER['rz'], MARKER['ry'], MARKER['rx']], degrees=True).as_matrix()
+    base = np.array([MARKER['x'], MARKER['y'], MARKER['z']]) + R_m @ np.array(ENTRY['values'])
+    expected = base + R_m @ np.array([5.0, -3.0, 10.0])
+    assert np.allclose(np.array(args[1:4]), expected, atol=1e-6), \
+        f"보정 반영 목표 {args[1:4]} ≠ 기대 {expected}"
 
 
 def test_fails_without_landmark_scan(executor):

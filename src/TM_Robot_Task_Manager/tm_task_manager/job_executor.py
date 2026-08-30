@@ -1762,6 +1762,9 @@ class JobExecutor:
         from .services.config_manager import ConfigManager
 
         params = job.params
+        dx = float(params.get('dx', 0.0))
+        dy = float(params.get('dy', 0.0))
+        dz = float(params.get('dz', 0.0))
         velocity = params.get('velocity', 10.0)
         wait_time = params.get('wait_after_command', 0.5)
 
@@ -1792,12 +1795,15 @@ class JobExecutor:
             'ZYX', [float(lm.get('rz', 0)), float(lm.get('ry', 0)), float(lm.get('rx', 0))],
             degrees=True).as_matrix()
         p_marker = np.array([float(lm.get('x', 0)), float(lm.get('y', 0)), float(lm.get('z', 0))])
-        target = p_marker + R_marker @ np.array([float(v) for v in offsets])
+        total_offset = np.array([float(v) for v in offsets]) + np.array([dx, dy, dz])
+        target = p_marker + R_marker @ total_offset
 
         cur_rx, cur_ry, cur_rz = self.ros_node.current_tcp_pose[3:6]
 
         self._log("sdc_palette_inlet_move: 자세 유지, 마커 상대 입구 위치로 이동")
         self._log(f"  마커 위치: X={p_marker[0]:.2f}, Y={p_marker[1]:.2f}, Z={p_marker[2]:.2f}")
+        if dx or dy or dz:
+            self._log(f"  보정(마커 frame): dX={dx:.2f}, dY={dy:.2f}, dZ={dz:.2f}")
         self._log(f"  목표 위치: X={target[0]:.2f}, Y={target[1]:.2f}, Z={target[2]:.2f}")
 
         success, msg = self._move_to_position_line(

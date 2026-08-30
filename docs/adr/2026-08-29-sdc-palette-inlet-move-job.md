@@ -25,3 +25,7 @@ Job `sdc_palette_inlet_move`(category Landmark)를 신설한다.
 ## Rollback
 
 N/A (가역) — JOB_TYPES 항목·dispatch 분기·실행 함수·테스트·positions.yaml 항목 제거로 원복. 영속 상태·스키마 변경 없음.
+
+## 개정 (2026-08-30 10:39 — 보정 파라미터)
+
+사용자 요구: "옵셋으로 이동하는데 수정할 필요가 있어서 기준 옵셋에서 보정을 넣고 싶은 것임". Job 에 **dx/dy/dz 보정 파라미터**(float, 기본 0.0, 마커 frame mm)를 추가한다 — 목표 = 마커위치 + R_marker@(YAML 기준 오프셋 + (dx,dy,dz)). 기본값 0 이라 기존 레시피 동작 불변(하위 호환). 기준(티칭)은 YAML, 레시피별·슬롯별 가감은 job 파라미터로 역할 분리.
