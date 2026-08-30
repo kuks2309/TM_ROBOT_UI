@@ -8,3 +8,10 @@
 - **검증**: `g++ -std=c++17 -fsyntax-only -Wall -Werror=switch` 통과(주석만이라 기능 시험 불요, 테스트 7종은 a047d89 시점 GREEN 기록 유지).
 - **함수표**: `hitbot_zefg/docs/function_table.md` 앵커 5건 재앵커(hpp #23~#26, cpp #39 — 주석 삽입 줄밀림 반영).
 - 원장: `.superpowers/sdd/2026-08-29-hitbot-zefg-stack/progress.md` (Task 1 CLOSED). 다음: Task 2(sim ZefgPlant) — 사용자 지시 대기.
+
+## 실기 H0 스모크 (같은 날 추가 — 사용자 지시 "실기에서 실행해봐야지")
+
+- **신규**: `hitbot_zefg/tools/zefg_hal_h0_smoke.cpp` — 읽기 전용 H0 도구(write 계열 불호출), Task 4 계획분 조기 인출. 함수표 #47~#49 등재(실측 앵커).
+- **결과: 성공** ✓ — nx-orin-1 `/dev/ttyUSB0` 실기에서 SerialPortLink→RtuClient→ZefgHal 전체 C++ 체인 스냅샷 판독: `init=Completed clamp=Dropping position=0.000mm(실물 완전 열림, 영점 정본 정합) current=-0.094A, health link_up=1 error_count=0`. 상세: [HIL 기록](../hil/2026-08-29-zefg-c35-h0.md) §H0 재수행.
+- 빌드: 본 PC(-Wall -Wextra -Werror=switch) + orin g++ 직빌드 모두 경고 0. orin `~/zefg_hal_smoke/` 보존(Task 4 재사용).
+- ⚠ speed 피드백 1.0mm/s(정지 중) — 2026-08-29 python 판독(0.0)과 상이, 원인 미확인으로 HIL 기록에 명시(동작 판정 미사용 필드).

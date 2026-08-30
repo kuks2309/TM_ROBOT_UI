@@ -88,6 +88,18 @@ gripper_hal 선례 복제(자체 정의) — install(TARGETS) 에도 포함(grip
 modbus 심볼 매치)에 해당하는 첫 실사용 — Step 6 라이브 확인: 정상 케이스 `✅ 직접 접근 0건 (검사 대상 45
 파일)` / 음성 케이스(hal 밖 임시 `hitbot_zefg/x.cpp` 에 modbus include) `❌ ... rc=1` → 삭제 후 `✅` 복귀.
 
+### src/Actuators/gripper/hitbot_zefg/tools/zefg_hal_h0_smoke.cpp
+
+실기 H0(관측·읽기 전용) 스모크 — SerialPortLink→RtuClient→ZefgHal 전체 C++ 체인을 실제 장치에 대고
+readSnapshot 1회. write 계열 절대 불호출(zefg_c35_probe.py 와 동일 H0 규율). Task 4 계획분 조기 인출
+(사용자 지시 "실기에서 실행해봐야지", 2026-08-30).
+
+| # | 함수 | 입력 | 출력 | 기능 | 위치(file:line) |
+|---|---|---|---|---|---|
+| 47 | initName (anon ns) | s: InitStatus | const char* | enum→표시 문자열 | src/Actuators/gripper/hitbot_zefg/tools/zefg_hal_h0_smoke.cpp:25 |
+| 48 | clampName (anon ns) | s: ClampStatus | const char* | enum→표시 문자열 | src/Actuators/gripper/hitbot_zefg/tools/zefg_hal_h0_smoke.cpp:39 |
+| 49 | main | argv: device [baud=115200] [unit=1] | rc 0/1/2 | 시리얼 개방→ZefgHal.readSnapshot→스냅샷·health 출력(읽기 전용) | src/Actuators/gripper/hitbot_zefg/tools/zefg_hal_h0_smoke.cpp:59 |
+
 ### 전역 변수
 
 없음 (전 상태는 ZefgHal 인스턴스 멤버 — client_/last_error_/error_count_/last_exception_code_).
