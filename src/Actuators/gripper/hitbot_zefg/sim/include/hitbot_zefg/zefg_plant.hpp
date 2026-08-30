@@ -82,7 +82,8 @@ class ZefgPlant
     bool moving_ = false;
     float motion_start_mm_ = 0.0F;
     float motion_target_mm_ = 0.0F;
-    float motion_step_mm_ = 0.0F; // 부호 포함(진행 방향)
+    float motion_step_mm_ = 0.0F;    // 부호 포함(진행 방향) — 위치 램프용
+    double motion_step_abs_mm_ = 0.0; // 크기(double) — tick 수 산출 전용(결정론 계약, 리뷰 Minor)
     float motion_current_a_ = 0.0F;
     int motion_tick_ = 0;
     int motion_total_ticks_ = 0;

@@ -180,6 +180,7 @@ void ZefgPlant::beginMotion()
     const double distance = std::fabs(static_cast<double>(motion_target_mm_) - static_cast<double>(motion_start_mm_));
     const float dir = (motion_target_mm_ >= motion_start_mm_) ? 1.0F : -1.0F;
     motion_step_mm_ = dir * static_cast<float>(step_mm);
+    motion_step_abs_mm_ = step_mm; // 장애물 도달 tick 산출도 같은 double 값으로(결정론 일관성)
     motion_tick_ = 0;
     motion_total_ticks_ = (step_mm > 0.0) ? static_cast<int>(std::ceil(distance / step_mm)) : 0;
     moving_ = true;
@@ -191,14 +192,19 @@ void ZefgPlant::beginMotion()
 void ZefgPlant::advanceMotion()
 {
     ++motion_tick_;
-    const float travelled = std::fabs(motion_step_mm_) * static_cast<float>(motion_tick_);
 
     // 장애물 우선 판정(경로 위에 있으면 목표 도달보다 먼저 만난다) — 도달 시 파지: 위치 고정.
+    // 도달 tick 은 beginMotion 총 tick 과 동일하게 double 기반 정수 산출(리뷰 Minor — float 거리
+    // 비교는 나눠떨어지지 않는 조합에서 반올림으로 tick 이 어긋날 수 있다).
     const bool toward_increase = motion_step_mm_ > 0.0F;
     const bool obstacle_on_path =
         has_obstacle_ && (toward_increase ? (obstacle_mm_ > motion_start_mm_ && obstacle_mm_ <= motion_target_mm_)
                                           : (obstacle_mm_ < motion_start_mm_ && obstacle_mm_ >= motion_target_mm_));
-    if (obstacle_on_path && travelled >= std::fabs(obstacle_mm_ - motion_start_mm_))
+    const double obstacle_dist =
+        std::fabs(static_cast<double>(obstacle_mm_) - static_cast<double>(motion_start_mm_));
+    const int obstacle_ticks =
+        (motion_step_abs_mm_ > 0.0) ? static_cast<int>(std::ceil(obstacle_dist / motion_step_abs_mm_)) : 0;
+    if (obstacle_on_path && motion_tick_ >= obstacle_ticks)
     {
         position_mm_ = obstacle_mm_;
         moving_ = false;

@@ -74,6 +74,7 @@ src/Actuators/gripper/
   - 설치(install) export 미결합 — gripper_common·벤더 hal 은 add_subdirectory 소비 전용(빌드 인터페이스만). 설치 기반 배포 지원 여부는 단계③ 착수 전 결정(최종 리뷰 I5, 2026-08-29).
   - 단계③ 구현 각주(2026-08-29): D2 의 parity 포함 시리얼 설정 소유는 현재 8N1 고정(HITBOT 실측 기준) — schunk_egu 착수 전 SerialConfig{parity·stop_bits} 확장 필요(최종 리뷰 I4).
   - D2 의 `IRtuClient` 인터페이스는 구체 `RtuClient` + `ISerialLink` 심으로 대체 구현 — 바이트 레벨 결함 주입이 가능한 더 낮은 심이 우월(최종 리뷰 판단).
+  - 단계④-2 fix wave 각주(2026-08-30): D4 게이트(`checks/gripper-io-single-master.sh`) 화이트리스트 정밀화 — 벤더 면제를 `hal/` 단독에서 `hal/·sim/·motion/test/` 로 확장(sim=SIL 슬레이브 플랜트, motion/test=SIL 조립 테스트는 검증 자산; motion/src 등 런타임 층은 계속 차단해 단일 쓰기 마스터 원칙 유지). 음성 프로브 2종(벤더 루트 x.cpp·motion/src/y.cpp 의 modbus include) rc=1 실증 후 정리 rc=0 — D1 승인 골격(hal·motion·sim 3형제)과 게이트의 충돌 해소.
 
 ## Rollback
 

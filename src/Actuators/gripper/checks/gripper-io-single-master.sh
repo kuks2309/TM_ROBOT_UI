@@ -17,10 +17,15 @@ ROS_ASSEMBLY_PKGS="gripper_ros"
 # ADR-005 D4 전면 적용(2026-08-29): RS485 RTU 벤더 스택의 hal/ 은 자기 버스의 유일 마스터로서
 # modbus_rtu 를 소비할 수 있다. Crevis 스테이션 보호는 불변 — smc_lecp6 및 그 외 전 계층은 여전히 금지.
 # 면제 범위는 modbus 계열 심볼(BANNED_IO 매치 라인에 "modbus" 문자열 포함)에 한정 —
-# socket 류(sys/socket.h 등)·remote_io_hal·IRemoteIoStationPort 는 벤더 hal 이라도 계속 차단한다
+# socket 류(sys/socket.h 등)·remote_io_hal·IRemoteIoStationPort 는 벤더 면제 경로라도 계속 차단한다
 # (최종 리뷰 I1: 종전 필터는 벤더 hal 의 모든 BANNED_IO 매치를 무조건 면제해 화이트리스트가
 # 과확장되어 있었다 — 아래 hits/build_hits awk 참조).
+# 단계④-2 fix wave 정밀화: 런타임 쓰기 마스터는 hal/ 만이되, sim/(SIL 슬레이브 플랜트)과
+# motion/test/(SIL 조립 테스트)는 검증 자산으로서 modbus_rtu 소비를 면제한다 — 회사 폴더의
+# 승인 골격(hal·motion·sim 3형제, ADR-005 D1)을 게이트가 왜곡하지 않게 하기 위함.
+# motion/src 등 런타임 층은 계속 차단(단일 쓰기 마스터 원칙 유지).
 RTU_VENDOR_DIRS='hitbot_zefg|schunk_egu'
+RTU_VENDOR_EXEMPT_SUB='((hal|sim)/|motion/test/)'
 BANNED_ROS='^[[:space:]]*#[[:space:]]*include[[:space:]]*[<"](rclcpp|rclcpp_lifecycle|rclcpp_action|std_msgs|sensor_msgs|geometry_msgs|nav_msgs|tc_msgs|ament_)'
 
 FAIL=0
@@ -33,22 +38,22 @@ BANNED_BUILD='(remote_io_hal|modbus_tcp|modbus_rtu)'
 
 # ADR-005 D4 (2026-08-29): 본 게이트의 보호 대상은 Crevis 스테이션(Modbus TCP)의 단일 쓰기
 # 마스터다. RS485 RTU 벤더 그리퍼(HITBOT 등)는 별개 버스이며 그 유일 마스터는 해당 그리퍼
-# 노드다 — 벤더 진단 도구(tools/)는 스캔에서 제외한다. 회사별 hal/ 허용은 RTU_VENDOR_DIRS
-# 화이트리스트로 적용됨(위 정의 참조).
+# 노드다 — 벤더 진단 도구(tools/)는 스캔에서 제외한다. 회사별 hal·sim·motion/test 허용은
+# RTU_VENDOR_DIRS × RTU_VENDOR_EXEMPT_SUB 화이트리스트로 적용됨(위 정의 참조).
 # 필터는 STACK_DIR 절대경로 `^` 앵커 — grep 출력은 항상 "경로:줄:내용" 형식이므로 앵커가
 # ①중첩 스푸핑 경로(예: smc_lecp6/hitbot_zefg/hal/)와 ②매치 줄 "내용부"의 문자열 우연 일치를
 # 모두 봉쇄한다(내용부는 경로 뒤에 오므로 `^${STACK_DIR}/...` 패턴에 걸릴 수 없다).
 #
-# 벤더 hal 경로로 판정된 매치 중에서도 "modbus" 문자열을 포함하는 라인만 면제한다 — 벤더 hal
-# 이라 해도 sys/socket.h·remote_io_hal·IRemoteIoStationPort 등 비-modbus 매치는 계속 차단
+# 벤더 면제 경로로 판정된 매치 중에서도 "modbus" 문자열을 포함하는 라인만 면제한다 — 면제
+# 경로라 해도 sys/socket.h·remote_io_hal·IRemoteIoStationPort 등 비-modbus 매치는 계속 차단
 # (최종 리뷰 I1: 경로만 보고 전량 면제하던 종전 로직의 화이트리스트 과확장 봉쇄).
 hits=$(grep -riEn --exclude-dir=tools "${SRC_GLOBS[@]}" "$BANNED_IO" "$STACK_DIR" 2>/dev/null \
-  | awk -v re="^${stack_re}/(${RTU_VENDOR_DIRS})/hal/" '
+  | awk -v re="^${stack_re}/(${RTU_VENDOR_DIRS})/${RTU_VENDOR_EXEMPT_SUB}" '
       {
         path = $0; sub(/:[0-9]+:.*/, "", path)
         if (path ~ re) {
           line = $0; sub(/^[^:]*:[0-9]+:/, "", line)
-          if (tolower(line) ~ /modbus/) next  # 벤더 hal + modbus 심볼만 면제
+          if (tolower(line) ~ /modbus/) next  # 벤더 면제 경로 + modbus 심볼만 면제
         }
         print
       }')
@@ -58,15 +63,16 @@ if [ -n "$hits" ]; then
   FAIL=1
 fi
 
-# build_hits 도 동일 원칙이나 면제 폭은 더 좁다 — 벤더 hal 은 modbus_rtu 의존 선언만 면제하고,
-# modbus_tcp·remote_io_hal 의존은 벤더 hal 이라도 차단한다(최종 리뷰 I1).
+# build_hits 도 동일 원칙이나 면제 폭은 더 좁다 — 벤더 면제 경로(hal·sim·motion/test)는
+# modbus_rtu 의존 선언만 면제하고, modbus_tcp·remote_io_hal 의존은 면제 경로라도 차단한다
+# (최종 리뷰 I1).
 build_hits=$(grep -riEn "${BUILD_GLOBS[@]}" "$BANNED_BUILD" "$STACK_DIR" 2>/dev/null \
-  | awk -v re="^${stack_re}/(${RTU_VENDOR_DIRS})/hal/" '
+  | awk -v re="^${stack_re}/(${RTU_VENDOR_DIRS})/${RTU_VENDOR_EXEMPT_SUB}" '
       {
         path = $0; sub(/:[0-9]+:.*/, "", path)
         if (path ~ re) {
           line = $0; sub(/^[^:]*:[0-9]+:/, "", line)
-          if (tolower(line) ~ /modbus_rtu/) next  # 벤더 hal + modbus_rtu 의존만 면제
+          if (tolower(line) ~ /modbus_rtu/) next  # 벤더 면제 경로 + modbus_rtu 의존만 면제
         }
         print
       }')

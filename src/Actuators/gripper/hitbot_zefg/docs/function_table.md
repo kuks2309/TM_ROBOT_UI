@@ -102,69 +102,71 @@ readSnapshot 1회. write 계열 절대 불호출(zefg_c35_probe.py 와 동일 H0
 
 ## Task 2: sim — ZefgPlant 결정론 플랜트 (단계④-2)
 
-**배치 이탈(계획 대비)**: 계획 §Task 2 는 `hitbot_zefg/sim/` 배치였으나, `checks/gripper-io-single-master.sh`
-게이트가 modbus 심볼·modbus_rtu 빌드 의존을 벤더 **`hal/` 경로에만** 면제한다(RTU_VENDOR_DIRS + `/hal/`
-앵커, ADR-005 D4). 플랜트는 계획 인터페이스 자체가 `comm::modbus_rtu::ISerialLink` 를 노출하므로
-`hitbot_zefg/sim/` 에서는 게이트 rc=1 이 필연 — 브리프 지시(게이트 완화 금지·구조 재검토)에 따라
-**`hitbot_zefg/hal/sim/` 독립 CMake 패키지**로 배치한다(같은 RTU 버스의 슬레이브 모형 = hal 경계 안).
+**배치**: 원안 골격 복원 + 게이트 정밀화(컨트롤러 Ruling 8, 단계④-2 fix wave). 최초 구현은
+게이트(`checks/gripper-io-single-master.sh`)의 벤더 면제가 `hal/` 경로 한정이라 `hal/sim/` 하위에
+두었으나, ADR-005 D1 의 사용자 승인 골격(회사 폴더 = hal·motion·sim 3형제, smc_lecp6 대칭)과
+충돌 — 게이트 화이트리스트를 `hal/·sim/·motion/test/` 로 정밀 확장(검증 자산만 면제, motion/src 등
+런타임 층은 계속 차단 = D4 단일 쓰기 마스터 유지)하고 sim 을 **`hitbot_zefg/sim/` 독립 CMake
+패키지**로 환원했다. 음성 프로브 2종(벤더 루트 x.cpp·motion/src/y.cpp) rc=1 실증.
 네임스페이스(`gripper::hitbot::sim`)·시그니처는 계획 블록 그대로.
 
-### src/Actuators/gripper/hitbot_zefg/hal/sim/include/hitbot_zefg/zefg_plant.hpp
+### src/Actuators/gripper/hitbot_zefg/sim/include/hitbot_zefg/zefg_plant.hpp
 
 | # | 함수/심볼 | 입력 | 출력 | 기능 | 위치(file:line) |
 |---|---|---|---|---|---|
-| 50 | PlantConfig (struct) | — | — | initial_position_mm=35.0F(HIL H0 관측)·tick{10ms} | src/Actuators/gripper/hitbot_zefg/hal/sim/include/hitbot_zefg/zefg_plant.hpp:29 |
-| 51 | kPlantInitTicks (상수) | — | int | 초기화 전이 후 완료까지 step 수=5 ⚠실측 미보유(결정론 sim 값) | src/Actuators/gripper/hitbot_zefg/hal/sim/include/hitbot_zefg/zefg_plant.hpp:37 |
-| 52 | kPlantUnitId (상수) | — | uint8_t | RTU unit=1 (HIL H0: 0x0080=1 공장 기본값) | src/Actuators/gripper/hitbot_zefg/hal/sim/include/hitbot_zefg/zefg_plant.hpp:40 |
-| 53 | ZefgPlant::ZefgPlant (선언) | cfg: PlantConfig={} | — | MockSlaveLink 내장 생성 + 초기화 완료 상태 시작 | src/Actuators/gripper/hitbot_zefg/hal/sim/include/hitbot_zefg/zefg_plant.hpp:45 |
-| 54 | ZefgPlant::link (선언) | — | shared_ptr&lt;ISerialLink&gt; | 내장 MockSlaveLink 의 관찰 데코레이터 — RtuClient 주입용 | src/Actuators/gripper/hitbot_zefg/hal/sim/include/hitbot_zefg/zefg_plant.hpp:48 |
-| 55 | ZefgPlant::step (선언) | — | void | tick 1회: 명령 소비(래치 전이)+위치 램프+레지스터 갱신 | src/Actuators/gripper/hitbot_zefg/hal/sim/include/hitbot_zefg/zefg_plant.hpp:52 |
-| 56 | ZefgPlant::insertObstacleAt (선언) | mm: float | void | 파지 모형: 경로 장애물 — 도달 시 kClamping 고정 | src/Actuators/gripper/hitbot_zefg/hal/sim/include/hitbot_zefg/zefg_plant.hpp:54 |
-| 57 | ZefgPlant::dropObject (선언) | — | void | 낙하 주입 → kDropping 래치(다음 모션까지 유지) | src/Actuators/gripper/hitbot_zefg/hal/sim/include/hitbot_zefg/zefg_plant.hpp:55 |
-| 58 | ZefgPlant::setPowerOnInitialized (선언) | initialized: bool | void | true(기본): 초기화 완료 시작(HIL H0 관측)/false: 미초기화 | src/Actuators/gripper/hitbot_zefg/hal/sim/include/hitbot_zefg/zefg_plant.hpp:56 |
-| 59 | ZefgPlant::PendingCommands (private struct) | — | — | write 수신 이벤트 래치(init·target) — step 이 소비 | src/Actuators/gripper/hitbot_zefg/hal/sim/include/hitbot_zefg/zefg_plant.hpp:60 |
-| 60 | ZefgPlant::syncRegisters (private 선언) | — | void | 상태·피드백을 0x0040~0x0047 반영(floatToWords 재사용) | src/Actuators/gripper/hitbot_zefg/hal/sim/include/hitbot_zefg/zefg_plant.hpp:66 |
-| 61 | ZefgPlant::beginMotion (private 선언) | — | void | 목표 write 소비 → kMoving 전이+램프 파라미터 확정 | src/Actuators/gripper/hitbot_zefg/hal/sim/include/hitbot_zefg/zefg_plant.hpp:67 |
-| 62 | ZefgPlant::advanceMotion (private 선언) | — | void | 램프 1 tick: 장애물 kClamping/도달 kInPlace | src/Actuators/gripper/hitbot_zefg/hal/sim/include/hitbot_zefg/zefg_plant.hpp:68 |
+| 50 | PlantConfig (struct) | — | — | initial_position_mm=35.0F(HIL H0 관측)·tick{10ms} | src/Actuators/gripper/hitbot_zefg/sim/include/hitbot_zefg/zefg_plant.hpp:29 |
+| 51 | kPlantInitTicks (상수) | — | int | 초기화 전이 후 완료까지 step 수=5 ⚠실측 미보유(결정론 sim 값) | src/Actuators/gripper/hitbot_zefg/sim/include/hitbot_zefg/zefg_plant.hpp:37 |
+| 52 | kPlantUnitId (상수) | — | uint8_t | RTU unit=1 (HIL H0: 0x0080=1 공장 기본값) | src/Actuators/gripper/hitbot_zefg/sim/include/hitbot_zefg/zefg_plant.hpp:40 |
+| 53 | ZefgPlant::ZefgPlant (선언) | cfg: PlantConfig={} | — | MockSlaveLink 내장 생성 + 초기화 완료 상태 시작 | src/Actuators/gripper/hitbot_zefg/sim/include/hitbot_zefg/zefg_plant.hpp:45 |
+| 54 | ZefgPlant::link (선언) | — | shared_ptr&lt;ISerialLink&gt; | 내장 MockSlaveLink 의 관찰 데코레이터 — RtuClient 주입용 | src/Actuators/gripper/hitbot_zefg/sim/include/hitbot_zefg/zefg_plant.hpp:48 |
+| 55 | ZefgPlant::step (선언) | — | void | tick 1회: 명령 소비(래치 전이)+위치 램프+레지스터 갱신 | src/Actuators/gripper/hitbot_zefg/sim/include/hitbot_zefg/zefg_plant.hpp:52 |
+| 56 | ZefgPlant::insertObstacleAt (선언) | mm: float | void | 파지 모형: 경로 장애물 — 도달 시 kClamping 고정 | src/Actuators/gripper/hitbot_zefg/sim/include/hitbot_zefg/zefg_plant.hpp:54 |
+| 57 | ZefgPlant::dropObject (선언) | — | void | 낙하 주입 → kDropping 래치(다음 모션까지 유지) | src/Actuators/gripper/hitbot_zefg/sim/include/hitbot_zefg/zefg_plant.hpp:55 |
+| 58 | ZefgPlant::setPowerOnInitialized (선언) | initialized: bool | void | true(기본): 초기화 완료 시작(HIL H0 관측)/false: 미초기화 | src/Actuators/gripper/hitbot_zefg/sim/include/hitbot_zefg/zefg_plant.hpp:56 |
+| 59 | ZefgPlant::PendingCommands (private struct) | — | — | write 수신 이벤트 래치(init·target) — step 이 소비 | src/Actuators/gripper/hitbot_zefg/sim/include/hitbot_zefg/zefg_plant.hpp:60 |
+| 60 | ZefgPlant::syncRegisters (private 선언) | — | void | 상태·피드백을 0x0040~0x0047 반영(floatToWords 재사용) | src/Actuators/gripper/hitbot_zefg/sim/include/hitbot_zefg/zefg_plant.hpp:66 |
+| 61 | ZefgPlant::beginMotion (private 선언) | — | void | 목표 write 소비 → kMoving 전이+램프 파라미터 확정 | src/Actuators/gripper/hitbot_zefg/sim/include/hitbot_zefg/zefg_plant.hpp:67 |
+| 62 | ZefgPlant::advanceMotion (private 선언) | — | void | 램프 1 tick: 장애물 kClamping/도달 kInPlace | src/Actuators/gripper/hitbot_zefg/sim/include/hitbot_zefg/zefg_plant.hpp:68 |
 
-### src/Actuators/gripper/hitbot_zefg/hal/sim/src/zefg_plant.cpp
+### src/Actuators/gripper/hitbot_zefg/sim/src/zefg_plant.cpp
 
 | # | 함수 | 입력 | 출력 | 기능 | 위치(file:line) |
 |---|---|---|---|---|---|
-| 63 | ZefgPlant::CommandObserverLink (nested class) | — | — | ISerialLink 데코레이터 — fc06/fc10 write 프레임에서 0x0000=1·0x0002 write 검출, 전 호출 MockSlaveLink 위임 | src/Actuators/gripper/hitbot_zefg/hal/sim/src/zefg_plant.cpp:22 |
-| 64 | CommandObserverLink::observe (private) | frame: bytes | void | 최소 파싱(unit·fc·addr·qty)으로 PendingCommands 래치 | src/Actuators/gripper/hitbot_zefg/hal/sim/src/zefg_plant.cpp:53 |
-| 65 | CommandObserverLink::writtenWord (static) | fc,frame,addr,reg | uint16_t | fc06 값/fc10 워드 추출 | src/Actuators/gripper/hitbot_zefg/hal/sim/src/zefg_plant.cpp:70 |
-| 66 | ZefgPlant::ZefgPlant (정의) | cfg | — | slave/pending/observer 조립 후 초기화 완료 상태 | src/Actuators/gripper/hitbot_zefg/hal/sim/src/zefg_plant.cpp:84 |
-| 67 | ZefgPlant::link (정의) | — | shared_ptr&lt;ISerialLink&gt; | observer_ 반환 | src/Actuators/gripper/hitbot_zefg/hal/sim/src/zefg_plant.cpp:92 |
-| 68 | ZefgPlant::setPowerOnInitialized (정의) | initialized | void | 0x0040=5/0·InPlace·초기 위치, 모션·pending 리셋 | src/Actuators/gripper/hitbot_zefg/hal/sim/src/zefg_plant.cpp:97 |
-| 69 | ZefgPlant::insertObstacleAt (정의) | mm | void | 장애물 등록 | src/Actuators/gripper/hitbot_zefg/hal/sim/src/zefg_plant.cpp:111 |
-| 70 | ZefgPlant::dropObject (정의) | — | void | kDropping 래치+모션 정지+장애물 제거 | src/Actuators/gripper/hitbot_zefg/hal/sim/src/zefg_plant.cpp:117 |
-| 71 | ZefgPlant::step (정의) | — | void | 명령 소비(래치 시맨틱스)→init 진행→램프→syncRegisters | src/Actuators/gripper/hitbot_zefg/hal/sim/src/zefg_plant.cpp:128 |
-| 72 | ZefgPlant::beginMotion (정의) | — | void | 목표/속도/전류 레지스터 판독→kMoving·총 tick 수 확정(double 산출 — 결정론 계약) | src/Actuators/gripper/hitbot_zefg/hal/sim/src/zefg_plant.cpp:166 |
-| 73 | ZefgPlant::advanceMotion (정의) | — | void | 장애물 우선 판정→kClamping / 완주→kInPlace / 진행 | src/Actuators/gripper/hitbot_zefg/hal/sim/src/zefg_plant.cpp:191 |
-| 74 | ZefgPlant::syncRegisters (정의) | — | void | setRegister 로 0x0040~0x0047 갱신(상위워드 우선) | src/Actuators/gripper/hitbot_zefg/hal/sim/src/zefg_plant.cpp:224 |
+| 63 | ZefgPlant::CommandObserverLink (nested class) | — | — | ISerialLink 데코레이터 — fc06/fc10 write 프레임에서 0x0000=1·0x0002 write 검출, 전 호출 MockSlaveLink 위임 | src/Actuators/gripper/hitbot_zefg/sim/src/zefg_plant.cpp:22 |
+| 64 | CommandObserverLink::observe (private) | frame: bytes | void | 최소 파싱(unit·fc·addr·qty)으로 PendingCommands 래치 | src/Actuators/gripper/hitbot_zefg/sim/src/zefg_plant.cpp:53 |
+| 65 | CommandObserverLink::writtenWord (static) | fc,frame,addr,reg | uint16_t | fc06 값/fc10 워드 추출 | src/Actuators/gripper/hitbot_zefg/sim/src/zefg_plant.cpp:70 |
+| 66 | ZefgPlant::ZefgPlant (정의) | cfg | — | slave/pending/observer 조립 후 초기화 완료 상태 | src/Actuators/gripper/hitbot_zefg/sim/src/zefg_plant.cpp:84 |
+| 67 | ZefgPlant::link (정의) | — | shared_ptr&lt;ISerialLink&gt; | observer_ 반환 | src/Actuators/gripper/hitbot_zefg/sim/src/zefg_plant.cpp:92 |
+| 68 | ZefgPlant::setPowerOnInitialized (정의) | initialized | void | 0x0040=5/0·InPlace·초기 위치, 모션·pending 리셋 | src/Actuators/gripper/hitbot_zefg/sim/src/zefg_plant.cpp:97 |
+| 69 | ZefgPlant::insertObstacleAt (정의) | mm | void | 장애물 등록 | src/Actuators/gripper/hitbot_zefg/sim/src/zefg_plant.cpp:111 |
+| 70 | ZefgPlant::dropObject (정의) | — | void | kDropping 래치+모션 정지+장애물 제거 | src/Actuators/gripper/hitbot_zefg/sim/src/zefg_plant.cpp:117 |
+| 71 | ZefgPlant::step (정의) | — | void | 명령 소비(래치 시맨틱스)→init 진행→램프→syncRegisters | src/Actuators/gripper/hitbot_zefg/sim/src/zefg_plant.cpp:128 |
+| 72 | ZefgPlant::beginMotion (정의) | — | void | 목표/속도/전류 레지스터 판독→kMoving·총 tick 수 확정(double 산출 — 결정론 계약) | src/Actuators/gripper/hitbot_zefg/sim/src/zefg_plant.cpp:166 |
+| 73 | ZefgPlant::advanceMotion (정의) | — | void | 장애물 우선 판정(double 기반 정수 tick — 리뷰 Minor)→kClamping / 완주→kInPlace / 진행 | src/Actuators/gripper/hitbot_zefg/sim/src/zefg_plant.cpp:192 |
+| 74 | ZefgPlant::syncRegisters (정의) | — | void | setRegister 로 0x0040~0x0047 갱신(상위워드 우선) | src/Actuators/gripper/hitbot_zefg/sim/src/zefg_plant.cpp:230 |
 
-### src/Actuators/gripper/hitbot_zefg/hal/sim/test/zefg_plant_test.cpp
+### src/Actuators/gripper/hitbot_zefg/sim/test/zefg_plant_test.cpp
 
 | # | 테스트/헬퍼 | 기능 | 위치(file:line) |
 |---|---|---|---|
-| 75 | fastConfig/makeHal/mustSnapshot (헬퍼) | ZefgPlant.link()→진짜 RtuClient→ZefgHal 실조립 | src/Actuators/gripper/hitbot_zefg/hal/sim/test/zefg_plant_test.cpp:21 |
-| 76 | TEST(ZefgPlant, InitializeSequenceCompletesAfterDeterministicTicks) | 미초기화→명령(write 직후 유지)→1 step kInitializing→+5 step kCompleted·35.0mm | src/Actuators/gripper/hitbot_zefg/hal/sim/test/zefg_plant_test.cpp:49 |
-| 77 | TEST(ZefgPlant, EmptyMoveCompletesInDeterministicTickCount) | 35mm에서 0mm 로 20mm/s·tick10ms = 전이1+램프175=176 tick 완주 검증 | src/Actuators/gripper/hitbot_zefg/hal/sim/test/zefg_plant_test.cpp:76 |
-| 78 | TEST(ZefgPlant, ObstacleGripLatchesClampingAndHoldsPosition) | 장애물 20mm 도달 tick 101 에 kClamping·위치 고정 | src/Actuators/gripper/hitbot_zefg/hal/sim/test/zefg_plant_test.cpp:104 |
-| 79 | TEST(ZefgPlant, DropObjectLatchesDropping) | 파지 후 낙하 주입 → kDropping 즉시+지속 래치 | src/Actuators/gripper/hitbot_zefg/hal/sim/test/zefg_plant_test.cpp:133 |
-| 80 | TEST(ZefgPlant, UninitializedStartIgnoresMotionUntilInitialized) | 미초기화 시작 상태 + 목표 write 무시 ⚠모형 | src/Actuators/gripper/hitbot_zefg/hal/sim/test/zefg_plant_test.cpp:158 |
-| 81 | TEST(ZefgPlant, TargetWriteKeepsLatchedStateUntilNextStep) | **브리프 추가분**: kDropping 래치 중 새 목표 write 직후·step 전 판독=kDropping 유지, 다음 step 에 kMoving(HIL §백드라이브·힘 순응 실측) | src/Actuators/gripper/hitbot_zefg/hal/sim/test/zefg_plant_test.cpp:180 |
+| 75 | fastConfig/makeHal/mustSnapshot (헬퍼) | ZefgPlant.link()→진짜 RtuClient→ZefgHal 실조립 | src/Actuators/gripper/hitbot_zefg/sim/test/zefg_plant_test.cpp:21 |
+| 76 | TEST(ZefgPlant, InitializeSequenceCompletesAfterDeterministicTicks) | 미초기화→명령(write 직후 유지)→1 step kInitializing→+5 step kCompleted·35.0mm | src/Actuators/gripper/hitbot_zefg/sim/test/zefg_plant_test.cpp:49 |
+| 77 | TEST(ZefgPlant, EmptyMoveCompletesInDeterministicTickCount) | 35mm에서 0mm 로 20mm/s·tick10ms = 전이1+램프175=176 tick 완주 검증 | src/Actuators/gripper/hitbot_zefg/sim/test/zefg_plant_test.cpp:76 |
+| 78 | TEST(ZefgPlant, ObstacleGripLatchesClampingAndHoldsPosition) | 장애물 20mm 도달 tick 101 에 kClamping·위치 고정 | src/Actuators/gripper/hitbot_zefg/sim/test/zefg_plant_test.cpp:104 |
+| 78a | TEST(ZefgPlant, ObstacleAtNonDivisibleDistanceClampsOnCeilTick) | **fix wave 추가(리뷰 Minor)**: 장애물 19.9mm(0.2mm 스텝 비정수배) — ceil tick(100)에 kClamping·19.9mm 스냅 | src/Actuators/gripper/hitbot_zefg/sim/test/zefg_plant_test.cpp:133 |
+| 79 | TEST(ZefgPlant, DropObjectLatchesDropping) | 파지 후 낙하 주입 → kDropping 즉시+지속 래치 | src/Actuators/gripper/hitbot_zefg/sim/test/zefg_plant_test.cpp:157 |
+| 80 | TEST(ZefgPlant, UninitializedStartIgnoresMotionUntilInitialized) | 미초기화 시작 상태 + 목표 write 무시 ⚠모형 | src/Actuators/gripper/hitbot_zefg/sim/test/zefg_plant_test.cpp:182 |
+| 81 | TEST(ZefgPlant, TargetWriteKeepsLatchedStateUntilNextStep) | **브리프 추가분**: kDropping 래치 중 새 목표 write 직후·step 전 판독=kDropping 유지, 다음 step 에 kMoving(HIL §백드라이브·힘 순응 실측) | src/Actuators/gripper/hitbot_zefg/sim/test/zefg_plant_test.cpp:204 |
 
-전 케이스 GREEN 확인: `hitbot_zefg_plant_test` 직접 실행 `[  PASSED  ] 6 tests.` (gtest), ctest 1 엔트리
-`1/1 Test #1: hitbot_zefg_plant_test ... Passed`. 회귀: hal 패키지 ctest 4/4(hitbot_zefg_hal_test +
+전 케이스 GREEN 확인(fix wave 후): `hitbot_zefg_plant_test` 직접 실행 `[  PASSED  ] 7 tests.` (gtest),
+ctest 1 엔트리 `100% tests passed ... out of 1`. 회귀: hal 패키지 ctest 4/4(hitbot_zefg_hal_test +
 modbus_rtu 3 엔트리) 무손상.
 
-### src/Actuators/gripper/hitbot_zefg/hal/sim/CMakeLists.txt
+### src/Actuators/gripper/hitbot_zefg/sim/CMakeLists.txt
 
-빌드 그래프(함수 아님) — 독립 패키지 `hitbot_zefg_sim`(smc_lecp6 sim 독립 CMake 선례). 부모 hal 을
-`add_subdirectory(..)` 가드로 소비(hal 이 modbus_rtu 를 끌어옴), `hitbot_zefg_hal`·`modbus_rtu_sim` 은
-`$<BUILD_INTERFACE:...>` 한정 링크(hal 의 "설치 export 는 add_subdirectory 소비 전용" 선례). 테스트
+빌드 그래프(함수 아님) — 독립 패키지 `hitbot_zefg_sim`(smc_lecp6 sim 독립 CMake 선례). 형제 hal 을
+`add_subdirectory(../hal)` 가드로 소비(hal 이 modbus_rtu 를 끌어옴), `hitbot_zefg_hal`·`modbus_rtu_sim`
+은 `$<BUILD_INTERFACE:...>` 한정 링크(hal 의 "설치 export 는 add_subdirectory 소비 전용" 선례). 테스트
 `hitbot_zefg_plant_test` 는 top-level 가드.
 
 ### 전역 변수

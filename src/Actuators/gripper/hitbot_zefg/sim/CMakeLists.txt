@@ -1,14 +1,14 @@
 # hitbot_zefg_sim — plain CMake (ROS-free). ZefgPlant 결정론 플랜트(SIL, ADR-005 단계④-2).
 #
-# 배치가 hal/ 하위인 이유: checks/gripper-io-single-master.sh 는 modbus 심볼·modbus_rtu 빌드
-# 의존을 벤더 `hal/` 경로에만 면제한다(ADR-005 D4). 플랜트는 같은 RTU 버스의 슬레이브 모형으로
-# modbus_rtu 를 소비하므로 hal 경계 안(독립 sim 하위 패키지)에 둔다 — 게이트 완화 없이 구조로 준수.
+# 배치: 회사 폴더 승인 골격 hal·motion·sim 3형제(ADR-005 D1, smc_lecp6 와 대칭).
+# checks/gripper-io-single-master.sh 는 sim/(SIL 슬레이브 플랜트)의 modbus_rtu 소비를
+# 검증 자산으로 면제한다(단계④-2 fix wave 정밀화 — 런타임 쓰기 마스터는 hal/ 만).
 cmake_minimum_required(VERSION 3.16)
 project(hitbot_zefg_sim VERSION 0.1.0 LANGUAGES CXX)
 
-# 부모 hal 소비(가드) — hal 이 modbus_rtu(impl+sim 타깃)를 형제 경로로 끌어온다.
+# 형제 hal 소비(가드) — hal 이 modbus_rtu(impl+sim 타깃)를 형제 경로로 끌어온다.
 if(NOT TARGET hitbot_zefg_hal)
-  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/.." "${CMAKE_CURRENT_BINARY_DIR}/hitbot_zefg_hal")
+  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../hal" "${CMAKE_CURRENT_BINARY_DIR}/hitbot_zefg_hal")
 endif()
 
 add_library(hitbot_zefg_sim STATIC src/zefg_plant.cpp)

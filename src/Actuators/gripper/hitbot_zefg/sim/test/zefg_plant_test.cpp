@@ -128,6 +128,30 @@ TEST(ZefgPlant, ObstacleGripLatchesClampingAndHoldsPosition)
     EXPECT_FLOAT_EQ(held.position_mm, 20.0F);
 }
 
+// 파지(나눠떨어지지 않는 조합, 리뷰 Minor 반영): 장애물 19.9mm 는 0.2mm 스텝으로 나눠떨어지지
+// 않는다 — 도달 tick = ceil(19.9/0.2) = 100 (double 기반 정수 산출, beginMotion 총 tick 과 동일 규약).
+TEST(ZefgPlant, ObstacleAtNonDivisibleDistanceClampsOnCeilTick)
+{
+    PlantConfig cfg;
+    cfg.initial_position_mm = 0.0F;
+    ZefgPlant plant(cfg);
+    auto hal = makeHal(plant);
+
+    plant.insertObstacleAt(19.9F);
+    ASSERT_TRUE(hal->writeTargets(MotionTarget{35.0F, 20.0F, 0.3F}));
+
+    for (int i = 0; i < 100; ++i)
+        plant.step();
+    const auto before = mustSnapshot(*hal); // 99 램프 tick — 19.8mm, 장애물 직전
+    EXPECT_EQ(before.clamp, ClampStatus::kMoving);
+    EXPECT_NEAR(before.position_mm, 19.8F, 1e-3F);
+
+    plant.step(); // ceil tick(100) — 장애물 위치로 스냅·파지
+    const auto grip = mustSnapshot(*hal);
+    EXPECT_EQ(grip.clamp, ClampStatus::kClamping);
+    EXPECT_FLOAT_EQ(grip.position_mm, 19.9F);
+}
+
 // 낙하: 파지(kClamping) 중 dropObject → kDropping, 이후 step 이 지나도 래치 유지
 // (HIL H0 재수행: 유휴 중에도 clamp=Dropping 유지 관측).
 TEST(ZefgPlant, DropObjectLatchesDropping)
