@@ -68,17 +68,40 @@ def test_open_reaches_target(monkeypatch):
 
 
 def test_close_clamping_is_success(monkeypatch):
-    fake = FakeSerial(_target_acks() + [_u16_response(z.CLAMP_CLAMPING), _float_response(21.3)])
+    # Moving 관측 후의 Clamping 만 성공으로 믿는다(래치 유예 규약)
+    fake = FakeSerial(_target_acks() + [_u16_response(z.CLAMP_MOVING), _float_response(10.0),
+                                        _u16_response(z.CLAMP_CLAMPING), _float_response(21.3)])
     _install(monkeypatch, fake)
     ok, detail = z.move_to(35.0)
     assert ok and 'Clamping' in detail
 
 
 def test_dropping_fails(monkeypatch):
-    fake = FakeSerial(_target_acks() + [_u16_response(z.CLAMP_DROPPING), _float_response(10.0)])
+    fake = FakeSerial(_target_acks() + [_u16_response(z.CLAMP_MOVING), _float_response(5.0),
+                                        _u16_response(z.CLAMP_DROPPING), _float_response(10.0)])
     _install(monkeypatch, fake)
     ok, detail = z.move_to(35.0)
     assert not ok and '낙하' in detail
+
+
+def test_stale_dropping_before_motion_is_ignored(monkeypatch):
+    # 직전 모션의 래치 Dropping 이 첫 폴링에 남아도 오탐 실패하지 않는다(실기 오탐 재현)
+    fake = FakeSerial(_target_acks() + [_u16_response(z.CLAMP_DROPPING), _float_response(0.1),
+                                        _u16_response(z.CLAMP_MOVING), _float_response(10.0),
+                                        _u16_response(z.CLAMP_IN_PLACE), _float_response(35.0)])
+    _install(monkeypatch, fake)
+    ok, detail = z.move_to(35.0)
+    assert ok and '목표 도달' in detail
+
+
+def test_stale_clamping_on_open_is_ignored(monkeypatch):
+    # 파지 유지 중 open 명령: 래치 Clamping 을 '파지 완료'로 오판하지 않고 실제 도달로 판정
+    fake = FakeSerial(_target_acks() + [_u16_response(z.CLAMP_CLAMPING), _float_response(16.5),
+                                        _u16_response(z.CLAMP_MOVING), _float_response(8.0),
+                                        _u16_response(z.CLAMP_IN_PLACE), _float_response(0.0)])
+    _install(monkeypatch, fake)
+    ok, detail = z.move_to(0.0)
+    assert ok and '목표 도달' in detail and '파지 완료' not in detail
 
 
 def test_out_of_range_rejected_without_serial(monkeypatch):

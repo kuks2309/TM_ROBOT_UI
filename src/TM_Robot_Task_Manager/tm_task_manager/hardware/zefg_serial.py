@@ -26,6 +26,9 @@ CURRENT_MAX_A = 0.5
 CURRENT_DEFAULT_A = 0.3
 POSITION_TOLERANCE_MM = 0.5
 POLL_INTERVAL_S = 0.1
+# 명령 직후 래치 상태(Dropping/Clamping) 무시 유예 — 슬레이브는 직전 모션의 최종 상태를 새 명령
+# 뒤에도 유지한 채 응답한다(실기 관측, HIL 정본 §백드라이브·힘 순응 실측).
+STATUS_GRACE_S = 0.3
 
 _REG_TARGET_POSITION = 0x0002
 _REG_TARGET_SPEED = 0x0004
@@ -113,6 +116,8 @@ def move_to(position_mm: float, speed_mms: float = SPEED_DEFAULT_MMS,
 
     성공: In place(±POSITION_TOLERANCE_MM) 또는 Clamping(물체 파지 — 닫기 시 정상).
     실패: 범위 밖(송신 없이 거부)·Dropping·타임아웃·통신 오류. (성공여부, 사유) 반환.
+    Dropping/Clamping 은 Moving 관측 후 또는 STATUS_GRACE_S 경과 후에만 판정에 쓴다 —
+    직전 모션의 래치 상태를 첫 폴링이 읽고 오판하는 것을 막는다(In place 는 위치 대조가 있어 예외).
     """
     if not (POSITION_MIN_MM <= position_mm <= POSITION_MAX_MM):
         return False, f'위치 범위 밖: {position_mm}mm (허용 {POSITION_MIN_MM}~{POSITION_MAX_MM})'
@@ -132,15 +137,20 @@ def move_to(position_mm: float, speed_mms: float = SPEED_DEFAULT_MMS,
                     return False, f'{label} 기록 실패 (reg 0x{reg:04X})'
 
             deadline = time.monotonic() + timeout_s
+            fresh_after = time.monotonic() + STATUS_GRACE_S
+            moving_seen = False
             while time.monotonic() < deadline:
                 clamp = _read_u16(ser, _REG_CLAMP_STATUS)
                 position = _read_float(ser, _REG_POSITION_FB)
                 if clamp is None or position is None:
                     time.sleep(POLL_INTERVAL_S)
                     continue
-                if clamp == CLAMP_DROPPING:
+                if clamp == CLAMP_MOVING:
+                    moving_seen = True
+                fresh = moving_seen or time.monotonic() >= fresh_after
+                if fresh and clamp == CLAMP_DROPPING:
                     return False, f'낙하 감지 (pos {position:.1f}mm)'
-                if clamp == CLAMP_CLAMPING:
+                if fresh and clamp == CLAMP_CLAMPING:
                     return True, f'파지 완료(Clamping, pos {position:.1f}mm)'
                 if clamp == CLAMP_IN_PLACE and abs(position - position_mm) <= POSITION_TOLERANCE_MM:
                     return True, f'목표 도달 (pos {position:.1f}mm)'
