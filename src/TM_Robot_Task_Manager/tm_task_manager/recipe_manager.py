@@ -361,6 +361,9 @@ class RecipeManager:
             'name': 'sdc_palette_inlet_move',
             'category': 'Landmark',
             'params': {
+                'dx': {'type': 'float', 'default': 0.0, 'step': 1.0, 'description': '기준 오프셋 보정 dX (mm, 마커 frame — YAML 값에 가산)'},
+                'dy': {'type': 'float', 'default': 0.0, 'step': 1.0, 'description': '기준 오프셋 보정 dY (mm, 마커 frame)'},
+                'dz': {'type': 'float', 'default': 0.0, 'step': 1.0, 'description': '기준 오프셋 보정 dZ (mm, 마커 frame — 양수=마커 쪽)'},
                 'velocity': {'type': 'float', 'default': 10.0, 'step': 5.0, 'description': '속도 (%)'},
                 'wait_after_command': {'type': 'float', 'default': 0.5, 'step': 0.1, 'description': '명령 후 대기 시간 (초)'}
             }

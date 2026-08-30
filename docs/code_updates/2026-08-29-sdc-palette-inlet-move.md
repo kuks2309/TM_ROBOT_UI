@@ -6,4 +6,6 @@
 - `job_executor.py` `_exec_sdc_palette_inlet_move` + `recipe_manager.py` JOB_TYPES(53종) + `positions.yaml` 항목 신설.
 - 테스트 9건 PASS(티칭 좌표 0.1mm 재현), 전체 회귀 902 passed. 실기 구동 미수행.
 
+- 개정(2026-08-30): dx/dy/dz 보정 파라미터 추가(마커 frame, 기본 0, YAML 기준 오프셋에 가산). 테스트 10건 PASS·회귀 916.
+
 Session: 8748628e-e7f8-4230-9548-cf3f978111a3
