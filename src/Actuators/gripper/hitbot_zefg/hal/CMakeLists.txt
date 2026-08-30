@@ -19,15 +19,13 @@ add_library(hitbot_zefg::hal ALIAS hitbot_zefg_hal)
 set_target_properties(hitbot_zefg_hal PROPERTIES EXPORT_NAME hal POSITION_INDEPENDENT_CODE ON)
 target_include_directories(hitbot_zefg_hal
   PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>)
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 # gripper_common(공용 타입)은 형제 패키지 — include 경로만 소비(타깃 링크·export 결합 없음, gripper_hal 선례).
 target_include_directories(hitbot_zefg_hal
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../gripper_common/include>)
-# modbus_rtu_impl 은 add_subdirectory 소비(형제 프로젝트, 별도 install export)라 install(EXPORT) 대상에
-# 넣지 않는다 — BUILD_INTERFACE 로 한정해 본 빌드 트리 안에서만 전파(gripper_hal_kernel 의 "설치 export
-# 는 add_subdirectory 소비 전용" 선례와 동일 판단).
+# modbus_rtu_impl 은 add_subdirectory 소비(형제 프로젝트) — BUILD_INTERFACE 한정으로 본 빌드
+# 트리 안에서만 전파한다.
 target_link_libraries(hitbot_zefg_hal PUBLIC $<BUILD_INTERFACE:modbus_rtu_impl> PRIVATE hitbot_zefg_hal_warnings)
 target_compile_features(hitbot_zefg_hal PUBLIC cxx_std_17)
 

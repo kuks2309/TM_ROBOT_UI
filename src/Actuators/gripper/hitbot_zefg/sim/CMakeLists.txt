@@ -16,10 +16,9 @@ add_library(hitbot_zefg::sim ALIAS hitbot_zefg_sim)
 set_target_properties(hitbot_zefg_sim PROPERTIES EXPORT_NAME sim POSITION_INDEPENDENT_CODE ON)
 target_include_directories(hitbot_zefg_sim
   PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>)
-# hal·modbus_rtu_sim 은 add_subdirectory 소비(형제 프로젝트, 별도 install export)라 install(EXPORT)
-# 대상에 넣지 않는다 — BUILD_INTERFACE 한정 전파(hitbot_zefg_hal 의 modbus_rtu_impl 선례와 동일 판단).
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+# hal·modbus_rtu_sim 은 add_subdirectory 소비(형제 프로젝트) — BUILD_INTERFACE 한정 전파
+# (hitbot_zefg_hal 의 modbus_rtu_impl 과 동일 판단).
 target_link_libraries(hitbot_zefg_sim
   PUBLIC $<BUILD_INTERFACE:hitbot_zefg_hal> $<BUILD_INTERFACE:modbus_rtu_sim>
   PRIVATE $<BUILD_INTERFACE:hitbot_zefg_hal_warnings>)

@@ -16,10 +16,9 @@ add_library(hitbot_zefg::motion ALIAS hitbot_zefg_motion)
 set_target_properties(hitbot_zefg_motion PROPERTIES EXPORT_NAME motion POSITION_INDEPENDENT_CODE ON)
 target_include_directories(hitbot_zefg_motion
   PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>)
-# hal·warnings 는 add_subdirectory 소비(형제 프로젝트, 별도 install export)라 install(EXPORT) 대상에
-# 넣지 않는다 — BUILD_INTERFACE 한정 전파(hitbot_zefg_sim 선례와 동일 판단).
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+# hal·warnings 는 add_subdirectory 소비(형제 프로젝트) — BUILD_INTERFACE 한정 전파
+# (hitbot_zefg_sim 과 동일 판단).
 target_link_libraries(hitbot_zefg_motion
   PUBLIC $<BUILD_INTERFACE:hitbot_zefg_hal>
   PRIVATE $<BUILD_INTERFACE:hitbot_zefg_hal_warnings>)
