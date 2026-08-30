@@ -5,5 +5,5 @@
 - **수정**: Dropping/Clamping 판정을 **Moving 관측 후 또는 `STATUS_GRACE_S`(0.3s) 경과 후에만 유효화**. In place 는 위치 대조(±0.5mm)가 있어 예외 유지(무이동 명령 즉시 성공 보존). [zefg_serial.py:112-161](../../tm_task_manager/hardware/zefg_serial.py).
 - **범위 명시**: 사용자 승인 문구는 Dropping 오탐 수정("결함 수정해주세요") — Clamping 오탐 경로는 **같은 근본 원인**(래치 신선도)이라 포함(미지시 확장 아님을 사유와 함께 명시, 보고 완료).
 - **검증**: `test_sdc_gripper.py` 8/8 PASS — 신규 2종(래치 Dropping 무시→정상 완주 성공 = 실기 오탐 재현 / open 시 래치 Clamping 오판 방지), 기존 Clamping·Dropping 케이스는 Moving 선행 표본으로 물리 정합화. 함수표 2건(hardware·test) 재앵커.
-- **배포**: orin `tm-robot-uni` scp→colcon build→task_manager_node 재시작 + 실기 확인 (본 entry 말미 갱신).
+- **배포·실기 확인 완료 (2026-08-30 11:27)**: orin scp→colcon build(3.07s)→노드 재시작(신규 PID 71616, install 경로 — 구 인스턴스 SIGTERM 무시로 SIGKILL 사용, 단일 인스턴스 확인). **실기 오탐 재현 조건(래치 Dropping·35mm)에서 open 실행 → `True 목표 도달 (pos 0.0mm)`** — 수정 전이라면 "낙하 감지" 즉시 오탐이던 정확히 그 시나리오. 노드 리스트·로봇 연결 로그 정상, tm_camera_bridge 프로세스 생존(/techman_image 노드는 재시작 직후 미등록 — 카메라 스트림 개시 시 재등록 예상, GUI 화면 확인 요망).
 - 보류: `docs/issues_and_fixes/issues_and_fixes.md` 기록 — SDC 세션(8748628e) 점유로 편집 배제, 해제 후 본 entry 내용으로 병합(§2026-08-30 [Issue] 형식).
