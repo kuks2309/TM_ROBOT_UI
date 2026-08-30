@@ -9,3 +9,5 @@
 - **판정 규약**: In place(±0.5mm)/Clamping=성공 · Dropping/타임아웃/통신오류=실패(사유 로그). 범위 밖 인자는 송신 없이 거부(레지스터·범위: 매뉴얼 p4-5 인용, zefg_serial.py 헤더).
 - **검증**: 단위 `test/test_sdc_gripper.py` **6/6 PASS**(프레임 순서·파지 판정·낙하·범위 거부·타임아웃·ack 실패, fake serial). 전체 회귀 **915 passed / 1 failed / 42 skipped** — 실패 1건(`test_manager_get_job_types_by_category` 의 `scan_ar_tag`∈Vision 기대)은 scan_ar_tag category 가 'AR Tag' 로 변경된 데 따른 **선재 실패로 본 변경과 무관**(본 변경은 Gripper category 2항목 추가뿐).
 - **함수표**: `tm_task_manager/hardware/docs/function_table.md`·`test/docs/function_table.md` (설계→실측 앵커).
+- **실기 검증 완료 (2026-08-30, 사용자 실행 확인)**: orin 배포(rsync→colcon build→task_manager_node 재시작, 2026-08-29 16:10) 후 GUI 에서 sdc_gripper_open/close Job 실행 — 정상 동작 확인("잘됨", 사용자 보고 2026-08-30 10:44). 상태: 완료.
+- 보류: 모듈 `docs/function_table.md` 의 sdc_gripper 행 병합 — 타 세션 편집 점유 지속 시 해제 후 수행(내용은 본 entry + hardware 표가 담보).
