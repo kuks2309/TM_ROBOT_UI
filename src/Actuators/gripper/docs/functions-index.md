@@ -12,7 +12,7 @@
 > | gripper_motion | (M2 예정) | 비어 있음 |
 > | gripper_ros | (M4 예정 — 단 `GripperCommand.action`·config 스키마는 M0) | 계약만 |
 > | gripper_sim | (M3 예정) | 비어 있음 |
-> | hitbot_zefg | [../hitbot_zefg/docs/function_table.md](../hitbot_zefg/docs/function_table.md) | ✅ 단계④ — hal(레지스터 계약+`ZefgHal`)·sim(`ZefgPlant`)·motion(`ZefgSequencer`)+H0 도구, 심볼 #1~#108 실측 앵커 |
+> | hitbot_zefg | [../hitbot_zefg/docs/function_table.md](../hitbot_zefg/docs/function_table.md) | ✅ 단계④ — hal(레지스터 계약+`ZefgHal`)·sim(`ZefgPlant`)·motion(`ZefgSequencer`)+H0 도구, 심볼 #1~#110 실측 앵커 |
 >
 > 전역 변수: **없음** (전 상태는 클래스/구조체 소유 — conventions 전역 규율)
 

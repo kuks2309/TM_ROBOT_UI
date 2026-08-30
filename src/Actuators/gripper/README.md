@@ -21,7 +21,7 @@
 | `gripper_ros/` | 얇은 조립 — LifecycleNode + `GripperCommand.action` + config 로드 | ament | 액션 IDL·config 스키마만 작성(노드는 M4) |
 | `gripper_ros/config/` | `gripper_stack.yaml` — 프로파일→스텝 표·신호 비트맵·코봇 브리지·타임아웃·인터록 | — | ✅ M0 스키마 |
 | `smc_lecp6/sim/` | LECP6 병렬 I/O 플랜트 + 포트 어댑터 + SIL 하니스 | plain CMake | ✅ **M3 — S1~S7 통과** |
-| `hitbot_zefg/{hal,motion,sim}` | **HITBOT Z-EFG-C35 벤더 스택**(ADR-005 D3) — RTU 레지스터 계약+`ZefgHal` 어댑터 · `ZefgSequencer` FSM(신선도 게이트) · `ZefgPlant` 결정론 플랜트 + 읽기 전용 H0 도구(`tools/`) | plain CMake ×3 | ✅ **단계④ — SIL 22종(hal 7·sim 7·motion 8) + 실기 H0 스모크 판독** ([이력](hitbot_zefg/docs/code_updates/2026-08-30-vendor-stack.md), gripper_ros 조립은 후속) |
+| `hitbot_zefg/{hal,motion,sim}` | **HITBOT Z-EFG-C35 벤더 스택**(ADR-005 D3) — RTU 레지스터 계약+`ZefgHal` 어댑터 · `ZefgSequencer` FSM(신선도 게이트) · `ZefgPlant` 결정론 플랜트 + 읽기 전용 H0 도구(`tools/`) | plain CMake ×3 | ✅ **단계④ — SIL 25종(hal 8·sim 7·motion 10) + 실기 H0 스모크 판독** ([이력](hitbot_zefg/docs/code_updates/2026-08-30-vendor-stack.md), gripper_ros 조립은 후속) |
 | `checks/` | `⟦CI⟧` 게이트 — ros-free · no-blocking · io-single-master · vendor-sealed · contract-freeze | — | `gripper-io-single-master.sh` ✅ (나머지는 해당 계층 착수 시) |
 | `docs/` | [migration-plan(SSOT)](docs/2026-08-12-migration-plan.md) · [인벤토리](docs/code_review/gripper_hal/2026-08-12.md) · [함수표 집계](docs/functions-index.md) · 수정 이력 | — | ✅ 작성 |
 
