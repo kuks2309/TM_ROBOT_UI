@@ -36,6 +36,8 @@ class ZefgHal
     explicit ZefgHal(std::shared_ptr<comm::modbus_rtu::RtuClient> client);
 
     gripper::hal::Result<void> commandInitialize();
+    // 부분 실패 시 선행 write(속도·전류)는 롤백되지 않는다 — 실패 반환 시 장치에 새 목표값이
+    // 일부만 반영된 상태일 수 있으므로, 호출자는 readSnapshot() 재조회로 실제 상태를 확인할 것.
     gripper::hal::Result<void> writeTargets(const MotionTarget &target);
     gripper::hal::Result<ZefgSnapshot> readSnapshot();
     gripper::hal::Health health() const;

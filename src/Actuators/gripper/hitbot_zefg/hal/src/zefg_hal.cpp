@@ -163,6 +163,8 @@ gripper::hal::Health ZefgHal::health() const
     h.link_up = (last_error_ != gripper::hal::HalError::kNotReady);
     h.error_count = error_count_;
     h.last_error = last_error_;
+    // snapshot_age·last_seq 는 기본값(0) 유지 — RtuClient 가 타임스탬프·시퀀스를 노출하지 않아
+    // "미측정" 의미다. 0 을 "방금 갱신됨"으로 읽지 말 것.
     return h;
 }
 
