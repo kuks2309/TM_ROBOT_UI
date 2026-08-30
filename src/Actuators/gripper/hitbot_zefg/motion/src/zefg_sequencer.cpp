@@ -20,7 +20,11 @@ bool ZefgSequencer::start(const MotionTarget &target, gripper::hal::TimePoint no
     outcome_ = SeqOutcome::kNone;
     init_command_pending_ = false;
     moving_seen_ = false;
-    start_time_ = now;
+    // 방어적 리셋: 데드라인·유예 기점은 각 전이 tick(kCheckInit/kWriteTargets)이 사용 전 덮어쓰지만,
+    // 그 순서에 의존하지 않도록 start 시각으로 초기화한다(덮어쓰기 전에 읽히면 즉시 만료로 드러남).
+    init_deadline_ = now;
+    motion_deadline_ = now;
+    status_fresh_after_ = now;
     state_ = SeqState::kCheckInit;
     return true;
 }

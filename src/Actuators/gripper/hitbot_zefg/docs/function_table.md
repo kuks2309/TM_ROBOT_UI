@@ -196,14 +196,14 @@ motion/src·include 는 ZefgHal 만 소비(하위 버스 심볼 금지 — 게�
 | # | 함수 | 입력 | 출력 | 기능 | 위치(file:line) |
 |---|---|---|---|---|---|
 | 91 | ZefgSequencer::ZefgSequencer (정의) | hal, cfg | — | 멤버 초기화 | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:11 |
-| 92 | ZefgSequencer::start (정의) | target, now | bool | 진행 중 재진입 거부·터미널 재사용 | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:15 |
-| 93 | ZefgSequencer::tick (정의) | now | SeqState | 상태별 핸들러 디스패치(switch) | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:28 |
-| 94 | ZefgSequencer::tickCheckInit (private) | now | void | readSnapshot 1회 — 완료→kWriteTargets / auto_initialize→kInitializing(명령 예약) / 아니면 kFailed(kNotInitialized) | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:52 |
-| 95 | ZefgSequencer::tickInitializing (private) | now | void | 예약 명령 송신(1회) 또는 폴링 — 완료→kWriteTargets / init_timeout→kFailed(kTimeout) | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:77 |
-| 96 | ZefgSequencer::tickWriteTargets (private) | now | void | writeTargets 1회 → kWaitMotion(모션 데드라인·신선도 유예 기점 설정) | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:105 |
-| 97 | ZefgSequencer::tickWaitMotion (private) | now | void | 폴링 — InPlace+위치 대조(게이트 예외)→kReached / **신선도 게이트**(Moving 관측 후 또는 status_grace 경과 후에만) Clamping→kClamped·Dropping→kDropped / motion_timeout→kTimeout | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:119 |
-| 98 | ZefgSequencer::fail (private) | why: SeqOutcome | void | kFailed 전이+사유 기록 | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:161 |
-| 99 | ZefgSequencer::succeed (private) | how: SeqOutcome | void | kSucceeded 전이+사유 기록 | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:167 |
+| 92 | ZefgSequencer::start (정의) | target, now | bool | 진행 중 재진입 거부·터미널 재사용 + 데드라인·유예 기점 방어 리셋(리뷰 Minor) | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:15 |
+| 93 | ZefgSequencer::tick (정의) | now | SeqState | 상태별 핸들러 디스패치(switch) | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:32 |
+| 94 | ZefgSequencer::tickCheckInit (private) | now | void | readSnapshot 1회 — 완료→kWriteTargets / auto_initialize→kInitializing(명령 예약) / 아니면 kFailed(kNotInitialized) | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:56 |
+| 95 | ZefgSequencer::tickInitializing (private) | now | void | 예약 명령 송신(1회) 또는 폴링 — 완료→kWriteTargets / init_timeout→kFailed(kTimeout) | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:81 |
+| 96 | ZefgSequencer::tickWriteTargets (private) | now | void | writeTargets 1회 → kWaitMotion(모션 데드라인·신선도 유예 기점 설정) | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:109 |
+| 97 | ZefgSequencer::tickWaitMotion (private) | now | void | 폴링 — InPlace+위치 대조(게이트 예외)→kReached / **신선도 게이트**(Moving 관측 후 또는 status_grace 경과 후에만) Clamping→kClamped·Dropping→kDropped / motion_timeout→kTimeout | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:123 |
+| 98 | ZefgSequencer::fail (private) | why: SeqOutcome | void | kFailed 전이+사유 기록 | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:165 |
+| 99 | ZefgSequencer::succeed (private) | how: SeqOutcome | void | kSucceeded 전이+사유 기록 | src/Actuators/gripper/hitbot_zefg/motion/src/zefg_sequencer.cpp:171 |
 
 ### src/Actuators/gripper/hitbot_zefg/motion/test/zefg_sequencer_test.cpp
 
@@ -237,4 +237,4 @@ RestartAfterDropIgnoresLatchedDroppingSample 이 함정 tick 에서 실패함을
 없음 (전 상태는 인스턴스 멤버 — ZefgHal: client_/last_error_/error_count_/last_exception_code_,
 ZefgPlant: cfg_/slave_/pending_/observer_/init_raw_/clamp_raw_/position_mm_/모션 램프 상태,
 ZefgSequencer: hal_/cfg_/state_/outcome_/target_/last_snapshot_/init_command_pending_/moving_seen_/
-start_time_/init_deadline_/motion_deadline_/status_fresh_after_).
+init_deadline_/motion_deadline_/status_fresh_after_ — `start_time_` 은 리뷰 Minor(사장 필드)로 제거).

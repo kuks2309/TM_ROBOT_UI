@@ -98,7 +98,6 @@ class ZefgSequencer
     ZefgSnapshot last_snapshot_{};
     bool init_command_pending_ = false; // kCheckInit 이 예약한 초기화 명령(hal 호출 ≤1회/tick 유지)
     bool moving_seen_ = false;          // kWaitMotion 에서 Moving 관측 여부 — 신선도 게이트 해제 조건
-    gripper::hal::TimePoint start_time_{};         // start() 수락 시각(진단용)
     gripper::hal::TimePoint init_deadline_{};      // 초기화 예약 tick 기점 + init_timeout
     gripper::hal::TimePoint motion_deadline_{};    // 목표 write tick 기점 + motion_timeout
     gripper::hal::TimePoint status_fresh_after_{}; // 목표 write tick 기점 + status_grace
