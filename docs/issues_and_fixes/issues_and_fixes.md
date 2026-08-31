@@ -1018,7 +1018,14 @@
 - **해결**: 폴링에서 Moving 미관측 && |pos−목표| ≤ 0.5mm → `목표 위치 유지(무이동)` 즉시 성공(신선도 판정보다 선행). 테스트 9/9. orin 배포·노드 재시작 후 **동일 조건 실기 재현 → 성공** 확인. C++ 시퀀서·플랜트 동일 사각지대는 별도 커밋(Ruling 13).
 - **파일**: `src/TM_Robot_Task_Manager/tm_task_manager/hardware/zefg_serial.py`, `test/test_sdc_gripper.py` (상세: `src/TM_Robot_Task_Manager/docs/code_updates/2026-08-31-sdc-gripper-noop-latched-fix.md`)
 - **물리 권고**: FT232R 이 물린 USB 허브 전원/케이블 접촉 점검(장치 번호 50→57 = 반복 재열거 이력).
-- **상태**: 완료(현장 복구), 저장소 커밋은 공유 인덱스 타 세션 staged 180건으로 대기 중
+- **상태**: 완료(현장 복구), 저장소 커밋 `38b27de`
+
+### [Issue] 구동 확인 중 close 오탐 재발 — 상태 라벨 갱신 지연(래치 Dropping 이 이동 중 ≥1초 유지)
+- **문제**: 조가 빈 상태에서 close 16.56 이 0.48초에 `낙하 감지 (pos 5.6mm)`. 25Hz 궤적 기록: Dropping 래치 출발 시 실제 이동 중에도 0x0041 이 Dropping 을 유지하다 목표 직전에서야 Moving→In place. 2차 수정의 0.3s 유예로는 불충분. 기구 이상 없음(3 trial 완주).
+- **원인**: 판정이 "상태 라벨 + 시간 유예"에 의존 — 장치 라벨 갱신이 이동 종료 시점에 몰리는 케이스를 가정하지 못함.
+- **해결**: 위치 동역학 우선 규약 — 위치가 변하는 동안은 라벨 무시, 0.3s 정지 후에만 종결(라벨이 명령 후 바뀐 경우 라벨 판정 / 래치 그대로면 위치 대조). 테스트 12/12(실기 궤적 재현 포함). orin 배포·재시작·4-move 실기 사이클 확인. C++ 시퀀서·플랜트 동일 적용(Ruling 14).
+- **파일**: `zefg_serial.py`, `test_sdc_gripper.py` (상세: `src/TM_Robot_Task_Manager/docs/code_updates/2026-08-31-sdc-gripper-position-dynamics.md`, HIL 정본 §상태 레지스터 갱신 지연 실측)
+- **상태**: 완료
 
 ---
 

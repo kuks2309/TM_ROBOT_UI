@@ -28,9 +28,11 @@ CURRENT_MAX_A = 0.5
 CURRENT_DEFAULT_A = 0.3
 POSITION_TOLERANCE_MM = 0.5
 POLL_INTERVAL_S = 0.1
-# 명령 직후 래치 상태(Dropping/Clamping) 무시 유예 — 슬레이브는 직전 모션의 최종 상태를 새 명령
-# 뒤에도 유지한 채 응답한다(실기 관측, HIL 정본 §백드라이브·힘 순응 실측).
+# 정지 판정 창 — 위치가 이 시간 동안 POSITION_STILL_EPS_MM 이내로 머물러야 "정지"로 보고 종결 판정한다.
+# 슬레이브는 직전 모션의 최종 상태(특히 Dropping)를 새 이동 중에도 1초 이상 유지한 채 응답하므로
+# 상태 라벨·시간 유예만으로는 이동 중 표본을 종결로 오판한다(실기 관측, HIL 정본 §상태 레지스터 갱신 지연 실측).
 STATUS_GRACE_S = 0.3
+POSITION_STILL_EPS_MM = 0.1
 
 _REG_TARGET_POSITION = 0x0002
 _REG_TARGET_SPEED = 0x0004
@@ -118,8 +120,10 @@ def move_to(position_mm: float, speed_mms: float = SPEED_DEFAULT_MMS,
 
     성공: In place(±POSITION_TOLERANCE_MM) 또는 Clamping(물체 파지 — 닫기 시 정상).
     실패: 범위 밖(송신 없이 거부)·Dropping·타임아웃·통신 오류. (성공여부, 사유) 반환.
-    Dropping/Clamping 은 Moving 관측 후 또는 STATUS_GRACE_S 경과 후에만 판정에 쓴다 —
-    직전 모션의 래치 상태를 첫 폴링이 읽고 오판하는 것을 막는다(In place 는 위치 대조가 있어 예외).
+    판정 규약(위치 동역학 우선): ① Moving 을 본 적 없는데 이미 목표 위치면 무이동 성공.
+    ② 위치가 변하는 동안은 이동 중 — 상태 라벨을 판정에 쓰지 않는다. ③ 위치가 STATUS_GRACE_S 동안
+    정지한 뒤에만 종결: 상태 라벨이 명령 후 한 번이라도 바뀌었으면 라벨로(In place+목표=도달,
+    Clamping=파지, Dropping=낙하), 아직 래치값 그대로면 위치 대조로만(목표면 도달, 아니면 계속 대기).
     """
     if not (POSITION_MIN_MM <= position_mm <= POSITION_MAX_MM):
         return False, f'위치 범위 밖: {position_mm}mm (허용 {POSITION_MIN_MM}~{POSITION_MAX_MM})'
@@ -139,28 +143,48 @@ def move_to(position_mm: float, speed_mms: float = SPEED_DEFAULT_MMS,
                     return False, f'{label} 기록 실패 (reg 0x{reg:04X})'
 
             deadline = time.monotonic() + timeout_s
-            fresh_after = time.monotonic() + STATUS_GRACE_S
             moving_seen = False
+            first_clamp = None
+            label_changed = False
+            last_position = None
+            last_change_at = time.monotonic()
             while time.monotonic() < deadline:
                 clamp = _read_u16(ser, _REG_CLAMP_STATUS)
                 position = _read_float(ser, _REG_POSITION_FB)
                 if clamp is None or position is None:
                     time.sleep(POLL_INTERVAL_S)
                     continue
+                now = time.monotonic()
+                if first_clamp is None:
+                    first_clamp = clamp
+                elif clamp != first_clamp:
+                    label_changed = True
+                if last_position is not None and abs(position - last_position) > POSITION_STILL_EPS_MM:
+                    moving_seen = True
+                    last_change_at = now
+                elif last_position is None:
+                    last_change_at = now
+                last_position = position
                 if clamp == CLAMP_MOVING:
                     moving_seen = True
+                at_target = abs(position - position_mm) <= POSITION_TOLERANCE_MM
                 # 목표가 현재 위치와 같으면 장치는 움직이지 않아 상태 레지스터가 갱신되지 않는다 —
-                # 래치된 Dropping/Clamping 이 유예 후에도 남아 오판되므로, Moving 을 본 적 없는 상태에서
-                # 이미 목표 위치이면 무이동 성공으로 종결한다(실제 낙하는 반드시 Moving 뒤에 나타남).
-                if not moving_seen and abs(position - position_mm) <= POSITION_TOLERANCE_MM:
+                # Moving 을 본 적 없는 상태에서 이미 목표 위치이면 무이동 성공으로 종결한다.
+                if not moving_seen and at_target:
                     return True, f'목표 위치 유지(무이동, pos {position:.1f}mm)'
-                fresh = moving_seen or time.monotonic() >= fresh_after
-                if fresh and clamp == CLAMP_DROPPING:
-                    return False, f'낙하 감지 (pos {position:.1f}mm)'
-                if fresh and clamp == CLAMP_CLAMPING:
-                    return True, f'파지 완료(Clamping, pos {position:.1f}mm)'
-                if clamp == CLAMP_IN_PLACE and abs(position - position_mm) <= POSITION_TOLERANCE_MM:
-                    return True, f'목표 도달 (pos {position:.1f}mm)'
+                # 위치가 아직 변하는 중이면 이동 중 — 래치된 라벨(Dropping 등)로 판정하지 않는다.
+                if now - last_change_at < STATUS_GRACE_S:
+                    time.sleep(POLL_INTERVAL_S)
+                    continue
+                if label_changed:
+                    if clamp == CLAMP_DROPPING:
+                        return False, f'낙하 감지 (pos {position:.1f}mm)'
+                    if clamp == CLAMP_CLAMPING:
+                        return True, f'파지 완료(Clamping, pos {position:.1f}mm)'
+                    if clamp == CLAMP_IN_PLACE and at_target:
+                        return True, f'목표 도달 (pos {position:.1f}mm)'
+                elif at_target:
+                    return True, f'목표 도달 (pos {position:.1f}mm, 상태 미갱신)'
                 time.sleep(POLL_INTERVAL_S)
             last = '무응답' if clamp is None else _CLAMP_NAMES.get(clamp, str(clamp))
             return False, f'타임아웃 {timeout_s}s (마지막 상태 {last}, pos {position})'

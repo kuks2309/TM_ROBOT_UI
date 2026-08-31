@@ -51,14 +51,36 @@ def _target_acks():
             _write_ack(z._REG_TARGET_POSITION)]
 
 
+class FakeClock:
+    """가상 시계 — sleep 이 시간을 전진시켜 정지 판정 창(STATUS_GRACE_S)을 결정론적으로 통과한다."""
+
+    def __init__(self):
+        self.now = 1000.0
+
+    def monotonic(self):
+        return self.now
+
+    def sleep(self, seconds):
+        self.now += seconds
+
+
 def _install(monkeypatch, fake):
+    clock = FakeClock()
     monkeypatch.setattr(z, '_open_serial', lambda *a, **k: fake)
-    monkeypatch.setattr(z.time, 'sleep', lambda *_: None)
+    monkeypatch.setattr(z.time, 'sleep', clock.sleep)
+    monkeypatch.setattr(z.time, 'monotonic', clock.monotonic)
+
+
+def _samples(clamp, position, repeat=1):
+    return [_u16_response(clamp), _float_response(position)] * repeat
+
+
+# 정지 판정 창(0.3s)을 채우려면 같은 표본이 폴 간격(0.1s) 기준 4개 이상 필요
+HOLD = 6
 
 
 def test_open_reaches_target(monkeypatch):
-    fake = FakeSerial(_target_acks() + [_u16_response(z.CLAMP_MOVING), _float_response(20.0),
-                                        _u16_response(z.CLAMP_IN_PLACE), _float_response(0.0)])
+    fake = FakeSerial(_target_acks() + _samples(z.CLAMP_MOVING, 20.0) + _samples(z.CLAMP_IN_PLACE, 0.0, HOLD))
     _install(monkeypatch, fake)
     ok, detail = z.move_to(0.0)
     assert ok and '목표 도달' in detail
@@ -68,36 +90,64 @@ def test_open_reaches_target(monkeypatch):
 
 
 def test_close_clamping_is_success(monkeypatch):
-    # Moving 관측 후의 Clamping 만 성공으로 믿는다(래치 유예 규약)
-    fake = FakeSerial(_target_acks() + [_u16_response(z.CLAMP_MOVING), _float_response(10.0),
-                                        _u16_response(z.CLAMP_CLAMPING), _float_response(21.3)])
+    # 라벨이 바뀐(Moving→Clamping) 뒤 정지 상태의 Clamping 만 파지 성공
+    fake = FakeSerial(_target_acks() + _samples(z.CLAMP_MOVING, 10.0) + _samples(z.CLAMP_CLAMPING, 21.3, HOLD))
     _install(monkeypatch, fake)
     ok, detail = z.move_to(35.0)
     assert ok and 'Clamping' in detail
 
 
 def test_dropping_fails(monkeypatch):
-    fake = FakeSerial(_target_acks() + [_u16_response(z.CLAMP_MOVING), _float_response(5.0),
-                                        _u16_response(z.CLAMP_DROPPING), _float_response(10.0)])
+    fake = FakeSerial(_target_acks() + _samples(z.CLAMP_MOVING, 5.0) + _samples(z.CLAMP_DROPPING, 10.0, HOLD))
     _install(monkeypatch, fake)
     ok, detail = z.move_to(35.0)
     assert not ok and '낙하' in detail
 
 
+def test_real_drop_after_clamp_fails(monkeypatch):
+    # 실제 낙하: 파지(Clamping) 뒤 물체를 놓쳐 목표까지 닫힌 채 Dropping 으로 정지 → 실패
+    fake = FakeSerial(_target_acks() + _samples(z.CLAMP_MOVING, 5.0) + _samples(z.CLAMP_CLAMPING, 16.0)
+                      + _samples(z.CLAMP_DROPPING, 16.5, HOLD))
+    _install(monkeypatch, fake)
+    ok, detail = z.move_to(16.56)
+    assert not ok and '낙하' in detail
+
+
 def test_stale_dropping_before_motion_is_ignored(monkeypatch):
     # 직전 모션의 래치 Dropping 이 첫 폴링에 남아도 오탐 실패하지 않는다(실기 오탐 재현)
-    fake = FakeSerial(_target_acks() + [_u16_response(z.CLAMP_DROPPING), _float_response(0.1),
-                                        _u16_response(z.CLAMP_MOVING), _float_response(10.0),
-                                        _u16_response(z.CLAMP_IN_PLACE), _float_response(35.0)])
+    fake = FakeSerial(_target_acks() + _samples(z.CLAMP_DROPPING, 0.1) + _samples(z.CLAMP_MOVING, 10.0)
+                      + _samples(z.CLAMP_IN_PLACE, 35.0, HOLD))
     _install(monkeypatch, fake)
     ok, detail = z.move_to(35.0)
     assert ok and '목표 도달' in detail
 
 
+def test_latched_dropping_persists_through_motion(monkeypatch):
+    # 실기 궤적 재현: Dropping 래치가 이동 중 1초 이상 유지되다 목표 직전에야 Moving→In place —
+    # 위치가 변하는 동안은 라벨로 판정하지 않으므로 오탐 없이 완주 성공
+    fake = FakeSerial(_target_acks()
+                      + _samples(z.CLAMP_DROPPING, 0.175) + _samples(z.CLAMP_DROPPING, 4.0)
+                      + _samples(z.CLAMP_DROPPING, 8.0) + _samples(z.CLAMP_DROPPING, 12.0)
+                      + _samples(z.CLAMP_DROPPING, 16.1) + _samples(z.CLAMP_MOVING, 16.3)
+                      + _samples(z.CLAMP_IN_PLACE, 16.555, HOLD))
+    _install(monkeypatch, fake)
+    ok, detail = z.move_to(16.56)
+    assert ok and '목표 도달' in detail
+
+
+def test_latched_label_never_updates_but_position_reaches_target(monkeypatch):
+    # 라벨이 끝까지 래치값이면 위치 대조만으로 도달 판정(상태 미갱신 명기)
+    fake = FakeSerial(_target_acks() + _samples(z.CLAMP_DROPPING, 2.0) + _samples(z.CLAMP_DROPPING, 9.0)
+                      + _samples(z.CLAMP_DROPPING, 16.5, HOLD))
+    _install(monkeypatch, fake)
+    ok, detail = z.move_to(16.56)
+    assert ok and '상태 미갱신' in detail
+
+
 def test_same_position_with_stale_dropping_is_noop_success(monkeypatch):
     # 이미 목표 위치(열림 0.0)에서 open 재명령: 장치는 안 움직여 래치 Dropping 이 영구 잔존 —
-    # 유예가 지나도 갱신이 없으므로 위치 대조로 무이동 성공 처리(실기 재현 케이스)
-    fake = FakeSerial(_target_acks() + [_u16_response(z.CLAMP_DROPPING), _float_response(0.0)] * 5)
+    # 위치 대조로 무이동 성공 처리(실기 재현 케이스)
+    fake = FakeSerial(_target_acks() + _samples(z.CLAMP_DROPPING, 0.0, 5))
     _install(monkeypatch, fake)
     ok, detail = z.move_to(0.0)
     assert ok and '무이동' in detail
@@ -105,9 +155,8 @@ def test_same_position_with_stale_dropping_is_noop_success(monkeypatch):
 
 def test_stale_clamping_on_open_is_ignored(monkeypatch):
     # 파지 유지 중 open 명령: 래치 Clamping 을 '파지 완료'로 오판하지 않고 실제 도달로 판정
-    fake = FakeSerial(_target_acks() + [_u16_response(z.CLAMP_CLAMPING), _float_response(16.5),
-                                        _u16_response(z.CLAMP_MOVING), _float_response(8.0),
-                                        _u16_response(z.CLAMP_IN_PLACE), _float_response(0.0)])
+    fake = FakeSerial(_target_acks() + _samples(z.CLAMP_CLAMPING, 16.5) + _samples(z.CLAMP_MOVING, 8.0)
+                      + _samples(z.CLAMP_IN_PLACE, 0.0, HOLD))
     _install(monkeypatch, fake)
     ok, detail = z.move_to(0.0)
     assert ok and '목표 도달' in detail and '파지 완료' not in detail
