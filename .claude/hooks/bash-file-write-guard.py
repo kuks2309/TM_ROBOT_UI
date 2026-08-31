@@ -15,6 +15,11 @@ TRACKED_PREFIXES = r"(?:\$CLAUDE_PROJECT_DIR/|/home/amap/T-Robotics/TM_Robot_UI/
 # `>` / `>>` / `tee [-a]` 뒤 목적지가 추적 트리인 경우만 매치. `2>&1`·fd 복제는 제외.
 REDIRECT_RE = re.compile(r"(?<![0-9<>&])>{1,2}\s*['\"]?" + TRACKED_PREFIXES)
 TEE_RE = re.compile(r"\btee\s+(?:-a\s+)?['\"]?" + TRACKED_PREFIXES)
+# 인라인 python(히어독·-c) 안의 쓰기 모드 open() — 히어독 본문은 데이터라 리다이렉션 검사에서 제외되지만,
+# 이 경로로 추적 파일을 고쳐 쓰는 것은 edit-guard 를 똑같이 우회한다(mistake 2026-08-31-002 재발).
+# 쓰기 목적지 경로를 정적으로 알 수 없으므로 인라인 python 의 쓰기 open 은 전부 차단한다(스크래치는 Write 도구로).
+INLINE_PY_RE = re.compile(r"\bpython3?\s+(?:-\s*<<|-c\b|<<)")
+PY_WRITE_OPEN_RE = re.compile(r"\bopen\(\s*[^)]*?,\s*['\"](?:w|a|r\+|w\+|a\+)b?['\"]")
 
 
 def main() -> int:
@@ -32,6 +37,13 @@ def main() -> int:
             "[BASH-WRITE-GUARD] 추적 저장소 파일로의 Bash 리다이렉션/tee 는 금지입니다 — "
             "git_workflow 규칙(파일 수정은 Write/Edit 도구만). Write/Edit 도구로 수행하십시오. "
             "(스크래치 /tmp·.superpowers·.omc 는 허용)\n"
+        )
+        return 2
+    # 인라인 python 은 원문(히어독 포함)에서 검사한다.
+    if INLINE_PY_RE.search(command) and PY_WRITE_OPEN_RE.search(command):
+        sys.stderr.write(
+            "[BASH-WRITE-GUARD] 인라인 python 의 쓰기 모드 open() 은 금지입니다 — 추적 파일 수정은 "
+            "Edit 도구(다중 치환은 복수 호출/replace_all), 스크래치 생성은 Write 도구로 수행하십시오.\n"
         )
         return 2
     return 0
