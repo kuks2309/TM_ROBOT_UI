@@ -149,6 +149,11 @@ def move_to(position_mm: float, speed_mms: float = SPEED_DEFAULT_MMS,
                     continue
                 if clamp == CLAMP_MOVING:
                     moving_seen = True
+                # 목표가 현재 위치와 같으면 장치는 움직이지 않아 상태 레지스터가 갱신되지 않는다 —
+                # 래치된 Dropping/Clamping 이 유예 후에도 남아 오판되므로, Moving 을 본 적 없는 상태에서
+                # 이미 목표 위치이면 무이동 성공으로 종결한다(실제 낙하는 반드시 Moving 뒤에 나타남).
+                if not moving_seen and abs(position - position_mm) <= POSITION_TOLERANCE_MM:
+                    return True, f'목표 위치 유지(무이동, pos {position:.1f}mm)'
                 fresh = moving_seen or time.monotonic() >= fresh_after
                 if fresh and clamp == CLAMP_DROPPING:
                     return False, f'낙하 감지 (pos {position:.1f}mm)'

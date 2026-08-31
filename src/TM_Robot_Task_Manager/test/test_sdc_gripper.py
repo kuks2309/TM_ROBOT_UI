@@ -94,6 +94,15 @@ def test_stale_dropping_before_motion_is_ignored(monkeypatch):
     assert ok and '목표 도달' in detail
 
 
+def test_same_position_with_stale_dropping_is_noop_success(monkeypatch):
+    # 이미 목표 위치(열림 0.0)에서 open 재명령: 장치는 안 움직여 래치 Dropping 이 영구 잔존 —
+    # 유예가 지나도 갱신이 없으므로 위치 대조로 무이동 성공 처리(실기 재현 케이스)
+    fake = FakeSerial(_target_acks() + [_u16_response(z.CLAMP_DROPPING), _float_response(0.0)] * 5)
+    _install(monkeypatch, fake)
+    ok, detail = z.move_to(0.0)
+    assert ok and '무이동' in detail
+
+
 def test_stale_clamping_on_open_is_ignored(monkeypatch):
     # 파지 유지 중 open 명령: 래치 Clamping 을 '파지 완료'로 오판하지 않고 실제 도달로 판정
     fake = FakeSerial(_target_acks() + [_u16_response(z.CLAMP_CLAMPING), _float_response(16.5),
