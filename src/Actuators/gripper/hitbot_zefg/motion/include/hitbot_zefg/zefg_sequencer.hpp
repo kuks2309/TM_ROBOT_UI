@@ -53,7 +53,8 @@ struct SeqConfig
     // Dropping 을 읽어 정상 도달을 낙하로 오판하는 함정. kWaitMotion 은 Moving 관측 후 또는 이
     // 유예 경과 후에만 Dropping/Clamping 을 판정에 쓴다(python 선례:
     // src/TM_Robot_Task_Manager/tm_task_manager/hardware/zefg_serial.py move_to 의 STATUS_GRACE_S).
-    // In place+위치 대조는 예외 — 무이동 명령(이미 목표 위치)의 즉시 성공을 보존한다.
+    // 예외 — 무이동 명령: Moving 을 본 적 없는데 이미 목표 위치(±tolerance)면 래치 상태와 무관하게
+    // 즉시 성공(실기 재현: 같은 위치 재명령 시 0x0041 이 영영 갱신되지 않아 유예만으로는 오탐).
     gripper::hal::Duration status_grace{300};
 };
 

@@ -83,8 +83,7 @@ class ZefgPlant::CommandObserverLink : public mrtu::ISerialLink
 
 ZefgPlant::ZefgPlant(PlantConfig cfg)
     : cfg_(cfg), slave_(std::make_shared<mrtu::sim::MockSlaveLink>(kPlantUnitId)),
-      pending_(std::make_shared<PendingCommands>()),
-      observer_(std::make_shared<CommandObserverLink>(slave_, pending_))
+      pending_(std::make_shared<PendingCommands>()), observer_(std::make_shared<CommandObserverLink>(slave_, pending_))
 {
     setPowerOnInitialized(true); // HIL H0: 전원 인가 시 자동 초기화 완료(0x0040=5) 관측 — 기본 시작 상태
 }
@@ -163,10 +162,19 @@ void ZefgPlant::step()
     syncRegisters();
 }
 
+// 동일 위치 판정 허용 오차 — 레지스터 float 왕복의 부동소수 오차만 흡수한다(무이동 명령 모형 전용).
+constexpr float kSamePositionEpsMm = 1e-3F;
+
 void ZefgPlant::beginMotion()
 {
     motion_target_mm_ =
         wordsToFloat(slave_->reg(kRegTargetPosition), slave_->reg(static_cast<uint16_t>(kRegTargetPosition + 1)));
+    // 무이동 명령(실기 재현 — HIL: 열림 0.0mm 에 Dropping 이 래치된 상태에서 0.0mm 를 재명령하면 장치는
+    // 움직이지 않고 0x0041 도 갱신하지 않는다): 목표가 현재 위치와 같으면 kMoving 전이·InPlace 갱신
+    // 없이 직전 래치 상태·위치·속도 피드백을 그대로 유지한다. 판정은 동일 위치(오차 1e-3mm)로 한정 —
+    // 스텝 미만 미소 이동 시 장치 거동은 실측 미보유 ⚠(모형은 통상 램프로 처리).
+    if (std::fabs(motion_target_mm_ - position_mm_) <= kSamePositionEpsMm)
+        return;
     const float speed =
         wordsToFloat(slave_->reg(kRegTargetSpeed), slave_->reg(static_cast<uint16_t>(kRegTargetSpeed + 1)));
     motion_current_a_ =
@@ -200,8 +208,7 @@ void ZefgPlant::advanceMotion()
     const bool obstacle_on_path =
         has_obstacle_ && (toward_increase ? (obstacle_mm_ > motion_start_mm_ && obstacle_mm_ <= motion_target_mm_)
                                           : (obstacle_mm_ < motion_start_mm_ && obstacle_mm_ >= motion_target_mm_));
-    const double obstacle_dist =
-        std::fabs(static_cast<double>(obstacle_mm_) - static_cast<double>(motion_start_mm_));
+    const double obstacle_dist = std::fabs(static_cast<double>(obstacle_mm_) - static_cast<double>(motion_start_mm_));
     const int obstacle_ticks =
         (motion_step_abs_mm_ > 0.0) ? static_cast<int>(std::ceil(obstacle_dist / motion_step_abs_mm_)) : 0;
     if (obstacle_on_path && motion_tick_ >= obstacle_ticks)

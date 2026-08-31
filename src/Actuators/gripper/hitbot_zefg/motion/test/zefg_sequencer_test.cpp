@@ -317,4 +317,53 @@ TEST(ZefgSequencer, OutOfRangeTargetFailsAsRejectedWithoutTransmission)
     EXPECT_EQ(slave->requestCount(), requests_before_write); // 무송신 — 로컬 거부
 }
 
+// ⑪ 무이동 명령 + 래치 Dropping(실기 재현 — HIL: 열림 0.0mm·Dropping 래치에서 0.0mm 재명령 시
+// 장치가 움직이지 않아 0x0041 이 영영 갱신되지 않고, python move_to 가 status grace 뒤 래치 Dropping 을
+// fresh 로 믿어 "낙하 감지" 오탐). 시퀀서는 Moving 을 본 적 없고 이미 목표 위치이면 신선도·Dropping
+// 판정보다 먼저 kSucceeded(kReached)로 종결해야 한다(python 선례 zefg_serial.py move_to 와 동일).
+// 플랜트 충실도(동일 위치 write 무이동)가 없으면 sim 이 Moving→InPlace 로 갱신해 결함을 가린다 —
+// write 후 플랜트를 여러 step 진행시키고 래치 유지를 직접 단언해 마스킹을 배제한다.
+TEST(ZefgSequencer, SamePositionRestartWithLatchedDroppingReachesWithoutMotion)
+{
+    ZefgPlant plant; // 기본: 초기화 완료·표시 35.0mm
+    auto hal = makeHal(plant);
+    ZefgSequencer seq(*hal);
+    gripper::hal::TimePoint now{};
+
+    // [1] kDropping 래치 조성(위치 35.0mm 유지 — 전이 tick 직후 낙하라 이동 없음).
+    ASSERT_TRUE(seq.start(openTarget(), now));
+    ASSERT_EQ(seq.tick(now), SeqState::kWriteTargets);
+    now += kPlantTick;
+    ASSERT_EQ(seq.tick(now), SeqState::kWaitMotion);
+    plant.step(); // kMoving 전이
+    now += kPlantTick;
+    ASSERT_EQ(seq.tick(now), SeqState::kWaitMotion);
+    ASSERT_EQ(seq.lastSnapshot().clamp, ClampStatus::kMoving);
+    plant.dropObject();
+    now += kPlantTick;
+    ASSERT_EQ(seq.tick(now), SeqState::kFailed);
+    ASSERT_EQ(seq.outcome(), SeqOutcome::kDropped);
+    ASSERT_FLOAT_EQ(seq.lastSnapshot().position_mm, 35.0F);
+
+    // [2] 같은 위치(35mm)로 재start — 장치(플랜트)는 무이동, 래치 Dropping 그대로.
+    ASSERT_TRUE(seq.start(closeTarget(), now));
+    ASSERT_EQ(seq.tick(now), SeqState::kWriteTargets);
+    now += kPlantTick;
+    ASSERT_EQ(seq.tick(now), SeqState::kWaitMotion); // 목표 write
+    for (int i = 0; i < 5; ++i)
+        plant.step(); // 장치 시간 경과 — 무이동이라 0x0041 갱신 없음
+    const auto held = hal->readSnapshot();
+    ASSERT_TRUE(held);
+    ASSERT_EQ(held.value().clamp, ClampStatus::kDropping); // 플랜트 충실도: Moving 전이 없음
+    ASSERT_FLOAT_EQ(held.value().position_mm, 35.0F);
+
+    // 시퀀서: Moving 미관측 + 이미 목표 위치 → 즉시 kReached. 위치 대조가 신선도 판정보다 뒤에 있으면
+    // status_grace 경과 후 래치 Dropping 을 fresh 로 믿어 kFailed(kDropped) 오탐(실기 결함 재현).
+    now += kPlantTick;
+    ASSERT_TRUE(runToTerminal(seq, plant, now));
+    EXPECT_EQ(seq.state(), SeqState::kSucceeded);
+    EXPECT_EQ(seq.outcome(), SeqOutcome::kReached);
+    EXPECT_FLOAT_EQ(seq.lastSnapshot().position_mm, 35.0F);
+}
+
 } // namespace

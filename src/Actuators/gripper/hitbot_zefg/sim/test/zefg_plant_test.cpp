@@ -232,4 +232,34 @@ TEST(ZefgPlant, TargetWriteKeepsLatchedStateUntilNextStep)
     EXPECT_FLOAT_EQ(done.position_mm, 0.0F);
 }
 
+// 무이동 명령(실기 재현 — HIL: 열림 0.0mm 에 Dropping 이 래치된 상태에서 0.0mm 를 재명령하면 장치는
+// 움직이지 않고 0x0041 도 갱신하지 않는다): 플랜트도 현재 위치와 같은 목표 write 에 kMoving 전이·
+// InPlace 갱신 없이 래치 상태·위치·속도를 그대로 유지해야 한다(step 다수 후에도 불변).
+TEST(ZefgPlant, SamePositionTargetKeepsLatchedStateWithoutMotion)
+{
+    PlantConfig cfg;
+    cfg.initial_position_mm = 0.0F;
+    ZefgPlant plant(cfg);
+    auto hal = makeHal(plant);
+
+    // kDropping 래치 조성: 파지(20mm 고정) 후 낙하.
+    plant.insertObstacleAt(20.0F);
+    ASSERT_TRUE(hal->writeTargets(MotionTarget{35.0F, 20.0F, 0.3F}));
+    for (int i = 0; i < 101; ++i)
+        plant.step();
+    plant.dropObject();
+    ASSERT_EQ(mustSnapshot(*hal).clamp, ClampStatus::kDropping);
+
+    // 같은 위치(20mm) 재명령 — step 을 거듭해도 상태 불변(Moving 전이 없음).
+    ASSERT_TRUE(hal->writeTargets(MotionTarget{20.0F, 20.0F, 0.3F}));
+    for (int i = 0; i < 20; ++i)
+    {
+        plant.step();
+        const auto s = mustSnapshot(*hal);
+        EXPECT_EQ(s.clamp, ClampStatus::kDropping) << "step " << i;
+        EXPECT_FLOAT_EQ(s.position_mm, 20.0F);
+        EXPECT_FLOAT_EQ(s.speed_mms, 0.0F);
+    }
+}
+
 } // namespace

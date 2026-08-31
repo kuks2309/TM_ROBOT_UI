@@ -145,9 +145,21 @@ void ZefgSequencer::tickWaitMotion(gripper::hal::TimePoint now)
     if (s.clamp == ClampStatus::kMoving)
         moving_seen_ = true;
 
-    // In place + 위치 대조는 신선도 게이트 예외 — 무이동 명령(이미 목표 위치)의 즉시 성공 보존.
-    if (s.clamp == ClampStatus::kInPlace &&
-        std::fabs(s.position_mm - target_.position_mm) <= cfg_.position_tolerance_mm)
+    const bool at_target = std::fabs(s.position_mm - target_.position_mm) <= cfg_.position_tolerance_mm;
+
+    // 무이동 명령 선판정(실기 재현 — HIL: 열림 0.0mm 에 Dropping 이 래치된 상태에서 0.0mm 재명령 →
+    // 장치는 움직이지 않아 0x0041 이 영영 갱신되지 않고, status_grace 뒤 래치 Dropping 을 fresh 로
+    // 믿으면 오탐 실패): Moving 을 본 적 없는데 이미 목표 위치이면 무이동 완료다 — 실제 낙하/파지는
+    // 반드시 Moving 뒤에 나타나므로 래치 상태(Dropping/Clamping/InPlace)와 무관하게 kReached.
+    // 신선도·Dropping/Clamping 판정보다 먼저 둔다(python 선례 zefg_serial.py move_to 와 동일 순서).
+    if (!moving_seen_ && at_target)
+    {
+        succeed(SeqOutcome::kReached);
+        return;
+    }
+
+    // 이동 후 도달: In place + 위치 대조(신선도 게이트 예외).
+    if (s.clamp == ClampStatus::kInPlace && at_target)
     {
         succeed(SeqOutcome::kReached);
         return;
