@@ -126,8 +126,10 @@ TEST(ZefgSequencer, DropDuringMotionFailsAsDropped)
     ASSERT_EQ(seq.lastSnapshot().clamp, ClampStatus::kMoving); // Moving 관측(신선도 게이트 해제)
 
     plant.dropObject();
-    now += kPlantTick;
-    EXPECT_EQ(seq.tick(now), SeqState::kFailed);
+    // 라벨이 Moving 에서 Dropping 으로 바뀌고 위치가 정지 — 정지 판정 창(status_grace) 경과 후
+    // kFailed(kDropped)(Ruling 14: 이동 중 판정 금지, 정지 후 라벨 변화가 있을 때만 라벨 판정).
+    ASSERT_TRUE(runToTerminal(seq, plant, now));
+    EXPECT_EQ(seq.state(), SeqState::kFailed);
     EXPECT_EQ(seq.outcome(), SeqOutcome::kDropped);
     EXPECT_EQ(seq.lastSnapshot().clamp, ClampStatus::kDropping);
 }
@@ -240,8 +242,7 @@ TEST(ZefgSequencer, RestartAfterDropIgnoresLatchedDroppingSample)
     ASSERT_EQ(seq.tick(now), SeqState::kWaitMotion);
     ASSERT_EQ(seq.lastSnapshot().clamp, ClampStatus::kMoving);
     plant.dropObject();
-    now += kPlantTick;
-    ASSERT_EQ(seq.tick(now), SeqState::kFailed);
+    ASSERT_TRUE(runToTerminal(seq, plant, now)); // 정지 판정 창 경과 후 라벨 변화(Dropping)로 종결
     ASSERT_EQ(seq.outcome(), SeqOutcome::kDropped);
 
     // [2] 재start — kCheckInit 폴링 표본도 Dropping 이지만 init 판정에만 쓰여 무해.
@@ -253,19 +254,20 @@ TEST(ZefgSequencer, RestartAfterDropIgnoresLatchedDroppingSample)
     now += kPlantTick;
 
     // 함정 표본: write 직후 첫 폴링. 플랜트가 step 하지 않았으므로 0x0041 은 직전 낙하의 Dropping
-    // 래치 그대로다(실기 §백드라이브·힘 순응 실측과 동일 시맨틱스). 신선도 게이트(Moving 미관측 +
-    // status_grace 300ms 미경과)가 없는 구현은 이 tick 에서 kFailed(kDropped) 오탐으로 종결된다 —
-    // 아래 두 단언이 "표본이 실제 Dropping 이었고, 그런데도 계속 대기"를 함께 고정해 우연 통과를
-    // 배제한다.
+    // 래치 그대로다(실기 §백드라이브·힘 순응 실측과 동일 시맨틱스). 라벨을 곧바로 믿는 구현은 이 tick
+    // 에서 kFailed(kDropped) 오탐으로 종결된다 — 아래 두 단언이 "표본이 실제 Dropping 이었고, 그런데도
+    // 계속 대기"를 함께 고정해 우연 통과를 배제한다(Ruling 14: 첫 표본 라벨은 래치값으로 기억만 하고
+    // 정지+라벨 변화 전에는 판정하지 않는다).
     ASSERT_EQ(seq.tick(now), SeqState::kWaitMotion);
     ASSERT_EQ(seq.lastSnapshot().clamp, ClampStatus::kDropping);
     ASSERT_EQ(seq.outcome(), SeqOutcome::kNone);
 
-    // 표본 순서 단언: Dropping(래치) → Moving(게이트 해제) → InPlace(완주).
-    plant.step(); // kMoving 전이
+    // 표본 순서 단언: Dropping(래치) → Dropping(이동 시작, 라벨 지연 — HIL §상태 레지스터 갱신 지연)
+    // → … → InPlace(완주). Dropping 래치 출발이라 전이 tick 뒤에도 라벨은 Dropping 이다.
+    plant.step(); // 이동 시작(전이 tick) — 위치 진행 없음, 라벨 Dropping 유지
     now += kPlantTick;
     ASSERT_EQ(seq.tick(now), SeqState::kWaitMotion);
-    ASSERT_EQ(seq.lastSnapshot().clamp, ClampStatus::kMoving);
+    ASSERT_EQ(seq.lastSnapshot().clamp, ClampStatus::kDropping);
 
     ASSERT_TRUE(runToTerminal(seq, plant, now));
     EXPECT_EQ(seq.state(), SeqState::kSucceeded);
@@ -340,8 +342,7 @@ TEST(ZefgSequencer, SamePositionRestartWithLatchedDroppingReachesWithoutMotion)
     ASSERT_EQ(seq.tick(now), SeqState::kWaitMotion);
     ASSERT_EQ(seq.lastSnapshot().clamp, ClampStatus::kMoving);
     plant.dropObject();
-    now += kPlantTick;
-    ASSERT_EQ(seq.tick(now), SeqState::kFailed);
+    ASSERT_TRUE(runToTerminal(seq, plant, now)); // 정지 판정 창 경과 후 라벨 변화(Dropping)로 종결
     ASSERT_EQ(seq.outcome(), SeqOutcome::kDropped);
     ASSERT_FLOAT_EQ(seq.lastSnapshot().position_mm, 35.0F);
 
@@ -364,6 +365,87 @@ TEST(ZefgSequencer, SamePositionRestartWithLatchedDroppingReachesWithoutMotion)
     EXPECT_EQ(seq.state(), SeqState::kSucceeded);
     EXPECT_EQ(seq.outcome(), SeqOutcome::kReached);
     EXPECT_FLOAT_EQ(seq.lastSnapshot().position_mm, 35.0F);
+}
+
+// ⑫ 래치 Dropping 출발 실제 이동 완주(Ruling 14, HIL §상태 레지스터 갱신 지연 실측 trial 1): 직전 상태가
+// Dropping 이면 실제 이동 중에도 0x0041 이 ≥1초 Dropping 을 유지하다 목표 직전에서야 Moving→In place.
+// 라벨·시간 유예 규약은 이동 중 표본(실기 `낙하 감지 (pos 5.6mm)`)에서 오탐한다 — 위치 동역학 우선
+// (위치가 변하는 동안 판정 금지, 정지 후 라벨 변화가 있을 때만 라벨 판정)으로 kReached 여야 한다.
+TEST(ZefgSequencer, DroppingLatchedStartMovesToTargetWithDelayedLabels)
+{
+    ZefgPlant plant; // 초기화 완료·35.0mm
+    auto hal = makeHal(plant);
+    ZefgSequencer seq(*hal);
+    gripper::hal::TimePoint now{};
+
+    // [1] kDropping 래치 조성(위치 35.0mm): 열기 전이 직후 낙하 주입 → 정지 후 kFailed(kDropped).
+    ASSERT_TRUE(seq.start(openTarget(), now));
+    ASSERT_EQ(seq.tick(now), SeqState::kWriteTargets);
+    now += kPlantTick;
+    ASSERT_EQ(seq.tick(now), SeqState::kWaitMotion);
+    plant.step(); // kMoving 전이(In place 출발)
+    now += kPlantTick;
+    ASSERT_EQ(seq.tick(now), SeqState::kWaitMotion);
+    plant.dropObject();
+    ASSERT_TRUE(runToTerminal(seq, plant, now));
+    ASSERT_EQ(seq.outcome(), SeqOutcome::kDropped);
+    ASSERT_FLOAT_EQ(seq.lastSnapshot().position_mm, 35.0F);
+
+    // [2] Dropping 래치 출발로 0mm 실제 이동 — 플랜트 라벨 지연 모드가 실기 궤적을 재현한다.
+    ASSERT_TRUE(seq.start(openTarget(), now));
+    ASSERT_EQ(seq.tick(now), SeqState::kWriteTargets);
+    now += kPlantTick;
+    ASSERT_EQ(seq.tick(now), SeqState::kWaitMotion);
+    // 이동 중 표본 관측: 위치는 줄어드는데 라벨은 Dropping 그대로 — 판정 금지 구간.
+    for (int i = 0; i < 40; ++i) // 400ms > status_grace(300ms): 라벨·유예 규약이라면 여기서 오탐
+    {
+        plant.step();
+        now += kPlantTick;
+        ASSERT_EQ(seq.tick(now), SeqState::kWaitMotion) << "이동 중 표본 " << i;
+    }
+    EXPECT_EQ(seq.lastSnapshot().clamp, ClampStatus::kDropping); // 라벨 지연 중
+    EXPECT_LT(seq.lastSnapshot().position_mm, 30.0F);            // 실제로 이동 중
+
+    ASSERT_TRUE(runToTerminal(seq, plant, now));
+    EXPECT_EQ(seq.state(), SeqState::kSucceeded);
+    EXPECT_EQ(seq.outcome(), SeqOutcome::kReached);
+    EXPECT_EQ(seq.lastSnapshot().clamp, ClampStatus::kInPlace);
+    EXPECT_NEAR(seq.lastSnapshot().position_mm, 0.0F, 0.5F);
+}
+
+// ⑬ 실제 낙하(Ruling 14 규약 4): 파지(Clamping) 후 물체가 빠지면 라벨이 Clamping 에서 Dropping 으로
+// 바뀌고 위치가 정지한다 — 정지 판정 창 경과 후 label_changed 로 kFailed(kDropped). 라벨 변화가
+// 동반되는 실제 낙하는 위치 동역학 규약에서도 그대로 검출된다.
+TEST(ZefgSequencer, RealDropAfterClampingFailsAsDropped)
+{
+    PlantConfig cfg;
+    cfg.initial_position_mm = 0.0F;
+    ZefgPlant plant(cfg);
+    auto hal = makeHal(plant);
+    ZefgSequencer seq(*hal);
+    gripper::hal::TimePoint now{};
+
+    plant.insertObstacleAt(20.0F);
+    ASSERT_TRUE(seq.start(closeTarget(), now));
+    // 파지 도달(전이 1 + 램프 100 step)까지 진행하되, 정지 판정 창(30 tick) 안에서 낙하를 주입한다.
+    for (int i = 0; i < 105; ++i)
+    {
+        const SeqState st = seq.tick(now);
+        ASSERT_NE(st, SeqState::kSucceeded) << "iter " << i;
+        ASSERT_NE(st, SeqState::kFailed) << "iter " << i;
+        plant.step();
+        now += kPlantTick;
+    }
+    ASSERT_EQ(seq.tick(now), SeqState::kWaitMotion);
+    ASSERT_EQ(seq.lastSnapshot().clamp, ClampStatus::kClamping); // 파지 관측 — 정지 창 미경과라 미종결
+    ASSERT_FLOAT_EQ(seq.lastSnapshot().position_mm, 20.0F);
+
+    plant.dropObject(); // 실제 낙하: 라벨 Clamping 에서 Dropping 으로, 위치 정지
+    ASSERT_TRUE(runToTerminal(seq, plant, now));
+    EXPECT_EQ(seq.state(), SeqState::kFailed);
+    EXPECT_EQ(seq.outcome(), SeqOutcome::kDropped);
+    EXPECT_EQ(seq.lastSnapshot().clamp, ClampStatus::kDropping);
+    EXPECT_FLOAT_EQ(seq.lastSnapshot().position_mm, 20.0F);
 }
 
 } // namespace

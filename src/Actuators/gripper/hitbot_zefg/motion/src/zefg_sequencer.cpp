@@ -20,13 +20,16 @@ bool ZefgSequencer::start(const MotionTarget &target, gripper::hal::TimePoint no
     outcome_ = SeqOutcome::kNone;
     init_command_pending_ = false;
     moving_seen_ = false;
-    // 방어적 리셋: 데드라인·유예 기점·모션 시작 위치는 각 전이 tick(kCheckInit/kWriteTargets)이
-    // 사용 전 덮어쓰지만, 그 순서에 의존하지 않도록 초기화한다(덮어쓰기 전에 읽히면 데드라인은
-    // 즉시 만료, 방향 판정은 닫힘 불성립 쪽 — 오탐 성공이 아니라 안전 측으로 드러남).
+    // 방어적 리셋: 데드라인·정지 판정 기점·모션 시작 위치·표본 이력은 각 전이 tick(kCheckInit/
+    // kWriteTargets)이 사용 전 덮어쓰지만, 그 순서에 의존하지 않도록 초기화한다(덮어쓰기 전에 읽히면
+    // 데드라인은 즉시 만료, 방향 판정은 닫힘 불성립 쪽 — 오탐 성공이 아니라 안전 측으로 드러남).
     init_deadline_ = now;
     motion_deadline_ = now;
-    status_fresh_after_ = now;
+    last_change_at_ = now;
     motion_start_position_mm_ = target.position_mm;
+    first_label_set_ = false;
+    label_changed_ = false;
+    has_last_position_ = false;
     state_ = SeqState::kCheckInit;
     return true;
 }
@@ -126,7 +129,10 @@ void ZefgSequencer::tickWriteTargets(gripper::hal::TimePoint now)
         return;
     }
     moving_seen_ = false;
-    status_fresh_after_ = now + cfg_.status_grace; // 신선도 유예 기점 = 목표 write 시각
+    first_label_set_ = false; // 첫 표본 라벨·위치 이력은 kWaitMotion 첫 폴링에서 채운다
+    label_changed_ = false;
+    has_last_position_ = false;
+    last_change_at_ = now; // 정지 판정 창 기점(첫 표본에서 다시 갱신)
     motion_deadline_ = now + cfg_.motion_timeout;
     state_ = SeqState::kWaitMotion;
 }
@@ -142,51 +148,87 @@ void ZefgSequencer::tickWaitMotion(gripper::hal::TimePoint now)
     last_snapshot_ = snap.value();
     const ZefgSnapshot &s = last_snapshot_;
 
+    // 판정 규약(Ruling 14 — 위치 동역학 우선, python 선례 zefg_serial.py move_to 와 동일 순서).
+    // 근거: HIL 정본(src/Actuators/gripper/docs/hil/) §상태 레지스터 갱신 지연 실측 — 직전 상태가
+    // Dropping 래치이면 실제 이동 중에도 0x0041 이 ≥1초 Dropping 을 유지하다 목표 직전에서야 Moving
+    // 후 In place 로 갱신된다. 라벨·시간 유예만으로는 이동 중 표본을 낙하로 오판한다(실기 `낙하 감지
+    // (pos 5.6mm)` — 실물은 정상 완주 중). 그래서 라벨은 "정지 후, 명령 후 한 번이라도 바뀌었을 때"만
+    // 판정에 쓰고, 위치가 변하는 동안은 판정하지 않는다.
+    if (!first_label_set_)
+    {
+        first_label_ = s.clamp; // 명령 후 첫 표본 = 직전 모션의 래치값일 수 있다
+        first_label_set_ = true;
+    }
+    else if (s.clamp != first_label_)
+    {
+        label_changed_ = true;
+    }
+    if (has_last_position_)
+    {
+        if (std::fabs(s.position_mm - last_position_mm_) > kPositionStillEpsMm)
+        {
+            moving_seen_ = true; // 위치 동역학으로 이동 관측(라벨이 지연돼도)
+            last_change_at_ = now;
+        }
+    }
+    else
+    {
+        has_last_position_ = true;
+        last_change_at_ = now;
+    }
+    last_position_mm_ = s.position_mm;
     if (s.clamp == ClampStatus::kMoving)
         moving_seen_ = true;
 
     const bool at_target = std::fabs(s.position_mm - target_.position_mm) <= cfg_.position_tolerance_mm;
 
-    // 무이동 명령 선판정(실기 재현 — HIL: 열림 0.0mm 에 Dropping 이 래치된 상태에서 0.0mm 재명령 →
-    // 장치는 움직이지 않아 0x0041 이 영영 갱신되지 않고, status_grace 뒤 래치 Dropping 을 fresh 로
-    // 믿으면 오탐 실패): Moving 을 본 적 없는데 이미 목표 위치이면 무이동 완료다 — 실제 낙하/파지는
-    // 반드시 Moving 뒤에 나타나므로 래치 상태(Dropping/Clamping/InPlace)와 무관하게 kReached.
-    // 신선도·Dropping/Clamping 판정보다 먼저 둔다(python 선례 zefg_serial.py move_to 와 동일 순서).
+    // ① 무이동 명령(Ruling 13, 실기 재현): Moving 을 본 적 없는데 이미 목표 위치면 래치 상태와 무관하게
+    //    즉시 완료 — 같은 위치 재명령 시 장치는 움직이지 않아 0x0041 이 영영 갱신되지 않는다.
     if (!moving_seen_ && at_target)
     {
         succeed(SeqOutcome::kReached);
         return;
     }
 
-    // 이동 후 도달: In place + 위치 대조(신선도 게이트 예외).
-    if (s.clamp == ClampStatus::kInPlace && at_target)
+    // ② 이동 중 판정 금지: 마지막 위치 변화 후 status_grace(정지 판정 창) 미만이면 라벨 무관 계속 폴링.
+    if (now - last_change_at_ < cfg_.status_grace)
     {
-        succeed(SeqOutcome::kReached);
+        if (now >= motion_deadline_)
+            fail(SeqOutcome::kTimeout);
         return;
     }
 
-    // 상태 신선도 게이트: 장치는 새 목표 write 후에도 직전 모션의 최종 상태(0x0041 래치)를 실제
-    // 이동 시작 전까지 유지한다 — HIL 정본(src/Actuators/gripper/docs/hil/) §백드라이브·힘 순응
-    // 실측(첫 폴링이 직전 래치 Dropping 을 읽는 오탐 함정). Dropping/Clamping 은 Moving 관측 후
-    // 또는 status_grace 경과 후에만 판정에 쓴다(헤더 SeqConfig.status_grace 주석·python 선례 참조).
-    const bool fresh = moving_seen_ || now >= status_fresh_after_;
-    if (fresh && s.clamp == ClampStatus::kClamping)
+    // ③ 정지 후 종결. 실제 낙하는 반드시 Clamping 후 Dropping 으로의 라벨 변화가 동반되므로 여기서 검출.
+    if (label_changed_)
     {
-        // 파지 성공(kClamped) 조건(코드가 강제): 닫힘 방향(목표 > 모션 시작 위치)이고 현재 위치가
-        // 목표 미달일 때만. 그 외 fresh Clamping 은 경로 걸림(kObstructed) — 실기 Clamping 은
-        // 외력에 저항 중인 과도 상태이기도 하다(HIL §백드라이브·힘 순응 실측: 외력 소멸 시 목표
-        // 복귀 후 InPlace) — 열기 방향에서 파지 성공으로 오판하지 않는다(리뷰 F1).
-        const bool closing = target_.position_mm > motion_start_position_mm_;
-        const bool short_of_target = s.position_mm < target_.position_mm;
-        if (closing && short_of_target)
-            succeed(SeqOutcome::kClamped);
-        else
-            fail(SeqOutcome::kObstructed);
-        return;
+        if (s.clamp == ClampStatus::kDropping)
+        {
+            fail(SeqOutcome::kDropped);
+            return;
+        }
+        if (s.clamp == ClampStatus::kClamping)
+        {
+            // 파지 성공(kClamped) 조건(코드가 강제, 리뷰 F1): 닫힘 방향(목표 > 모션 시작 위치)이고 현재
+            // 위치가 목표 미달일 때만. 그 외 Clamping 은 경로 걸림(kObstructed) — 실기 Clamping 은 외력에
+            // 저항 중인 과도 상태이기도 하다(HIL §백드라이브·힘 순응 실측: 외력 소멸 시 목표 복귀 후
+            // InPlace) — 열기 방향에서 파지 성공으로 오판하지 않는다.
+            const bool closing = target_.position_mm > motion_start_position_mm_;
+            const bool short_of_target = s.position_mm < target_.position_mm;
+            if (closing && short_of_target)
+                succeed(SeqOutcome::kClamped);
+            else
+                fail(SeqOutcome::kObstructed);
+            return;
+        }
+        if (s.clamp == ClampStatus::kInPlace && at_target)
+        {
+            succeed(SeqOutcome::kReached);
+            return;
+        }
     }
-    if (fresh && s.clamp == ClampStatus::kDropping)
+    else if (at_target)
     {
-        fail(SeqOutcome::kDropped);
+        succeed(SeqOutcome::kReached); // 라벨이 래치 그대로(미갱신)여도 정지 + 목표 위치면 도달
         return;
     }
 

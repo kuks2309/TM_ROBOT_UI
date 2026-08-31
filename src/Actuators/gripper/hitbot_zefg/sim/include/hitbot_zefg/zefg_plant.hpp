@@ -11,6 +11,10 @@
 // - Dropping 은 다음 모션 시작까지 래치(H0 재수행: 유휴 중에도 clamp=Dropping 유지 관측).
 // - 무이동 명령: 목표가 현재 위치와 같으면 장치는 움직이지 않고 0x0041 도 갱신하지 않는다(실기 재현:
 //   열림 0.0mm·Dropping 래치에서 0.0mm 재명령 → 상태 불변). 플랜트도 kMoving 전이 없이 래치 유지.
+// - 라벨 지연(§상태 레지스터 갱신 지연 실측): Dropping 래치 출발 이동은 실제 이동 중에도 0x0041 이
+//   ≥1초 Dropping 을 유지하다 목표 직전에서야 Moving 후 In place 로 갱신된다(In place 출발은 50ms 내
+//   Moving). 플랜트는 Dropping 출발 시 이동 중 라벨을 Dropping 으로 유지하고 남은 거리 ≤ 1 스텝에서
+//   kMoving 1 tick 후 kInPlace 로 모형화. Clamping 래치 출발의 지연 여부는 ⚠ 미실측 — 확장하지 않음.
 // - 한계(모형 단순화): 실기 Clamping 은 외력이 사라지면 목표로 복귀해 InPlace 가 되는 과도 상태
 //   이기도 하다(§백드라이브·힘 순응 실측: 외력 제거 시 자동 복귀 관측) — 본 플랜트는 장애물 도달
 //   시 kClamping 종결(위치 고정)로 단순화한다. 복귀 거동 모형화는 후속 필요 시(리뷰 F2).
@@ -85,6 +89,7 @@ class ZefgPlant
 
     int init_ticks_left_ = 0;
     bool moving_ = false;
+    bool label_delay_ = false; // Dropping 래치 출발 이동 — 이동 중 라벨 Dropping 유지(§상태 레지스터 갱신 지연)
     float motion_start_mm_ = 0.0F;
     float motion_target_mm_ = 0.0F;
     float motion_step_mm_ = 0.0F;     // 부호 포함(진행 방향) — 위치 램프용

@@ -101,6 +101,7 @@ void ZefgPlant::setPowerOnInitialized(bool initialized)
     speed_fb_mms_ = 0.0F;
     current_fb_a_ = 0.0F;
     moving_ = false;
+    label_delay_ = false;
     init_ticks_left_ = 0;
     pending_->init = false;
     pending_->target = false;
@@ -192,7 +193,13 @@ void ZefgPlant::beginMotion()
     motion_tick_ = 0;
     motion_total_ticks_ = (step_mm > 0.0) ? static_cast<int>(std::ceil(distance / step_mm)) : 0;
     moving_ = true;
-    clamp_raw_ = 1; // Moving [p5] — 여기(목표 소비 step)에서 비로소 전이(래치 시맨틱스)
+    // 라벨 지연(HIL §상태 레지스터 갱신 지연 실측 trial 1): 직전 상태가 Dropping 래치이면 실제 이동 중에도
+    // 0x0041 이 Dropping 을 유지하다 목표 직전에서야 Moving 후 In place 로 갱신된다 — 여기서는 전이하지
+    // 않고 advanceMotion 의 종단(남은 거리 ≤ 1 스텝)에서 kMoving 1 tick 을 낸다. In place 출발은 즉시
+    // Moving(trial 2·3). Clamping 래치 출발의 지연 여부는 ⚠ 미실측 — Dropping 에 한정한다.
+    label_delay_ = (clamp_raw_ == 3);
+    if (!label_delay_)
+        clamp_raw_ = 1; // Moving [p5] — 여기(목표 소비 step)에서 비로소 전이(래치 시맨틱스)
     speed_fb_mms_ = speed; // 모형은 명령 속도를 그대로 피드백(실측 평균 기울기 차이는 HIL ⚠ 기록 참조)
     current_fb_a_ = motion_current_a_;
 }
@@ -215,7 +222,9 @@ void ZefgPlant::advanceMotion()
     {
         position_mm_ = obstacle_mm_;
         moving_ = false;
-        clamp_raw_ = 2; // Clamping [p5] — 전류 제한으로 유지(HIL §백드라이브: 유지 = 순응 거동)
+        label_delay_ = false;
+        clamp_raw_ = 2; // Clamping [p5] — 전류 제한으로 유지(HIL §백드라이브: 유지 = 순응 거동).
+                        // Dropping 출발 시 Clamping 라벨 지연 여부는 ⚠ 미실측 — 즉시 전이로 둔다.
         speed_fb_mms_ = 0.0F;
         current_fb_a_ = motion_current_a_; // 유지 전류 모형 — 실측은 제한 부근 변동(§백드라이브)
         return;
@@ -225,6 +234,7 @@ void ZefgPlant::advanceMotion()
     {
         position_mm_ = motion_target_mm_;
         moving_ = false;
+        label_delay_ = false;
         clamp_raw_ = 0; // InPlace [p5]
         speed_fb_mms_ = 0.0F;
         current_fb_a_ = 0.0F; // 유휴 모형(실측 유휴 전류는 미소 오프셋 — HIL H0)
@@ -232,6 +242,10 @@ void ZefgPlant::advanceMotion()
     }
 
     position_mm_ = motion_start_mm_ + motion_step_mm_ * static_cast<float>(motion_tick_);
+    // 라벨 지연 종단: 남은 거리 ≤ 1 스텝(마지막 램프 tick 직전)에서 Moving 1 tick — HIL trial 1 의
+    // 16.100mm(Moving) → 16.555mm(In place) 순서를 결정론 tick 으로 모형화.
+    if (label_delay_ && motion_tick_ >= motion_total_ticks_ - 1)
+        clamp_raw_ = 1; // Moving [p5]
 }
 
 void ZefgPlant::syncRegisters()

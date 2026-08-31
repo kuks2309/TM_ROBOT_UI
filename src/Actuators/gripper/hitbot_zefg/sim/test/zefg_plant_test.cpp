@@ -198,9 +198,10 @@ TEST(ZefgPlant, UninitializedStartIgnoresMotionUntilInitialized)
     EXPECT_FLOAT_EQ(s1.position_mm, 35.0F);
 }
 
-// 래치 유지(브리프 추가분): 직전 모션의 최종 상태(kDropping)는 새 목표 write 직후·step 전 판독까지
-// 유지되고, 다음 step 에서 비로소 kMoving 전이(HIL §백드라이브·힘 순응 실측 — 새 모션 write 후
-// 첫 폴링이 직전 래치 Dropping 을 그대로 읽은 실기 관측).
+// 래치 유지(브리프 추가분 + Ruling 14 개정): 직전 모션의 최종 상태(kDropping)는 새 목표 write 직후·
+// step 전 판독까지 유지된다(HIL §백드라이브·힘 순응 실측). 나아가 Dropping 래치 출발 이동은 실제
+// 이동 중에도 라벨이 Dropping 으로 유지되다 목표 직전에서야 Moving→In place 로 갱신된다(HIL §상태
+// 레지스터 갱신 지연 실측) — 첫 step 뒤에도 kMoving 이 아니라 kDropping 이어야 한다.
 TEST(ZefgPlant, TargetWriteKeepsLatchedStateUntilNextStep)
 {
     PlantConfig cfg;
@@ -221,12 +222,52 @@ TEST(ZefgPlant, TargetWriteKeepsLatchedStateUntilNextStep)
     EXPECT_EQ(before.clamp, ClampStatus::kDropping);
     EXPECT_FLOAT_EQ(before.position_mm, 20.0F);
 
-    plant.step();
-    EXPECT_EQ(mustSnapshot(*hal).clamp, ClampStatus::kMoving);
+    plant.step(); // 전이 tick — Dropping 래치 출발이라 라벨은 아직 Dropping(위치 진행 없음)
+    const auto first = mustSnapshot(*hal);
+    EXPECT_EQ(first.clamp, ClampStatus::kDropping);
+    EXPECT_FLOAT_EQ(first.position_mm, 20.0F);
 
-    // 새 모션이 낙하 래치를 해소하고 정상 완주: 20mm / 0.2mm = 100 램프 tick.
+    // 새 모션이 낙하 래치를 해소하고 정상 완주: 20mm / 0.2mm = 100 램프 tick — 종단에서만 라벨 갱신.
     for (int i = 0; i < 100; ++i)
         plant.step();
+    const auto done = mustSnapshot(*hal);
+    EXPECT_EQ(done.clamp, ClampStatus::kInPlace);
+    EXPECT_FLOAT_EQ(done.position_mm, 0.0F);
+}
+
+// 라벨 지연 모드(Ruling 14, HIL §상태 레지스터 갱신 지연 실측 trial 1: Dropping 래치 출발 close 16.56 —
+// 이동 중 내내 Dropping 유지, 16.100mm 에서 처음 Moving, 16.555mm 에서 In place): Dropping 래치 출발
+// 이동은 매 step 라벨이 Dropping 으로 유지되고, 목표 직전(남은 거리 ≤ 1 스텝) 1 tick 만 Moving, 도달
+// tick 에 In place. In place 출발은 기존대로 즉시 Moving(trial 2·3: 50ms 내 Moving).
+TEST(ZefgPlant, DroppingLatchedStartDelaysLabelsUntilNearTarget)
+{
+    ZefgPlant plant; // 초기화 완료·35.0mm
+    auto hal = makeHal(plant);
+
+    // kDropping 래치 조성(위치 35.0mm 유지): 열기 전이 tick 직후 낙하 주입.
+    ASSERT_TRUE(hal->writeTargets(MotionTarget{0.0F, 20.0F, 0.3F}));
+    plant.step();
+    ASSERT_EQ(mustSnapshot(*hal).clamp, ClampStatus::kMoving); // In place 출발 — 즉시 Moving
+    plant.dropObject();
+    ASSERT_EQ(mustSnapshot(*hal).clamp, ClampStatus::kDropping);
+    ASSERT_FLOAT_EQ(mustSnapshot(*hal).position_mm, 35.0F);
+
+    // Dropping 래치 출발 재이동: 시작 35mm·목표 0mm, 20mm/s·tick 10ms 이므로 램프 175 tick(+전이 1).
+    ASSERT_TRUE(hal->writeTargets(MotionTarget{0.0F, 20.0F, 0.3F}));
+    plant.step(); // 전이 tick
+    for (int ramp = 1; ramp <= 173; ++ramp)
+    {
+        plant.step();
+        const auto s = mustSnapshot(*hal);
+        ASSERT_EQ(s.clamp, ClampStatus::kDropping) << "ramp tick " << ramp; // 이동 중 라벨 지연
+        ASSERT_NEAR(s.position_mm, 35.0F - 0.2F * static_cast<float>(ramp), 1e-3F);
+    }
+    plant.step(); // 램프 174 — 남은 거리 0.2mm(≤ 1 스텝): Moving 1 tick
+    const auto near = mustSnapshot(*hal);
+    EXPECT_EQ(near.clamp, ClampStatus::kMoving);
+    EXPECT_NEAR(near.position_mm, 0.2F, 1e-3F);
+
+    plant.step(); // 램프 175 — 도달
     const auto done = mustSnapshot(*hal);
     EXPECT_EQ(done.clamp, ClampStatus::kInPlace);
     EXPECT_FLOAT_EQ(done.position_mm, 0.0F);

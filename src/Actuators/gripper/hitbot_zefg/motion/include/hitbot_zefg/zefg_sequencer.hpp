@@ -47,16 +47,20 @@ struct SeqConfig
     gripper::hal::Duration motion_timeout{4000}; // 실측: 35mm@20mm/s 왕복 각 2.5~2.7s → 여유 4s
     float position_tolerance_mm = 0.5F;
     bool auto_initialize = true; // 미초기화 발견 시 commandInitialize 자동 수행
-    // 상태 신선도 유예(브리프 승인 확장, 계획 블록 외). 실기·플랜트 공통으로 새 목표 위치 write
-    // 후에도 직전 모션의 최종 상태(0x0041 래치, 예: Dropping)가 실제 이동 시작 전까지 유지된다 —
-    // HIL 정본(src/Actuators/gripper/docs/hil/) §백드라이브·힘 순응 실측: 첫 폴링이 직전 래치
-    // Dropping 을 읽어 정상 도달을 낙하로 오판하는 함정. kWaitMotion 은 Moving 관측 후 또는 이
-    // 유예 경과 후에만 Dropping/Clamping 을 판정에 쓴다(python 선례:
-    // src/TM_Robot_Task_Manager/tm_task_manager/hardware/zefg_serial.py move_to 의 STATUS_GRACE_S).
-    // 예외 — 무이동 명령: Moving 을 본 적 없는데 이미 목표 위치(±tolerance)면 래치 상태와 무관하게
-    // 즉시 성공(실기 재현: 같은 위치 재명령 시 0x0041 이 영영 갱신되지 않아 유예만으로는 오탐).
+    // 정지 판정 창(브리프 승인 확장 필드 — Ruling 14 로 의미 재정의): 위치가 이 시간 동안
+    // kPositionStillEpsMm 이내로 머물러야 "정지"로 보고 종결 판정한다. 근거: HIL 정본
+    // (src/Actuators/gripper/docs/hil/) §상태 레지스터 갱신 지연 실측 — 직전 상태가 Dropping 래치이면
+    // 실제 이동 중에도 0x0041 이 ≥1초 Dropping 을 유지하다 목표 직전에서야 Moving 후 In place 로
+    // 갱신된다(In place 출발은 50ms 내 Moving). 라벨·시간 유예만으로는 이동 중 표본을 낙하로 오판
+    // (실기 `낙하 감지 (pos 5.6mm)`). 규약(python 선례 zefg_serial.py move_to 와 동일): ① Moving 을
+    // 본 적 없는데 이미 목표 위치면 무이동 성공 ② 위치가 변하는 동안은 라벨 무관 계속 폴링 ③ 정지
+    // 후에만 종결 — 명령 후 라벨이 한 번이라도 바뀌었으면 라벨로, 래치 그대로면 위치 대조로만.
     gripper::hal::Duration status_grace{300};
 };
+
+// 위치 정지 판정 허용 변화량(직전 표본 대비) — 이 값을 초과해 움직이면 이동 중으로 본다
+// (python 선례 POSITION_STILL_EPS_MM, 실측 25Hz 궤적의 표본 간 이동량 0.8mm 대비 충분히 작음).
+inline constexpr float kPositionStillEpsMm = 0.1F;
 
 class ZefgSequencer
 {
@@ -100,11 +104,16 @@ class ZefgSequencer
     MotionTarget target_{0.0F, 0.0F, 0.0F};
     ZefgSnapshot last_snapshot_{};
     bool init_command_pending_ = false; // kCheckInit 이 예약한 초기화 명령(hal 호출 ≤1회/tick 유지)
-    bool moving_seen_ = false;          // kWaitMotion 에서 Moving 관측 여부 — 신선도 게이트 해제 조건
+    bool moving_seen_ = false; // Moving 라벨 또는 위치 변화 관측 — 무이동(①) 판정 배제 조건
     float motion_start_position_mm_ = 0.0F; // 목표 write 직전 판독 위치 — 닫힘/열기 방향 판정 기준(리뷰 F1)
-    gripper::hal::TimePoint init_deadline_{};      // 초기화 예약 tick 기점 + init_timeout
-    gripper::hal::TimePoint motion_deadline_{};    // 목표 write tick 기점 + motion_timeout
-    gripper::hal::TimePoint status_fresh_after_{}; // 목표 write tick 기점 + status_grace
+    ClampStatus first_label_ = ClampStatus::kUnknown; // 명령 후 첫 표본의 라벨(래치값)
+    bool first_label_set_ = false;
+    bool label_changed_ = false; // 첫 표본과 다른 라벨을 한 번이라도 관측 — 정지 후 라벨 판정 허용 조건
+    float last_position_mm_ = 0.0F; // 직전 표본 위치 — 위치 동역학(정지/이동) 판정용
+    bool has_last_position_ = false;
+    gripper::hal::TimePoint init_deadline_{};   // 초기화 예약 tick 기점 + init_timeout
+    gripper::hal::TimePoint motion_deadline_{}; // 목표 write tick 기점 + motion_timeout
+    gripper::hal::TimePoint last_change_at_{}; // 마지막 위치 변화 시각 — 정지 판정 창(status_grace) 기점
 };
 
 } // namespace gripper::hitbot
