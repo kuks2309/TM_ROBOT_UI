@@ -1,0 +1,277 @@
+# Recipe: 새 Recipe
+# TM Task Manager Recipe File
+
+name: 새 Recipe
+description: ''
+version: '1.0'
+created: '2026-08-29'
+modified: '2026-08-31'
+jobs:
+- id: 1
+  type: sdc_gripper_open
+  name: SDC 그리퍼 열기
+  params:
+    position: 0.0
+    speed: 20.0
+    current: 0.3
+    timeout: 5.0
+- id: 2
+  type: move_to_point
+  name: 포인트 이동
+  params:
+    motion_type: tcp
+    X: -820.96
+    Y: 0.34
+    Z: 547.26
+    Rx: 89.63
+    Ry: -19.48
+    Rz: -91.09
+    velocity: 60.0
+    decomposed_tcp: false
+  robot_base:
+    X: -820.96
+    Y: 0.34
+    Z: 547.26
+    Rx: 89.63
+    Ry: -19.48
+    Rz: -91.09
+- id: 3
+  type: sdc_tcp_base
+  name: sdc_tcp_base 위치
+  params:
+    velocity: 60.0
+    wait_after_command: 0.5
+- id: 4
+  type: move_to_point
+  name: 포인트 이동
+  params:
+    motion_type: tcp
+    X: -886.81
+    Y: 5.78
+    Z: 593.64
+    Rx: 89.93
+    Ry: -21.96
+    Rz: -88.07
+    velocity: 40.0
+    decomposed_tcp: false
+  robot_base:
+    X: -886.81
+    Y: 5.78
+    Z: 593.64
+    Rx: 89.93
+    Ry: -21.96
+    Rz: -88.07
+- id: 5
+  type: scan_tm_landmark
+  name: TM Landmark 스캔
+  params:
+    wait_after_command: 100
+    repeat_count: 5
+    outlier_method: none
+    analysis_target: xyz
+- id: 6
+  type: save_landmark_pose
+  name: Landmark 좌표 저장
+  params:
+    save_path: /home/nvidia/Project/TM-Robot/tm-robot-uni/src/TM_Robot_Task_Manager/config/recipes/SDC
+    operator: Kuk Won Ko
+- id: 7
+  type: sdc_palette_tcp_align
+  name: sdc_palette_tcp_align
+  params:
+    velocity: 10.0
+    wait_after_command: 0.5
+- id: 8
+  type: sdc_palette_inlet_move
+  name: sdc_palette_inlet_move
+  params:
+    velocity: 50.0
+    wait_after_command: 0.5
+    dx: 0.0
+    dy: 5.0
+    dz: 0.0
+- id: 9
+  type: sdc_marker_move
+  name: sdc_marker_move
+  caption: push 50mm
+  params:
+    dx: 0.0
+    dy: 0.0
+    dz: 50.0
+    velocity: 30.0
+    wait_after_command: 0.5
+- id: 10
+  type: wait
+  name: 대기
+  params:
+    duration: 500
+- id: 11
+  type: sdc_gripper_close
+  name: SDC 그리퍼 닫기
+  params:
+    position: 16.56
+    speed: 20.0
+    current: 0.3
+    timeout: 5.0
+- id: 12
+  type: sdc_marker_move
+  name: sdc_marker_move
+  caption: up 50mm
+  params:
+    dx: 0.0
+    dy: -50.0
+    dz: 0.0
+    velocity: 30.0
+    wait_after_command: 0.5
+- id: 13
+  type: wait
+  name: 대기
+  params:
+    duration: 500
+- id: 14
+  type: sdc_marker_move
+  name: sdc_marker_move
+  caption: back -100mm
+  params:
+    dx: 0.0
+    dy: 0.0
+    dz: -100.0
+    velocity: 30.0
+    wait_after_command: 0.5
+- id: 15
+  type: move_to_point
+  name: 포인트 이동
+  params:
+    motion_type: tcp
+    X: -843.83
+    Y: 44.53
+    Z: 563.08
+    Rx: 93.03
+    Ry: -22.87
+    Rz: -92.01
+    velocity: 60.0
+    decomposed_tcp: false
+  robot_base:
+    X: -843.83
+    Y: 44.53
+    Z: 563.08
+    Rx: 93.03
+    Ry: -22.87
+    Rz: -92.01
+- id: 16
+  type: wait
+  name: 대기
+  params:
+    duration: 500
+- id: 17
+  type: move_to_point
+  name: 포인트 이동
+  caption: back
+  params:
+    motion_type: tcp
+    X: -395.55
+    Y: -852.15
+    Z: 591.15
+    Rx: 89.74
+    Ry: -23.51
+    Rz: -0.57
+    velocity: 80.0
+    decomposed_tcp: false
+  robot_base:
+    X: -395.55
+    Y: -852.15
+    Z: 591.15
+    Rx: 89.74
+    Ry: -23.51
+    Rz: -0.57
+- id: 18
+  type: sdc_palette_inlet_move
+  name: sdc_palette_inlet_move
+  params:
+    velocity: 50.0
+    wait_after_command: 0.5
+    dx: 0.0
+    dy: -55.0
+    dz: -100.0
+- id: 19
+  type: sdc_marker_move
+  name: sdc_marker_move
+  caption: push 100mm
+  params:
+    dx: 0.0
+    dy: 0.0
+    dz: 155.0
+    velocity: 60.0
+    wait_after_command: 0.5
+- id: 20
+  type: sdc_marker_move
+  name: sdc_marker_move
+  caption: down 40mm
+  params:
+    dx: 0.0
+    dy: 40.0
+    dz: 0.0
+    velocity: 30.0
+    wait_after_command: 0.5
+- id: 21
+  type: wait
+  name: 대기
+  params:
+    duration: 500
+- id: 22
+  type: sdc_gripper_open
+  name: SDC 그리퍼 열기
+  params:
+    position: 0.0
+    speed: 20.0
+    current: 0.3
+    timeout: 5.0
+- id: 23
+  type: sdc_marker_move
+  name: sdc_marker_move
+  caption: down 15mm
+  params:
+    dx: 0.0
+    dy: 15.0
+    dz: 0.0
+    velocity: 30.0
+    wait_after_command: 0.5
+- id: 24
+  type: sdc_marker_move
+  name: sdc_marker_move
+  caption: back
+  params:
+    dx: 0.0
+    dy: 0.0
+    dz: -200.0
+    velocity: 60.0
+    wait_after_command: 0.5
+- id: 25
+  type: move_to_point
+  name: 포인트 이동
+  caption: back
+  params:
+    motion_type: tcp
+    X: -395.55
+    Y: -852.15
+    Z: 591.15
+    Rx: 89.74
+    Ry: -23.51
+    Rz: -0.57
+    velocity: 90.0
+    decomposed_tcp: false
+  robot_base:
+    X: -395.55
+    Y: -852.15
+    Z: 591.15
+    Rx: 89.74
+    Ry: -23.51
+    Rz: -0.57
+reference:
+  tm_jig_landmark:
+    X: 12.11
+    Y: 708.6
+    Z: -35.31
+    Rx: 179.24
+    Ry: 0.44
+    Rz: 178.86
