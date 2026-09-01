@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+"""독립 CLI — place 시점 TCP 를 팔레트 평면 좌표계 상대값으로 기록한다.
+
+측정파일 평균으로 기준 plate_pose 를 만들고, 임시 rclpy 노드로 tool_pose
+(PoseStamped, m/quaternion)를 1건 수신해 mm/deg 상대 pose 로 저장한다.
+"""
 import argparse
 import math
 import sys
@@ -8,6 +13,7 @@ from typing import Dict, List, Optional
 
 import yaml
 
+# 단독 실행(python3 record_place_pose.py) 시 패키지 import 가 되도록 부트스트랩
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from tm_task_manager.tools.jig_plane_calculator import (
@@ -24,6 +30,11 @@ POSE_KEYS = ('x', 'y', 'z', 'rx', 'ry', 'rz')
 
 
 def read_current_tcp(timeout_sec: float = 5.0) -> Optional[Dict[str, float]]:
+    """단명 노드로 tool_pose(TM Driver 발행) 1건을 받아 mm/deg dict 로 돌려준다.
+
+    rclpy.init/shutdown 을 스스로 수행하므로 이미 초기화된 프로세스에서
+    재사용할 수 없다 — CLI 단독 실행 전용.
+    """
     import rclpy
     from geometry_msgs.msg import PoseStamped
     from rclpy.node import Node
@@ -65,6 +76,11 @@ def read_current_tcp(timeout_sec: float = 5.0) -> Optional[Dict[str, float]]:
 
 
 def build_reference(plate_dir: Path, prefix: str):
+    """팔레트 측정파일들을 평균해 기준 plate_pose 를 만든다.
+
+    Returns:
+        (plate_pose dict 또는 None, 사용 파일, (건너뛴 파일, 사유)).
+    """
     files = sorted(f for f in plate_dir.glob(f"{prefix}*.yaml") if f.is_file())
     if not files:
         return None, [], []
@@ -85,6 +101,7 @@ def _fmt(pose: Dict[str, float]) -> str:
 
 
 def print_summary(out_dir: Path, pallet: str) -> int:
+    """저장돼 있는 place 기록의 상대 pose 목록·평균·std·PtP 를 출력한다 (종료코드 반환)."""
     files = sorted(out_dir.glob(f"{pallet}_place_*.yaml"))
     if not files:
         print(f"기록 없음: {out_dir}/{pallet}_place_*.yaml")
@@ -115,6 +132,7 @@ def print_summary(out_dir: Path, pallet: str) -> int:
 
 
 def main() -> int:
+    """기준 구축→TCP 수신→상대 계산→yaml 저장 (--summary 는 통계만)."""
     ap = argparse.ArgumentParser(description='place 시점 TCP 를 평면 좌표계로 기록')
     ap.add_argument('--pallet', default='pallet0', help='기준 팔레트 접두어 (기본 pallet0)')
     ap.add_argument('--label', default='', help='기록에 붙일 메모 (예: 1층 좌상)')

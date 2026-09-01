@@ -1,3 +1,4 @@
+"""job_executor save_landmark_pose job(6DOF 저장·파일명 규칙·실패 조건)을 검증한다."""
 import re
 
 import pytest

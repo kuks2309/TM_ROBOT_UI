@@ -1,3 +1,4 @@
+"""순수 OpenCV Canny 엣지 검출 플러그인."""
 import cv2
 import numpy as np
 from typing import Any, Dict, Optional
@@ -6,6 +7,8 @@ from .base_plugin import BaseVisionPlugin
 
 
 class EdgeDetectionPlugin(BaseVisionPlugin):
+    """OpenCV Canny 플러그인 — 블러 σ0(커널 크기에서 자동 산출), FastEdgePlugin(σ1.4)과 결과가 다르다."""
+
     def __init__(self):
         super().__init__(
             name="edge_detection",
@@ -13,6 +16,7 @@ class EdgeDetectionPlugin(BaseVisionPlugin):
         )
 
     def process(self, image: np.ndarray, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """그레이 변환→(옵션 블러)→Canny. params: threshold1/2, blur_size(px, 홀수), use_blur."""
         params = params or {}
         threshold1 = params.get('threshold1', 50)
         threshold2 = params.get('threshold2', 150)

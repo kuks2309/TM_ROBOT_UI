@@ -1,3 +1,4 @@
+"""tools/landmark_parser 의 파싱 실패 시 원문 에코 동작을 검증한다."""
 import pytest
 
 from tm_task_manager.tools.landmark_parser import (

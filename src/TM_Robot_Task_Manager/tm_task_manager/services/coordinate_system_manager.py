@@ -1,3 +1,4 @@
+"""좌표계 정의(robot_base/jig_landmark/jig_plate) 관리 + TF 트리 발행 (mm/deg 저장)."""
 import math
 import shutil
 from datetime import datetime
@@ -6,6 +7,7 @@ from typing import Dict, Optional, Tuple, List, Any
 from .config_manager import ConfigManager
 from .. import paths
 
+# tf2_ros 미소싱 환경에서도 정의 관리 기능은 살리고 TF 발행만 비활성화한다
 try:
     from tf2_ros import StaticTransformBroadcaster
     from geometry_msgs.msg import TransformStamped
@@ -17,6 +19,15 @@ except ImportError:
 
 
 class CoordinateSystemManager:
+    """좌표계별 tool_pose·scan_data 의 저장/로드와 TF 발행.
+
+    정의는 ConfigManager 의 coordinate_definitions.* 절에 저장한다.
+    TF 는 robot_base → jig_landmark → jig_plate → mark_jig_plate1..4 체인을
+    StaticTransformBroadcaster 로 발행하며, 타이머 콜백(executor 스레드)이
+    _definitions 를 읽는 동안 GUI 가 scan_data 를 변형할 수 있다 — 편집은
+    발행 중지 후 하는 것이 안전하다.
+    """
+
     ROBOT_BASE = 'robot_base'
     JIG_LANDMARK = 'jig_landmark'
     JIG_PLATE = 'jig_plate'
@@ -75,6 +86,7 @@ class CoordinateSystemManager:
         return {'x': x, 'y': y, 'z': z, 'rx': rx, 'ry': ry, 'rz': rz}
 
     def _create_default_definition(self, name: str) -> Dict[str, Any]:
+        """타입별 기본 정의 — single 은 dict, multi 는 list 형 scan_data."""
         system_type = self.SYSTEM_TYPES.get(name, self.TYPE_FIXED)
         tool_pose = self.DEFAULT_TOOL_POSE.get(name, self._create_pose_dict()).copy()
 
@@ -96,6 +108,7 @@ class CoordinateSystemManager:
 
 
     def get_tool_pose(self, name: str) -> Optional[Dict[str, float]]:
+        """좌표계의 tool_pose 사본 (mm/deg) — 정의가 없으면 기본값."""
         if name not in self.SUPPORTED_SYSTEMS:
             self._log(f"지원하지 않는 좌표계: {name}")
             return None
@@ -111,6 +124,7 @@ class CoordinateSystemManager:
         x: float, y: float, z: float,
         rx: float, ry: float, rz: float
     ) -> bool:
+        """tool_pose 를 설정한다 (mm/deg) — 기준계인 robot_base 는 수정 불가."""
         if name not in self.SUPPORTED_SYSTEMS:
             self._log(f"지원하지 않는 좌표계: {name}")
             return False
@@ -147,6 +161,7 @@ class CoordinateSystemManager:
         landmark: Dict[str, float],
         tcp_pose: Dict[str, float]
     ) -> bool:
+        """단일 랜드마크 스캔을 저장하고 tool_pose 를 랜드마크로 동기화한다."""
         if name not in self.SUPPORTED_SYSTEMS:
             self._log(f"지원하지 않는 좌표계: {name}")
             return False
@@ -174,6 +189,7 @@ class CoordinateSystemManager:
         landmark: Dict[str, float],
         tcp_pose: Dict[str, float]
     ) -> bool:
+        """다중 랜드마크 스캔 목록에 (landmark, tcp_pose) 1건을 append 한다."""
         if name not in self.SUPPORTED_SYSTEMS:
             self._log(f"지원하지 않는 좌표계: {name}")
             return False
@@ -242,6 +258,7 @@ class CoordinateSystemManager:
 
 
     def save_to_config(self, backup_type: str = None) -> bool:
+        """정의 전체와 current 를 positions.yaml 에 저장한다 (backup_type 지정 시 백업 먼저)."""
         try:
             if backup_type:
                 self._save_coordinate_backup(backup_type)
@@ -258,6 +275,7 @@ class CoordinateSystemManager:
             return False
 
     def _save_coordinate_backup(self, coordinate_type: str) -> bool:
+        """positions.yaml 전체를 data/jig_mark/<날짜>/ 로 복사해 백업한다."""
         try:
             config_path = self.config_manager.get_config_path()
             if not config_path or not Path(config_path).exists():
@@ -287,6 +305,7 @@ class CoordinateSystemManager:
             return False
 
     def load_from_config(self) -> bool:
+        """positions.yaml 에서 정의·current 를 로드한다 (없는 항목은 기본값)."""
         try:
             for name in self.SUPPORTED_SYSTEMS:
                 data = self.config_manager.get(f'coordinate_definitions.{name}')
@@ -337,12 +356,14 @@ class CoordinateSystemManager:
 
 
     def set_ros_node(self, ros_node) -> None:
+        """TF 발행에 쓸 노드를 주입하고 StaticTransformBroadcaster 를 준비한다."""
         self._ros_node = ros_node
         if ROS2_AVAILABLE and ros_node:
             self._tf_broadcaster = StaticTransformBroadcaster(ros_node)
             self._log("TF broadcaster 초기화 완료")
 
     def _euler_to_quaternion(self, rx: float, ry: float, rz: float) -> Tuple[float, float, float, float]:
+        """RPY(deg)를 쿼터니언 (qx, qy, qz, qw) 로 변환한다."""
         roll = math.radians(rx)
         pitch = math.radians(ry)
         yaw = math.radians(rz)
@@ -367,6 +388,7 @@ class CoordinateSystemManager:
         child_frame: str,
         pose: Dict[str, float]
     ) -> 'TransformStamped':
+        """pose(mm/deg)를 TF 규약 단위(m/quaternion)로 바꿔 TransformStamped 를 만든다."""
         if not ROS2_AVAILABLE:
             return None
 
@@ -388,6 +410,7 @@ class CoordinateSystemManager:
         return t
 
     def publish_tf(self) -> bool:
+        """스캔 데이터로 TF 트리(랜드마크·플레이트·마크 4개)를 발행한다."""
         if not ROS2_AVAILABLE:
             self._log("ROS2를 사용할 수 없습니다")
             return False
@@ -454,6 +477,11 @@ class CoordinateSystemManager:
             return False
 
     def _calculate_center_pose(self, scan_data_list: List[Dict]) -> Optional[Dict[str, float]]:
+        """랜드마크들의 성분별 산술 평균 중심.
+
+        각도도 산술 평균이라 ±180° 랩어라운드는 처리하지 않는다 — 경계 근방
+        각도가 섞인 데이터에서는 틀린 평균이 나온다.
+        """
         if not scan_data_list:
             return None
 
@@ -484,6 +512,12 @@ class CoordinateSystemManager:
         parent_pose: Dict[str, float],
         child_pose: Dict[str, float]
     ) -> Dict[str, float]:
+        """성분별 단순 차감 상대 pose.
+
+        부모가 회전돼 있으면 수학적으로 정확한 상대 변환이 아니다 — 병진에
+        부모 회전이 반영되지 않고 회전도 오일러 뺄셈이다. 부모 회전이 0 에
+        가깝다는 전제에서만 TF 시각화가 올바르다.
+        """
         return {
             'x': child_pose['x'] - parent_pose['x'],
             'y': child_pose['y'] - parent_pose['y'],
@@ -494,6 +528,7 @@ class CoordinateSystemManager:
         }
 
     def start_tf_publishing(self, interval_sec: float = 1.0) -> bool:
+        """rclpy 타이머로 interval_sec(s) 주기 재발행을 시작한다."""
         if not ROS2_AVAILABLE or not self._ros_node:
             self._log("TF 발행을 시작할 수 없습니다")
             return False
@@ -519,6 +554,7 @@ class CoordinateSystemManager:
 
 
     def compute_jig_plate_coordinates(self) -> bool:
+        """jig_plate 4점 스캔으로 평면 pose 를 계산해 정의의 computed 에 저장한다."""
         from ..tools.jig_plane_calculator import JigPlaneCalculator, Mark
 
         scan_data = self.get_scan_data(self.JIG_PLATE)

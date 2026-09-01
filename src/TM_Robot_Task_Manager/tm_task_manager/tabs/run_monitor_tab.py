@@ -1,3 +1,4 @@
+"""Recipe 실행/모니터 탭 — 실행 제어 버튼, executor 콜백 기반 진행 표시, 반복 실행 카운터를 담당한다."""
 import os
 from datetime import datetime
 
@@ -10,6 +11,8 @@ VISION_ORIGIN_CHECK_JOB_TYPE = 'vision_origin_check'
 
 
 class RunMonitorTab(BaseTab):
+    """Run/Pause/Stop/Step/반복 실행 제어와 Job 목록 O/X·진행바 표시, 기준점 확인 배치 검증을 담당하는 탭."""
+
     def __init__(self, main_window):
         super().__init__(main_window)
         self.mw = main_window
@@ -33,6 +36,7 @@ class RunMonitorTab(BaseTab):
 
         self.mw.tabWidget_main.currentChanged.connect(self._on_tab_changed)
 
+        # Qt 시그널이 아닌 단일 콜백 속성 대입 — 마지막 대입자가 점유하므로 다른 구독자와 공유 불가
         self.job_executor.on_state_changed = self._on_executor_state_changed
         self.job_executor.on_job_started = self._on_executor_job_started
         self.job_executor.on_job_completed = self._on_executor_job_completed
@@ -57,6 +61,11 @@ class RunMonitorTab(BaseTab):
 
 
     def _validate_vision_origin_check_placement(self, recipe):
+        """recipe_info 의 vision_origin_check 정책(first/last/both)에 맞게 기준점 확인 Job 이 배치됐는지 검증한다.
+
+        Returns:
+            (bool, str): (통과 여부, 실패 사유)
+        """
         policy = 'none'
         for job in recipe.jobs:
             if job.type == 'recipe_info':
@@ -279,6 +288,7 @@ class RunMonitorTab(BaseTab):
                 self._repeat_ok += 1
                 self._repeat_remaining -= 1
                 if self._repeat_remaining > 0:
+                    # executor 콜백 스택 안에서 바로 재실행하지 않고 이벤트 루프 경유로 다음 반복을 예약
                     QTimer.singleShot(500, self._start_repeat_iteration)
                     return
                 else:
@@ -298,6 +308,7 @@ class RunMonitorTab(BaseTab):
                     self.mw.pushButton_repeatRun.setEnabled(True)
                     self.mw.spinBox_repeatCount.setEnabled(True)
 
+            # 동적 정밀도 테스트 연계 — Recipe 완료를 매니저에 통지해 다음 회차를 이어가게 한다
             if (self.mw.precision_test_manager.is_running and
                 self.mw.precision_test_manager.test_mode == 'dynamic'):
                 self.mw.precision_test_manager.on_recipe_completed()

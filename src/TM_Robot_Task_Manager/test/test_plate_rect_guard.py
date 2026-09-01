@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""tools/jig_plate_validator 의 사각형 가드 판정을 검증한다."""
 import sys
 from pathlib import Path
 

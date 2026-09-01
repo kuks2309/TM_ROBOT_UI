@@ -1,3 +1,7 @@
+"""애플리케이션 진입점 — TaskManagerNode(rclpy 노드)와 MainWindow(PyQt5 GUI)를 조립한다.
+
+ROS 실행 모델은 별도 spin 스레드 없이 Qt QTimer(10ms)로 spin_once 를 폴링하는 방식이다.
+"""
 import math
 import os
 import time
@@ -65,6 +69,8 @@ from .tabs import (
 
 
 class TaskManagerNode(Node):
+    """tm_driver 토픽 구독·서비스 클라이언트와 안전 가드를 보유한 rclpy 노드."""
+
     def __init__(self):
         super().__init__('tm_task_manager_node')
 
@@ -145,6 +151,10 @@ class TaskManagerNode(Node):
         self.get_logger().info('Task Manager Node initialized')
 
     def _init_safety_guard(self):
+        """안전 구역 가드 배선 — 사전 검사(MotionGuard)·실시간 감시(BoundaryMonitor)·정지(RobotStopService).
+
+        모든 모션은 self.motion_gateway 를 지나야 가드가 적용된다 — 새 모션 경로도 여기를 거치게 한다.
+        """
         from .safety import safety_area as sa
         from .safety.boundary_monitor import BoundaryMonitor
         from .safety.motion_guard import MotionGuard
@@ -199,6 +209,11 @@ class TaskManagerNode(Node):
                 f'[안전구역] 비활성 — 구역 제약 없이 동작합니다 ({sa.config_path()})')
 
     def reload_safety_area(self):
+        """안전 구역 설정을 다시 읽어 가드·감시기에 반영한다.
+
+        Returns:
+            (ok, reason).
+        """
         from .safety import safety_area as sa
 
         area = self.safety_guard.reload()
@@ -250,6 +265,7 @@ class TaskManagerNode(Node):
 
 
     def _on_joint_state(self, msg):
+        """TM 로봇의 조인트 상태만 골라 motion_service 에 반영하고 UI 콜백을 부른다."""
         if is_tm_joint_state(msg.name, msg.position):
             self.motion_service.update_joint_state(list(msg.position[:6]))
             guard = getattr(self, 'joint_guard', None)
@@ -267,6 +283,7 @@ class TaskManagerNode(Node):
         )
 
     def _on_feedback_state(self, msg):
+        """속도·SCT 연결 여부·IO 상태를 각 서비스 캐시에 반영한다."""
         tcp_speed = list(msg.tcp_speed) if msg.tcp_speed else []
         joint_vel = list(msg.joint_vel) if msg.joint_vel else []
         self.motion_service.update_feedback_state(tcp_speed, joint_vel)
@@ -287,6 +304,7 @@ class TaskManagerNode(Node):
                 print(f"[DEBUG] io_control_service not set on TaskManagerNode")
 
     def _on_techman_image(self, msg):
+        # 대기 여부와 무관하게 항상 캐시에 보관 — 소비자는 자기 기준 시퀀스 이후 프레임만 골라 간다.
         self.techman_image_cache.push(msg)
 
         if self.waiting_for_techman_image:
@@ -295,6 +313,7 @@ class TaskManagerNode(Node):
             self.get_logger().info('techman_image 수신 완료')
 
     def start_techman_image_subscription(self):
+        """촬영 대기를 연다 — 반환한 기준 시퀀스보다 뒤에 도착한 프레임만 이번 요청의 것으로 본다."""
         self.waiting_for_techman_image = True
         self.current_techman_image = None
         baseline = self.techman_image_cache.baseline()
@@ -303,6 +322,17 @@ class TaskManagerNode(Node):
 
     def wait_techman_image(self, baseline, timeout_sec,
                            should_stop=None, spin=False):
+        """baseline 이후에 도착한 techman_image 프레임을 기다린다.
+
+        Args:
+            baseline: start_techman_image_subscription 이 돌려준 기준 시퀀스.
+            timeout_sec: 대기 한도 (s).
+            should_stop: True 를 돌려주면 대기를 중단하는 콜백.
+            spin: 자체 실행기가 없는 호출부가 직접 콜백을 돌려야 할 때 True.
+
+        Returns:
+            (msg, error) — msg 가 None 이면 error 에 사유가 담긴다.
+        """
         on_poll = None
         if spin:
             def on_poll():
@@ -319,6 +349,7 @@ class TaskManagerNode(Node):
         return self.motion_service.check_motion_complete()
 
     def _motion_kind_of(self, motion_type):
+        """SetPositions.motion_type 상수 → 안전 가드가 쓰는 모션 종류 문자열."""
         from .safety import motion_guard as mg
 
         if motion_type == SetPositions.Request.LINE_T:
@@ -330,6 +361,7 @@ class TaskManagerNode(Node):
         return f'set_positions({motion_type})'
 
     def _log_motion_command(self, kind, positions, velocity):
+        """이동 명령의 좌표계·실측 TCP·목표를 진단 로그로 남긴다 — 로그가 모션을 막지 않도록 예외는 삼킨다."""
         import math
         from .safety import motion_guard as mg
 
@@ -339,6 +371,7 @@ class TaskManagerNode(Node):
                        if cur and len(cur) >= 6 else 'None')
 
             if len(positions) >= 6:
+                # 서비스 단위(m/rad) → 표시 단위(mm/deg) 환산
                 if kind == mg.MOTION_PTP_JOINT:
                     target = [math.degrees(v) for v in positions[:6]]
                 else:
@@ -357,6 +390,10 @@ class TaskManagerNode(Node):
             self.get_logger().warn(f'[모션] 진단 로그 실패: {e}')
 
     def _call_set_positions(self, motion_type, positions, velocity, acc_time, blend_percentage=0, fine_goal=False):
+        """안전 게이트웨이를 경유하는 set_positions — 판정에서 거부되면 명령을 보내지 않는다.
+
+        positions 는 m·rad 단위이므로 가드에 넘길 목표는 mm 로 환산한다.
+        """
         from .safety import motion_guard as mg
         from .safety import safety_area as sa
 
@@ -383,6 +420,7 @@ class TaskManagerNode(Node):
         )
 
     def _send_set_positions(self, motion_type, positions, velocity, acc_time, blend_percentage=0, fine_goal=False):
+        """set_positions 를 호출하고 완료를 폴링한다 (30s 한도, 완료 판정 3회 연속이면 성공)."""
         if not self.set_positions_client.wait_for_service(timeout_sec=1.0):
             return False, "TM Driver set_positions 서비스를 사용할 수 없습니다"
 
@@ -432,6 +470,7 @@ class TaskManagerNode(Node):
 
 
     def start_subscriptions(self):
+        """Vision 탭 라이브용 techman_image·aruco/pose 구독을 생성한다 (이미 있으면 유지)."""
         if self.image_sub is None:
             self.image_sub = self.create_subscription(
                 Image,
@@ -451,6 +490,7 @@ class TaskManagerNode(Node):
             self.get_logger().info('Subscribed to aruco/pose')
 
     def stop_subscriptions(self):
+        """start_subscriptions 로 만든 구독을 해제한다."""
         if self.image_sub is not None:
             self.destroy_subscription(self.image_sub)
             self.image_sub = None
@@ -475,6 +515,8 @@ class TaskManagerNode(Node):
 
 
 class MainWindow(QMainWindow):
+    """메인 창 — 서비스 객체들과 12개 탭을 조립하고 QTimer 로 ROS 를 폴링한다."""
+
     def __init__(self, ros_node=None):
         super().__init__()
 
@@ -614,6 +656,7 @@ class MainWindow(QMainWindow):
         self.robot_status_timer.start(100)
 
     def _spin_ros(self):
+        """10ms 주기 QTimer — rclpy 콜백을 Qt 메인 스레드에서 비차단(spin_once timeout 0)으로 처리한다."""
         if self.ros_node and rclpy.ok():
             try:
                 rclpy.spin_once(self.ros_node, timeout_sec=0)
@@ -715,6 +758,7 @@ class MainWindow(QMainWindow):
             self._log(f"Robot IP 저장 실패: {e}")
 
     def _on_find_robot_ip(self):
+        """백그라운드 스레드로 로봇 IP(5890/5891 포트)를 스캔하고 QTimer 로 완료를 폴링한다."""
         import threading
 
         self._log("TM 로봇 IP 검색 중...")
@@ -835,6 +879,7 @@ class MainWindow(QMainWindow):
                 self._log(f"Recipe 로드 실패: {e}")
 
     def _update_recipe_reference(self, recipe):
+        """scan 잡이 있는 레시피 저장 시 tm_jig_landmark 기준점을 recipe.reference 에 기록한다."""
         has_scan = any(job.type == 'scan_tm_landmark' for job in recipe.jobs)
         if not has_scan:
             return
@@ -921,6 +966,7 @@ class MainWindow(QMainWindow):
 
 
     def _on_origin_check_alarm(self, result):
+        """기준점 편차 초과 시 축별 편차(mm/deg)와 허용범위를 담은 크리티컬 다이얼로그를 띄운다."""
         axis_lines = "\n".join(
             f"  {axis.upper()}: {result.deltas[axis]:+.3f}"
             f"{' mm' if axis in ('x', 'y', 'z') else ' deg'}"
@@ -940,6 +986,11 @@ class MainWindow(QMainWindow):
 
 
     def _on_plate_rect_alarm(self, payload):
+        """직사각형 검증 실패 시 저장/중단 선택을 작업자에게 묻는다.
+
+        Returns:
+            True 면 저장하고 계속, False 면 중단.
+        """
         results = payload['results']
         distances = payload['distances']
 
@@ -1040,6 +1091,7 @@ class MainWindow(QMainWindow):
         self._save_captured_image(self.captured_image)
 
     def _save_captured_image(self, cv_image):
+        """캡처 이미지를 data/images/<날짜>/ 에 PNG 로 저장한다 (실패 시 None)."""
         import cv2
         from datetime import datetime
 
@@ -1053,6 +1105,7 @@ class MainWindow(QMainWindow):
         filename = f"capture_{timestamp}.png"
         filepath = os.path.join(save_dir, filename)
 
+        # cv2.imwrite 는 실패해도 예외 없이 False 만 돌려주므로 반환값을 반드시 확인한다.
         if not cv2.imwrite(filepath, cv_image):
             self._log(f"이미지 저장 실패 (경로·권한·형식 확인): {filepath}")
             return None
@@ -1103,6 +1156,7 @@ class MainWindow(QMainWindow):
 
 
     def _move_to_position(self, motion_type, positions, velocity, acc_time, blend_percentage=0, fine_goal=False):
+        """jog/teaching 서비스용 이동 콜백 — ros_node 의 안전 게이트 경유 호출로 위임한다."""
         if not self.ros_node:
             return False, "ROS 노드 없음"
 
@@ -1131,6 +1185,7 @@ class MainWindow(QMainWindow):
     def current_tcp_orientation(self):
         return self.coordinate_system_manager.get_current_tcp_orientation()
 
+    # 로그 스타일 테이블: (kind, 마크, 전경색, 배경색, 트리거 키워드)
     LOG_STYLES = (
         ('fail', '✕', '#b00020', '#fdecea',
          ('실패', '오류', '[거부]', '[중단]', '[ERROR]', '초과', '타임아웃', '불가',
@@ -1144,6 +1199,7 @@ class MainWindow(QMainWindow):
     LOG_PREMARKS = ('✅', '❌', '⚠️', '⚠', '✓', '✗')
 
     def _log_style_for(self, message, kind=None):
+        """명시 kind 또는 메시지 키워드로 로그 스타일(마크·전경·배경)을 정한다 (해당 없으면 None)."""
         if kind is not None:
             if kind == 'plain':
                 return None
@@ -1157,6 +1213,7 @@ class MainWindow(QMainWindow):
         return None
 
     def _strip_log_premark(self, message):
+        """메시지 선두의 이모지 마크를 제거한다 — 스타일 마크와의 중복 표시 방지."""
         text = message.lstrip()
         for mark in self.LOG_PREMARKS:
             if text.startswith(mark):
@@ -1164,6 +1221,11 @@ class MainWindow(QMainWindow):
         return message
 
     def _log(self, message, kind=None):
+        """타임스탬프 로그 출력 — 스타일 대상이면 HTML 색상을 입힌다.
+
+        마지막 processEvents 호출로 동기 잡 실행 중에도 GUI 이벤트가 처리된다 —
+        실행 중 정지 버튼이 동작하는 경로이므로 제거 시 대체 수단이 필요하다.
+        """
         from datetime import datetime
         from html import escape
         from PyQt5.QtGui import QTextCharFormat
@@ -1232,6 +1294,7 @@ class MainWindow(QMainWindow):
 
 
     def closeEvent(self, event):
+        """종료 정리 — 타이머 정지·구독 해제·TF 정지 후 카메라 브리지 프로세스를 정리한다."""
         import subprocess
 
         self.ros_timer.stop()
@@ -1263,6 +1326,7 @@ class MainWindow(QMainWindow):
 
 
 def main():
+    """진입점 — rclpy 초기화 → TaskManagerNode → QApplication → MainWindow → 이벤트 루프."""
     import sys
     from PyQt5.QtWidgets import QApplication
 

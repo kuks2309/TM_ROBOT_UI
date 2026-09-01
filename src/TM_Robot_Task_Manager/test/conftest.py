@@ -1,6 +1,8 @@
+"""pytest 공용 설정 — ROS 모듈 14종을 MagicMock 으로 선치환해 ROS 미소싱 환경에서도 스위트가 돌게 하고, 공용 fixture 를 제공한다."""
 import sys
 from unittest.mock import MagicMock
 
+# 대상 모듈 임포트보다 먼저 sys.modules 에 넣어야 실제 ROS 임포트를 가로챈다.
 sys.modules['rclpy'] = MagicMock()
 sys.modules['rclpy.node'] = MagicMock()
 sys.modules['rclpy.qos'] = MagicMock()

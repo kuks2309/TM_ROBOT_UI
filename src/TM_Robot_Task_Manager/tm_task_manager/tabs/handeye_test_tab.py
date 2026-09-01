@@ -1,3 +1,4 @@
+"""Hand-Eye 테스트 탭 — 측정 위치 그리드 생성·편집·YAML 저장과 반복 측정 실행·통계 표시를 담당한다."""
 from PyQt5.QtWidgets import (
     QVBoxLayout, QTableWidgetItem, QFileDialog, QMessageBox
 )
@@ -10,6 +11,8 @@ from .. import paths
 
 
 class HandEyeTestTab(BaseTab):
+    """HandEyeTestManager 를 생성·소유하고 위치 목록 편집, QTimer 체인 반복 측정, 결과 표시·CSV 내보내기를 담당하는 탭."""
+
     def __init__(self, main_window):
         super().__init__(main_window)
         self.mw = main_window
@@ -17,6 +20,7 @@ class HandEyeTestTab(BaseTab):
         self.manager = None
 
     def connect_signals(self):
+        """no-op — 시그널 연결은 .ui 로드가 끝나는 init_ui 내부에서 수행한다."""
         pass
 
     def init_ui(self):
@@ -74,6 +78,7 @@ class HandEyeTestTab(BaseTab):
 
     def _on_read_current_tcp(self):
         tcp = self.manager.get_current_tcp()
+        # (0,0,0) 정확 일치를 읽기 실패 sentinel 로 간주 — 실제 원점 근처 자세와는 구분되지 않음(함정)
         if tcp[0] == 0.0 and tcp[1] == 0.0 and tcp[2] == 0.0:
             self._log("TCP 위치를 읽을 수 없습니다")
             return
@@ -217,9 +222,11 @@ class HandEyeTestTab(BaseTab):
         self._run_next_measurement()
 
     def _run_next_measurement(self):
+        """측정 1회 실행 후 100ms 타이머로 자신을 재예약 — 루프 대신 체인으로 측정 사이 이벤트 루프(UI 갱신) 기회를 준다."""
         if not self.manager.is_running:
             return
 
+        # 로봇 이동을 포함한 동기 호출 — 완료까지 GUI 스레드가 멈춘다
         success, measurement, msg = self.manager.run_single_measurement()
 
         if not success:

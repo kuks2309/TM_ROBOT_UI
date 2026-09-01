@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+"""정밀 반복 테스트 CSV(precision_test_*.csv)의 6축 mean·σ·3σ·range 통계와 산점/회전 그래프를 표시하는 PyQt5 오프라인 분석기.
+
+실행: python3 scripts/precision_analyzer.py [csv경로] — load_from_manager 로 메모리 내 측정 리스트도 수용.
+"""
 import warnings
 warnings.filterwarnings('ignore', category=UserWarning, module='pandas')
 
@@ -28,6 +32,8 @@ from matplotlib.figure import Figure
 
 
 class ZoomableGraphWidget(QWidget):
+    """휠 줌·더블클릭 시 저장된 초기 축 범위로 복원되는 matplotlib 캔버스 위젯."""
+
     def __init__(self, parent=None, title="", compact=False):
         super().__init__(parent)
         self.title = title
@@ -37,6 +43,7 @@ class ZoomableGraphWidget(QWidget):
         self.setup_ui()
 
     def setup_ui(self):
+        """Figure·캔버스·툴바를 구성하고 스크롤/클릭 이벤트를 연결한다."""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -90,6 +97,7 @@ class ZoomableGraphWidget(QWidget):
             self.canvas.draw_idle()
 
     def save_original_limits(self):
+        """현재 축 범위를 더블클릭 복원용 원본으로 저장한다."""
         self._xlim_orig = self.ax.get_xlim()
         self._ylim_orig = self.ax.get_ylim()
 
@@ -100,14 +108,18 @@ class ZoomableGraphWidget(QWidget):
         self.ax.set_aspect('equal', adjustable='datalim')
 
     def draw(self):
+        """레이아웃 정리 후 렌더링하고 축 범위를 원본으로 저장한다."""
         self.figure.tight_layout()
         self.canvas.draw()
         self.save_original_limits()
 
 
 class PrecisionAnalyzer:
+    """정밀 테스트 데이터의 축별 통계 산출 유틸리티."""
+
     @staticmethod
     def calculate_statistics(data: pd.DataFrame) -> dict:
+        """6축(X/Y/Z[mm], Rx/Ry/Rz[deg]) 각각의 mean/std/3sigma/min/max/range 를 계산한다."""
         columns = ['X (mm)', 'Y (mm)', 'Z (mm)', 'Rx (deg)', 'Ry (deg)', 'Rz (deg)']
         stats = {}
 
@@ -127,6 +139,8 @@ class PrecisionAnalyzer:
 
 
 class MainWindow(QMainWindow):
+    """CSV/메모리 데이터 로드→통계→테이블·그래프 갱신과 CSV/PNG 내보내기를 담당하는 메인 창."""
+
     def __init__(self):
         super().__init__()
         self.data = None
@@ -136,6 +150,7 @@ class MainWindow(QMainWindow):
         self.setup_connections()
 
     def setup_ui(self):
+        """ui/precision_analyzer.ui 를 로드해 중앙 위젯으로 얹고 그래프 위젯을 치환한다."""
         self.setWindowTitle("Precision Test Analyzer")
         self.setMinimumSize(1000, 700)
 
@@ -153,6 +168,7 @@ class MainWindow(QMainWindow):
         self.setup_graphs()
 
     def setup_graphs(self):
+        """.ui 의 placeholder 를 ZoomableGraphWidget 으로 교체한다(개요4·상세3·회전3)."""
         overview_graphs = [
             ('widget_overviewXY', 'X-Y'),
             ('widget_overviewYZ', 'Y-Z'),
@@ -188,6 +204,7 @@ class MainWindow(QMainWindow):
 
         index = layout.indexOf(old_widget)
 
+        # grid 레이아웃은 (row, col) 자리를, box 레이아웃은 index 를 보존해야 배치가 유지된다.
         if hasattr(layout, 'getItemPosition'):
             row, col, _, _ = layout.getItemPosition(index)
             layout.removeWidget(old_widget)
@@ -205,12 +222,14 @@ class MainWindow(QMainWindow):
         self.graph_widgets[widget_name] = new_widget
 
     def setup_connections(self):
+        """버튼 시그널을 슬롯에 연결한다."""
         self.ui.pushButton_openFile.clicked.connect(self.open_csv_file)
         self.ui.pushButton_recentFile.clicked.connect(self.open_recent_file)
         self.ui.pushButton_exportCSV.clicked.connect(self.export_csv)
         self.ui.pushButton_saveGraphs.clicked.connect(self.save_graphs)
 
     def open_csv_file(self):
+        """파일 다이얼로그로 CSV 를 선택해 로드한다."""
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "CSV 파일 열기",
@@ -222,6 +241,7 @@ class MainWindow(QMainWindow):
             self.load_csv(file_path)
 
     def open_recent_file(self):
+        """data/ 의 최신 precision_test_*.csv 를 찾아 로드한다."""
         csv_files = sorted(DATA_DIR.glob("precision_test_*.csv"), reverse=True)
 
         if csv_files:
@@ -230,9 +250,11 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "알림", "테스트 파일이 없습니다.")
 
     def load_csv(self, file_path: str):
+        """CSV 를 로드해 하단 통계 요약부를 잘라내고 수치 변환·통계 산출 후 전체 갱신한다."""
         try:
             df = pd.read_csv(file_path)
 
+            # 정밀 테스트 CSV 는 데이터 뒤에 '통계' 요약 행이 붙으므로 그 앞까지만 사용한다.
             stats_idx = df[df.iloc[:, 0].astype(str).str.contains('통계', na=False)].index
             if len(stats_idx) > 0:
                 df = df.iloc[:stats_idx[0]]
@@ -259,6 +281,7 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "오류", f"파일 로드 실패:\n{str(e)}")
 
     def update_all(self):
+        """테이블·개요 통계·상세 통계·그래프를 일괄 갱신한다."""
         if self.data is None:
             return
 
@@ -268,6 +291,7 @@ class MainWindow(QMainWindow):
         self.update_graphs()
 
     def update_table(self):
+        """랜드마크·TCP·시간 14컬럼 데이터 테이블을 채운다."""
         table = self.ui.tableWidget_data
         table.setRowCount(len(self.data))
 
@@ -292,6 +316,7 @@ class MainWindow(QMainWindow):
                 table.setItem(row_idx, col_idx, item)
 
     def update_overview_stats(self):
+        """축별 μ/σ 와 3σ 라벨을 갱신한다."""
         s = self.stats
 
         self.ui.label_xValue.setText(f"μ={s['X (mm)']['mean']:.4f}  σ={s['X (mm)']['std']:.4f}")
@@ -310,6 +335,7 @@ class MainWindow(QMainWindow):
         )
 
     def update_detail_stats(self):
+        """평면(XY/YZ/ZX)·회전 탭의 상세 통계 라벨을 갱신한다."""
         s = self.stats
 
         self.ui.label_xyStatsX.setText(
@@ -344,6 +370,7 @@ class MainWindow(QMainWindow):
         )
 
     def update_graphs(self):
+        """XY/YZ/ZX 산점도(개요+상세)와 회전 추이 그래프를 갱신한다."""
         if self.data is None:
             return
 
@@ -398,6 +425,7 @@ class MainWindow(QMainWindow):
         indices = np.arange(len(rx))
         graph.ax.plot(indices, rx, 'r-', label='Rx', alpha=0.7)
         graph.ax.plot(indices, ry, 'g-', label='Ry', alpha=0.7)
+        # Rz 는 ±180° 부근 값이라 +180 시프트해 Rx/Ry 와 같은 축 범위에서 비교한다.
         graph.ax.plot(indices, rz + 180, 'b-', label='Rz+180', alpha=0.7)
         graph.ax.set_xlabel('Sample')
         graph.ax.set_ylabel('Angle (deg)')
@@ -446,6 +474,7 @@ class MainWindow(QMainWindow):
         graph_rz.draw()
 
     def export_csv(self):
+        """현재 데이터를 CSV 로 재저장한다."""
         if self.data is None:
             QMessageBox.warning(self, "경고", "내보낼 데이터가 없습니다.")
             return
@@ -462,6 +491,7 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "완료", f"저장됨: {file_path}")
 
     def save_graphs(self):
+        """상세 6개 그래프를 PNG 로 저장한다."""
         if self.data is None:
             QMessageBox.warning(self, "경고", "저장할 그래프가 없습니다.")
             return
@@ -478,6 +508,7 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "완료", f"그래프가 {dir_path}에 저장되었습니다.")
 
     def load_from_manager(self, manager):
+        """CSV 파일 없이 매니저의 메모리 측정 리스트(measurements)를 DataFrame 으로 받아 갱신한다."""
         if not manager.measurements:
             QMessageBox.warning(self, "경고", "측정 데이터가 없습니다.")
             return
@@ -502,6 +533,7 @@ class MainWindow(QMainWindow):
 
 
 def main():
+    """앱을 기동하고 argv[1] 이 있으면 해당 CSV 를 자동 로드한다."""
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()

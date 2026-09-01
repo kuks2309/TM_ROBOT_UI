@@ -1,3 +1,5 @@
+"""웹 브리지 ROS2 노드 — tm_driver 상태 토픽 구독으로 RobotMotionService 를 갱신하고,
+조그·시퀀스·DO·비전 캡처를 tm_driver 서비스 호출로 웹 API 에 제공한다."""
 import re
 import threading
 import time
@@ -22,6 +24,7 @@ from tm_task_manager.recipe_manager import Recipe
 from tm_task_manager.job_executor import ExecutionState
 from .bridge_executor import BridgeJobExecutor
 
+# 웹 시퀀스로 실행을 허용하는 잡 타입 — 목록 밖 타입은 run_sequence 가 거부한다
 SEQUENCE_WHITELIST = {
     "go_home",
     "move_to_point",
@@ -34,14 +37,18 @@ SEQUENCE_WHITELIST = {
     "align_to_plane_normal",
     "measure_plane_distance",
 }
+# 웹 시퀀스 잡 velocity 상한. 잡 타입과 무관하게 일괄 clamp 하므로 %(PTP 계열)와
+# mm/s(move_linear) 값이 같은 상한을 공유한다
 MAX_SEQ_VELOCITY = 30.0
 
-LIVE_VIEWER_TTL = 5.0
-LIVE_FRAME_TIMEOUT = 3.0
-LIVE_JOG_YIELD = 0.35
+LIVE_VIEWER_TTL = 5.0  # 라이브 뷰어 유지 시간(s) — 재-join 없이 지나면 만료
+LIVE_FRAME_TIMEOUT = 3.0  # 캡처 후 프레임 도착 대기 상한(s)
+LIVE_JOG_YIELD = 0.35  # 조그 진행 중 라이브 루프 양보 간격(s)
 
 
 class BridgeNode(Node):
+    """웹 API 백엔드 노드 — tm_driver 구독·서비스 클라이언트와 시퀀스/라이브 스레드를 소유한다."""
+
     def __init__(self):
         super().__init__('tm_web_bridge')
 
@@ -61,6 +68,7 @@ class BridgeNode(Node):
 
         self._jog_lock = threading.Lock()
 
+        # 모션 게이트 — HTTP 스레드에서 토글되고 ROS·시퀀스 스레드가 읽는 공유 플래그
         self.motion_enabled = False
 
         self.gv_manager = GlobalVariableScript(self)
@@ -82,6 +90,7 @@ class BridgeNode(Node):
         self._live_running = False
 
         self._frame_evt = threading.Event()
+        # depth 1 — 라이브 루프는 최신 프레임 도착 신호만 필요하다
         self.create_subscription(
             CompressedImage, '/techman_image/compressed', self._on_frame, 1)
 
@@ -100,6 +109,7 @@ class BridgeNode(Node):
         )
 
     def _on_feedback_state(self, msg):
+        """속도 피드백과 sct(명령)·svr(상태) 채널 연결 플래그를 갱신한다."""
         tcp_speed = list(msg.tcp_speed) if msg.tcp_speed else []
         joint_vel = list(msg.joint_vel) if msg.joint_vel else []
         self.motion_service.update_feedback_state(tcp_speed, joint_vel)
@@ -109,6 +119,12 @@ class BridgeNode(Node):
 
     def _call_set_positions(self, motion_type, positions, velocity, acc_time,
                             blend_percentage=0, fine_goal=False):
+        """set_positions 를 비동기 호출하고 완료를 폴링으로 판정한다.
+
+        velocity 는 % 입력을 motion_type 별 서비스 단위로 환산해 전달한다.
+        응답 대기 10s + 완료 폴링 최대 30s 동안 호출 스레드를 블로킹한다.
+        Returns: (성공 여부, 메시지).
+        """
         if not self.set_positions_client.wait_for_service(timeout_sec=1.0):
             return False, "set_positions 서비스를 사용할 수 없습니다 (tm_driver 미기동?)"
 
@@ -134,7 +150,7 @@ class BridgeNode(Node):
         self.motion_service.target_position = list(positions)
         start_time = time.time()
         stable_count = 0
-        stable_threshold = 3
+        stable_threshold = 3  # 정지 판정 채터링 방지 — 연속 3회 확인 후에만 완료 처리
         while time.time() - start_time < 30.0:
             if self.motion_service.check_motion_complete():
                 stable_count += 1
@@ -151,11 +167,18 @@ class BridgeNode(Node):
 
 
     def set_motion_enabled(self, enabled: bool) -> bool:
+        """모션 게이트를 설정한다 — 조그·시퀀스·DO·캡처의 공통 선행 조건."""
         self.motion_enabled = bool(enabled)
         self.get_logger().warning(f'motion_enabled = {self.motion_enabled}')
         return self.motion_enabled
 
     def jog(self, axis, direction, step_mm, velocity_percent):
+        """TCP 조그 1스텝 — 게이트 확인 후 teaching_service 에 위임한다.
+
+        step_mm 단위: 선형축 mm, 회전축 deg. velocity_percent 단위: %.
+        진행 중 조그가 있으면 즉시 거부한다(락 non-blocking).
+        Returns: (성공 여부, 메시지).
+        """
         if not self.motion_enabled:
             return False, "모션이 비활성 상태입니다. /motion/enable 로 활성화 후 시도하세요."
         if not self._jog_lock.acquire(blocking=False):
@@ -175,6 +198,7 @@ class BridgeNode(Node):
 
     @property
     def current_tcp_pose(self):
+        """motion_service 가 유지하는 현재 TCP 포즈 (수신 전이면 None)."""
         return self.motion_service.current_tcp_pose
 
 
@@ -184,6 +208,11 @@ class BridgeNode(Node):
             self._seq_logs = self._seq_logs[-200:]
 
     def run_sequence(self, jobs):
+        """웹 잡 목록을 검증하고 시퀀스를 백그라운드 스레드로 실행한다.
+
+        게이트·명령 채널(sct) 연결·화이트리스트를 검사하고 velocity 를
+        MAX_SEQ_VELOCITY 로 clamp 한다. Returns: (수락 여부, 메시지).
+        """
         if not self.motion_enabled:
             return False, "모션이 비활성 상태입니다. /motion/enable 로 활성화 후 시도하세요."
 
@@ -234,11 +263,13 @@ class BridgeNode(Node):
             )
 
     def stop_sequence(self):
+        """정지 플래그를 세우고 job_executor 에 정지를 요청한다."""
         self._seq_stop_flag = True
         self.job_executor.stop()
         return True, "시퀀스 정지 요청됨"
 
     def sequence_status(self):
+        """실행 상태·진행 인덱스·최근 로그 40줄 스냅샷을 반환한다."""
         state = self.job_executor.state.value
         if self._seq_stop_flag and state in ("error", "stopped"):
             state = "stopped"
@@ -251,6 +282,10 @@ class BridgeNode(Node):
 
 
     def set_digital_output(self, module, pin, state):
+        """디지털 출력 1핀 설정 — module 0=ControlBox(핀 0~15), 1=EndEffector(핀 0~3).
+
+        Returns: (성공 여부, 메시지). 서비스 응답 대기 5s.
+        """
         if not self.motion_enabled:
             return False, "모션이 비활성 상태입니다. 상단 '모션 활성' 스위치를 켜세요."
         if module not in (0, 1):
@@ -281,6 +316,10 @@ class BridgeNode(Node):
 
 
     def _trigger_capture_command(self):
+        """전역변수 캡처 명령 기록 + ScriptExit() 로 로봇측 캡처 흐름을 트리거한다.
+
+        PyQt 쪽 image_capture_service·job_executor 의 AI 캡처 경로와 같은 규약을 쓴다.
+        """
         if not self.send_script_client.wait_for_service(timeout_sec=1.0):
             return False, "send_script 서비스를 사용할 수 없습니다 (tm_driver 미기동?)"
 
@@ -293,24 +332,33 @@ class BridgeNode(Node):
         return True, f"캡처 명령 전송됨 ({VISION_CAPTURE_COMMAND_VAR}={VISION_CAPTURE_COMMAND})"
 
     def capture_vision(self, job_name=None):
+        """모션 게이트 확인 후 캡처를 트리거한다."""
         if not self.motion_enabled:
             return False, "모션이 비활성 상태입니다. 상단 '모션 활성' 스위치를 켜세요."
         return self._trigger_capture_command()
 
     def capture_still(self, job_name=None):
+        """게이트 없이 캡처를 트리거한다 — 라이브 뷰 프레임 갱신용."""
         return self._trigger_capture_command()
 
 
     def _on_frame(self, _msg):
+        # 페이로드는 쓰지 않는다 — 라이브 루프에 프레임 도착 신호만 전달
         self._frame_evt.set()
 
     def _prune_live_viewers(self):
+        """TTL 초과 뷰어 제거 — _live_lock 을 쥔 상태에서만 호출해야 한다."""
         now = time.monotonic()
         for vid in [v for v, t in self._live_viewers.items()
                     if now - t > LIVE_VIEWER_TTL]:
             self._live_viewers.pop(vid, None)
 
     def live_join(self, viewer_id):
+        """뷰어 등록 — 첫 뷰어면 라이브 촬영 루프 스레드를 기동한다.
+
+        Returns: (뷰어 수, 수락 여부).
+        """
+        # 뷰어 키 형식 제한(영숫자·-·_ 최대 64자) — 임의 문자열 키 등록 방지
         if not re.match(r"^[A-Za-z0-9_\-]{1,64}$", str(viewer_id)):
             return 0, False
         with self._live_lock:
@@ -326,6 +374,7 @@ class BridgeNode(Node):
         return n, True
 
     def live_leave(self, viewer_id):
+        """뷰어 해제. Returns: (남은 뷰어 수, 라이브 지속 여부)."""
         with self._live_lock:
             self._live_viewers.pop(str(viewer_id), None)
             self._prune_live_viewers()
@@ -333,6 +382,7 @@ class BridgeNode(Node):
         return n, n > 0
 
     def live_status(self):
+        """뷰어 수·라이브 활성 여부 스냅샷."""
         with self._live_lock:
             self._prune_live_viewers()
             n = len(self._live_viewers)
@@ -340,6 +390,10 @@ class BridgeNode(Node):
         return {"live": bool(n) and running, "viewers": n}
 
     def _live_loop(self):
+        """뷰어가 있는 동안 캡처 트리거→프레임 대기를 반복한다 (전용 데몬 스레드).
+
+        조그 진행 중에는 촬영을 보내지 않고 양보해 모션 명령과의 경합을 피한다.
+        """
         try:
             while True:
                 with self._live_lock:
@@ -370,6 +424,7 @@ class BridgeNode(Node):
 
 
     def get_status(self):
+        """웹 상태 표시용 스냅샷 — 연결·포즈·조인트·이동중·게이트."""
         tcp = self.motion_service.current_tcp_pose
         joints = self.motion_service.current_joint_position
         return {

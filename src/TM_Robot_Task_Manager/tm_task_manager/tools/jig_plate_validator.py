@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""지그 플레이트 4점 무결성 검사기 + 독립 실행 GUI (mm/deg).
+
+검증 코어(JigPlateValidator)는 plate_pose_dataset 등 헤드리스 사용처도 쓰지만,
+모듈 상단에서 PyQt5·matplotlib 를 무조건 import 하므로 그 사용처도 GUI
+의존성이 연쇄 로드된다.
+"""
 import sys
 import os
 import math
@@ -44,6 +50,7 @@ LANDMARK_SIZE = 40.0
 
 
 def rotation_matrix_from_euler(rx, ry, rz):
+    """오일러 각(deg)에서 Rz@Ry@Rx 합성 3x3 회전행렬을 만든다."""
     rx, ry, rz = np.radians(rx), np.radians(ry), np.radians(rz)
 
     Rx = np.array([[1, 0, 0],
@@ -62,6 +69,7 @@ def rotation_matrix_from_euler(rx, ry, rz):
 
 
 def get_landmark_corners(x, y, z, rx, ry, rz, size=LANDMARK_SIZE):
+    """랜드마크 정사각형(size mm)의 4꼭짓점 월드 좌표 (4,3) 배열 — 3D 표시용."""
     half = size / 2.0
     corners_local = np.array([
         [-half, -half, 0],
@@ -80,6 +88,7 @@ def get_landmark_corners(x, y, z, rx, ry, rz, size=LANDMARK_SIZE):
 
 @dataclass
 class Mark:
+    """마크 한 점의 6축 측정값 (x/y/z mm, rx/ry/rz deg)."""
     x: float
     y: float
     z: float
@@ -90,6 +99,7 @@ class Mark:
 
 @dataclass
 class ValidationResult:
+    """검사 항목 하나의 결과 (측정값·허용값·합격 여부)."""
     name: str
     value: float
     threshold: float
@@ -102,6 +112,12 @@ class ValidationResult:
 
 
 class JigPlateValidator:
+    """4점 마크의 기하 무결성(직사각·평행도·Z 편차)을 검사한다.
+
+    마크 순서 계약은 JigPlaneCalculator 와 동일: 1=좌하, 2=좌상, 3=우하, 4=우상.
+    """
+
+    # 허용값 — 변/대각 차 mm, 각도 deg
     TOLERANCE_SIDE_DIFF = 1.0
     TOLERANCE_DIAGONAL_DIFF = 1.0
     TOLERANCE_ANGLE = 0.5
@@ -114,6 +130,7 @@ class JigPlateValidator:
         self.results: List[ValidationResult] = []
 
     def load_from_yaml(self, yaml_path: str) -> bool:
+        """positions.yaml 형식에서 jig_landmark(선택)와 jig_plate 4점을 읽는다."""
         try:
             with open(yaml_path, 'r') as f:
                 data = yaml.safe_load(f)
@@ -158,6 +175,7 @@ class JigPlateValidator:
             return False
 
     def load_from_dicts(self, mark_dicts: List[Dict[str, float]]) -> bool:
+        """dict 4개로 마크를 로드한다 (jig_landmark 는 비운다)."""
         if len(mark_dicts) != 4:
             print(f"4개의 mark가 필요합니다 (입력: {len(mark_dicts)}개)")
             return False
@@ -172,6 +190,7 @@ class JigPlateValidator:
         return True
 
     def get_side_lengths(self) -> Dict[str, float]:
+        """변 4개 + 대각 2개 거리(mm) dict."""
         if len(self.marks) != 4:
             return {}
 
@@ -206,6 +225,7 @@ class JigPlateValidator:
         return math.degrees(math.acos(cos_angle))
 
     def check_rectangle(self) -> List[ValidationResult]:
+        """대향변 차·대각선 차(mm)·직각 오차(deg)로 직사각형 여부를 검사한다."""
         results = []
         m = self.marks
 
@@ -264,6 +284,7 @@ class JigPlateValidator:
         return results
 
     def check_plane_parallelism(self) -> List[ValidationResult]:
+        """jig_landmark 대비 마크들의 Ry 최대 편차(deg) — 기준 랜드마크 없으면 빈 목록."""
         results = []
         m = self.marks
 
@@ -286,6 +307,7 @@ class JigPlateValidator:
         return results
 
     def check_z_consistency(self) -> List[ValidationResult]:
+        """마크 Z 의 평균 대비 최대 편차(mm)를 검사한다."""
         results = []
 
         if len(self.marks) != 4:
@@ -306,6 +328,7 @@ class JigPlateValidator:
         return results
 
     def run_validation(self) -> str:
+        """전 검사를 수행해 results 를 채우고 텍스트 리포트를 돌려준다."""
         from datetime import datetime
         self.results = []
 
@@ -364,6 +387,11 @@ class JigPlateValidator:
         return "\n".join(report_lines)
 
     def calculate_center(self) -> Optional[Mark]:
+        """4점 산술 평균 중심 pose.
+
+        rx 만 ±180° 랩어라운드를 보정한다 (마크가 대개 rx 180° 근방이라 부호가
+        갈리기 때문) — ry·rz 는 단순 산술 평균.
+        """
         if len(self.marks) != 4:
             return None
 
@@ -385,6 +413,8 @@ class JigPlateValidator:
 
 
 class ValidatorWindow(QMainWindow):
+    """단독 실행 GUI — yaml 로드→검사→2D/Z바/3D 시각화·리포트 저장."""
+
     def __init__(self):
         super().__init__()
 
@@ -439,6 +469,7 @@ class ValidatorWindow(QMainWindow):
         self.pushButton_saveReport.clicked.connect(self._on_save_report)
 
     def _get_jig_data_dir(self) -> Path:
+        """data/jig_mark 의 최신 날짜 폴더 (없으면 config 폴더 폴백)."""
         src_data = Path(__file__).resolve()
         for _ in range(3):
             src_data = src_data.parent
@@ -685,6 +716,7 @@ class ValidatorWindow(QMainWindow):
 
 
 def main():
+    """CLI: QApplication 기동 후 --config yaml 이 있으면 즉시 로드·검사한다."""
     parser = argparse.ArgumentParser(description='Jig Plate 무결성 검사기')
     parser.add_argument('--config', '-c', type=str, help='YAML 설정 파일 경로')
     args = parser.parse_args()

@@ -1,3 +1,4 @@
+// RemoteIoStationPort 시험 — 스냅샷·비트 병합 RMW·미러 보존/시드·읽기검증 불일치·워치독 구성.
 #include "remote_io_hal/remote_io_station_port.hpp"
 
 #include <cstdint>
@@ -34,6 +35,8 @@ std::vector<uint8_t> fc6Echo(uint16_t tid, const std::vector<uint8_t>& req) {
   return srv::buildFrame(tid, 1, pdu);
 }
 
+// 레지스터 뱅크 픽스처. tampered 주소에는 FC6 값을 +1 로 왜곡 저장해
+// 읽기검증(read-back) 불일치 경로를 만든다.
 struct Bank {
   std::map<uint16_t, uint16_t> regs;
   int tampered = -1;

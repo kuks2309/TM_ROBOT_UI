@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+"""마스터 레시피 YAML 을 TM Landmark 기준 상대좌표 Runtime 레시피로 변환하는 CLI.
+
+실행: python3 tools/convert_to_runtime.py [master.yaml] [output.yaml] [jig_plate.yaml]
+scan_tm_landmark 이전 job 은 절대좌표 유지, 이후 job 은 T_rel = T_tm⁻¹ @ T_abs 로 상대화한다.
+"""
 import sys
 import yaml
 import numpy as np
@@ -9,6 +14,7 @@ import copy
 from datetime import datetime
 
 
+# Runtime 레시피에만 존재하는 job 정의 — 마스터에 없으면 insert_before 대상 job 앞에 자동 삽입된다.
 RUNTIME_ONLY_JOBS = {
     'find_landmark': {
         'insert_before': 'scan_tm_landmark',
@@ -27,6 +33,8 @@ RUNTIME_ONLY_JOBS = {
 
 
 class RecipeConverter:
+    """마스터→Runtime 변환기 — 기준점 탐색·상대화·역변환 자체검증(0.1mm 게이트)을 수행한다."""
+
     def __init__(self, jig_plate_file: Optional[str] = None,
                  runtime_job_config: Optional[str] = None,
                  landmark_pose_file: Optional[str] = None):
@@ -35,6 +43,7 @@ class RecipeConverter:
         self.landmark_pose_file = landmark_pose_file
 
     def create_transform_matrix(self, pose: Dict[str, float]) -> np.ndarray:
+        """pose(X/Y/Z[mm], Rx/Ry/Rz[deg], ZYX 오일러)를 4x4 동차변환행렬로 만든다."""
         x, y, z = pose['X'], pose['Y'], pose['Z']
         rx, ry, rz = pose['Rx'], pose['Ry'], pose['Rz']
 
@@ -48,6 +57,7 @@ class RecipeConverter:
         return T
 
     def extract_pose(self, T: np.ndarray) -> Dict[str, float]:
+        """동차변환행렬에서 pose 를 추출한다(소수 2자리 반올림 — mm/deg)."""
         x, y, z = T[:3, 3]
 
         R = T[:3, :3]
@@ -64,6 +74,7 @@ class RecipeConverter:
         }
 
     def load_jig_plate_calibration(self) -> Optional[Dict[str, float]]:
+        """Jig Plate Calibration YAML 의 jig_landmark.tool_pose 를 기준점 pose 로 읽는다(불완전/실패 시 None)."""
         if not self.jig_plate_file:
             return None
 
@@ -98,6 +109,7 @@ class RecipeConverter:
             return None
 
     def load_landmark_pose(self) -> Optional[Dict[str, float]]:
+        """save_landmark_pose 산출물 YAML 의 landmark 좌표를 기준점 pose 로 읽는다(불완전/실패 시 None)."""
         if not self.landmark_pose_file:
             return None
 
@@ -183,6 +195,10 @@ class RecipeConverter:
         return result
 
     def convert_to_relative(self, master_file: str, output_file: str) -> bool:
+        """전체 변환 파이프라인 — 로드→runtime job 삽입→기준점 결정→상대화→검증→저장. 성공 여부 반환.
+
+        기준점 우선순위: ① 마스터 reference.tm_jig_landmark ② data/landmark_pose ③ data/jig_mark.
+        """
         print(f"📖 마스터 파일 읽기: {master_file}")
         try:
             with open(master_file, 'r', encoding='utf-8') as f:
@@ -316,6 +332,7 @@ class RecipeConverter:
             params['Y'] = rel_pose['Y']
             params['Z'] = rel_pose['Z']
 
+            # teaching 모드는 자세를 마스터 절대값 그대로 두어 교시 자세를 보존한다(X/Y/Z 만 상대화).
             if recipe_mode == 'teaching':
                 params['Rx'] = abs_pose['Rx']
                 params['Ry'] = abs_pose['Ry']
@@ -325,6 +342,7 @@ class RecipeConverter:
                 params['Ry'] = rel_pose['Ry']
                 params['Rz'] = rel_pose['Rz']
 
+            # 자체검증: 역변환(T_tm @ T_rel)이 마스터 절대좌표를 0.1mm 이내로 재현해야 저장한다.
             T_verify = T_tm @ T_rel
             verify_pose = self.extract_pose(T_verify)
             err_x = abs(verify_pose['X'] - abs_pose['X'])
@@ -357,6 +375,7 @@ class RecipeConverter:
 
 
 def find_latest_jig_plate_file() -> Optional[str]:
+    """data/jig_mark 에서 mtime 최신 YAML 경로를 찾는다(없으면 None)."""
     jig_mark_dir = Path(__file__).parent.parent / "data" / "jig_mark"
 
     if not jig_mark_dir.exists():
@@ -372,6 +391,7 @@ def find_latest_jig_plate_file() -> Optional[str]:
 
 
 def find_latest_landmark_pose_file() -> Optional[str]:
+    """data/landmark_pose 에서 mtime 최신 YAML 경로를 찾는다(없으면 None)."""
     landmark_dir = Path(__file__).parent.parent / "data" / "landmark_pose"
 
     if not landmark_dir.exists():
@@ -387,6 +407,7 @@ def find_latest_landmark_pose_file() -> Optional[str]:
 
 
 def find_latest_runtime_job_config() -> Optional[str]:
+    """config/runtime_job_defaults.yaml 이 있으면 그 경로를 돌려준다."""
     config_dir = Path(__file__).parent.parent / "config"
     config_file = config_dir / "runtime_job_defaults.yaml"
 
@@ -396,6 +417,7 @@ def find_latest_runtime_job_config() -> Optional[str]:
 
 
 def main():
+    """인자 해석(기본 경로·소스 자동탐색) 후 변환을 실행하고 종료코드(0 성공/1 실패)를 반환한다."""
     if len(sys.argv) > 1:
         master_file = sys.argv[1]
     else:

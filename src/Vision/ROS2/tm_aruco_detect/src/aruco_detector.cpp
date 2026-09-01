@@ -72,6 +72,7 @@ void ArucoDetectorNode::imageCallback(const sensor_msgs::msg::Image::SharedPtr m
       "Unsupported encoding: %s (bgr8 required)", msg->encoding.c_str());
     return;
   }
+  // 메시지 버퍼를 무복사 래핑한 뒤 clone — 콜백 밖 수명·드로잉 오염을 피한다(cv_bridge 미사용).
   const cv::Mat wrapped(
     msg->height, msg->width, CV_8UC3,
     const_cast<uint8_t *>(msg->data.data()), msg->step);
@@ -110,6 +111,8 @@ void ArucoDetectorNode::detectMarkers(cv::Mat & image)
 
   cv::aruco::drawDetectedMarkers(image, marker_corners, marker_ids);
 
+  // 마커 4꼭짓점 평면 모델(마커 중심 원점, 단위 m) — 꼭짓점 순서는 detectMarkers 의
+  // 좌상→우상→우하→좌하와 일치해야 한다. IPPE_SQUARE 는 이 정방형 전제 전용 솔버.
   const float half = static_cast<float>(marker_size_) / 2.0f;
   const std::vector<cv::Point3f> obj_points = {
     {-half,  half, 0.0f}, { half,  half, 0.0f},
@@ -140,6 +143,8 @@ void ArucoDetectorNode::publishMarkerPose(
   int marker_id, const cv::Vec3d & rvec, const cv::Vec3d & tvec)
 {
   geometry_msgs::msg::PoseStamped pose_msg;
+  // stamp 는 발행 시각(this->now()) — 원본 이미지 헤더 시각과는 어긋난다.
+  // 마커 id 는 메시지에 없다 — 다중 마커 구분은 TF child frame(aruco_marker_<id>)만 가능.
   pose_msg.header.stamp = this->now();
   pose_msg.header.frame_id = camera_frame_;
 

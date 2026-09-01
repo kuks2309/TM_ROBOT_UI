@@ -1,3 +1,4 @@
+// MagazineTable·validate 계약 시험 — 매핑(앞/뒤 교차)·극성·디바운스·짧은 프레임 보존·stale 거동.
 #include <gtest/gtest.h>
 
 #include <vector>

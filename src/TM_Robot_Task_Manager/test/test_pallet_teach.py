@@ -1,3 +1,4 @@
+"""macros/pallet_teach·pallet_recipe_generator·탭 배선의 팔레트 티칭 파이프라인을 검증한다."""
 import math
 import os
 import sys

@@ -1,3 +1,4 @@
+"""aruco_detector 단일 노드 기동 — config/aruco_params.yaml 로드, image_topic·marker_size 인자 오버라이드."""
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument

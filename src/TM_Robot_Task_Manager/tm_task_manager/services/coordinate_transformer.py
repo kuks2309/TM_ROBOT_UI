@@ -1,15 +1,22 @@
+"""정적 좌표/단위 변환 유틸 — GUI 단위(mm/deg/%)와 SetPositions 단위(m/rad) 사이."""
 import math
 from typing import List, Tuple
 
-MAX_JOINT_VELOCITY = math.pi
-MAX_TCP_SPEED = 1.0
+# 속도 100% 에 대응하는 서비스 값 상한
+MAX_JOINT_VELOCITY = math.pi   # rad/s (조인트·PTP 계열)
+MAX_TCP_SPEED = 1.0            # m/s (LINE_T)
 
+# tm_msgs SetPositions.Request.LINE_T 와 같은 값의 로컬 재정의 —
+# 벤더 상수가 바뀌면 함께 어긋나므로 주의
 _MOTION_LINE_T = 4
 
 
 class CoordinateTransformer:
+    """전부 staticmethod 인 순수 변환 함수 모음."""
+
     @staticmethod
     def velocity_percent_to_service(motion_type: int, percent: float) -> float:
+        """속도 % 를 서비스 값으로 — LINE_T 는 m/s, 그 외는 rad/s (0~100 클램프)."""
         ratio = max(0.0, min(percent, 100.0)) / 100.0
         if motion_type == _MOTION_LINE_T:
             return ratio * MAX_TCP_SPEED
@@ -17,6 +24,7 @@ class CoordinateTransformer:
 
     @staticmethod
     def euler_to_rotation_matrix(rx: float, ry: float, rz: float) -> List[List[float]]:
+        """오일러 각(rad)에서 Rz·Ry·Rx 합성 3x3 회전행렬 — 입력이 rad 임에 주의."""
         cos_rx, sin_rx = math.cos(rx), math.sin(rx)
         cos_ry, sin_ry = math.cos(ry), math.sin(ry)
         cos_rz, sin_rz = math.cos(rz), math.sin(rz)
@@ -30,6 +38,7 @@ class CoordinateTransformer:
 
     @staticmethod
     def quaternion_to_euler(qx: float, qy: float, qz: float, qw: float) -> Tuple[float, float, float]:
+        """쿼터니언을 오일러 각(deg)으로 — 짐벌락은 ry=±90° 로 고정."""
         sinr_cosp = 2 * (qw * qx + qy * qz)
         cosr_cosp = 1 - 2 * (qx * qx + qy * qy)
         rx = math.atan2(sinr_cosp, cosr_cosp) * 180.0 / math.pi
@@ -49,6 +58,7 @@ class CoordinateTransformer:
     @staticmethod
     def transform_tool_to_base(tool_delta: List[float],
                               tcp_orientation: List[float]) -> List[float]:
+        """공구 좌표계 변위(mm)를 TCP 자세(deg)로 회전시켜 베이스 변위로 바꾼다."""
         rx = tcp_orientation[0] * math.pi / 180.0
         ry = tcp_orientation[1] * math.pi / 180.0
         rz = tcp_orientation[2] * math.pi / 180.0
@@ -65,6 +75,7 @@ class CoordinateTransformer:
 
     @staticmethod
     def angle_difference_deg(target: float, current: float) -> float:
+        """±180° 랩어라운드를 고려한 최단 각도차 절댓값(deg)."""
         diff = (target - current + 180.0) % 360.0 - 180.0
         return abs(diff)
 
@@ -86,6 +97,7 @@ class CoordinateTransformer:
 
     @staticmethod
     def convert_tcp_to_service_format(tcp_pose: List[float]) -> List[float]:
+        """TCP pose(mm/deg)를 SetPositions 형식(m/rad)으로 변환한다."""
         return [
             CoordinateTransformer.mm_to_m(tcp_pose[0]),
             CoordinateTransformer.mm_to_m(tcp_pose[1]),
@@ -97,4 +109,5 @@ class CoordinateTransformer:
 
     @staticmethod
     def convert_joint_to_service_format(joint_pose: List[float]) -> List[float]:
+        """조인트 각(deg)을 SetPositions 형식(rad)으로 변환한다."""
         return [CoordinateTransformer.deg_to_rad(j) for j in joint_pose]

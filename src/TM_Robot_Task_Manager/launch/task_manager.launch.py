@@ -1,3 +1,4 @@
+"""Task Manager 풀스택 launch — 미실행인 tm_driver·tm_camera_bridge·camera_calibration_node 만 조건부 기동 후 task_manager_node(GUI)를 띄운다."""
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument, OpaqueFunction, ExecuteProcess, Shutdown
@@ -9,6 +10,7 @@ from ament_index_python.packages import get_package_share_directory
 
 
 def check_node_running(node_name):
+    """`ros2 node list` 출력에 node_name 이 포함되는지 검사한다(부분문자열 매칭·daemon 캐시 의존)."""
     try:
         result = subprocess.run(
             ['ros2', 'node', 'list'],
@@ -23,6 +25,7 @@ def check_node_running(node_name):
 
 
 def launch_setup(context):
+    """기실행 노드는 건너뛰고 필요한 노드 목록을 구성해 반환한다(OpaqueFunction 본체)."""
     robot_ip = LaunchConfiguration('robot_ip').perform(context)
 
     nodes_to_launch = []
@@ -52,6 +55,7 @@ def launch_setup(context):
     if not check_node_running('/tm_camera_bridge'):
         print(f"[tm_task_manager] TM Camera Bridge가 실행되지 않음. 자동으로 실행합니다...")
 
+        # 카메라 브리지가 쓰는 flask/waitress 등을 워크스페이스 vendor/pylibs 에서 찾을 수 있게 PYTHONPATH 에 선두 주입.
         _ws_root = os.path.dirname(os.path.dirname(os.path.dirname(
             os.path.dirname(os.path.abspath(__file__)))))
         _vendor = os.path.join(_ws_root, 'vendor', 'pylibs')
@@ -98,6 +102,7 @@ def launch_setup(context):
         )
         nodes_to_launch.append(camera_calibration_node)
 
+    # GUI 종료 시 launch 전체를 내리기 위해 on_exit=Shutdown().
     task_manager_node = Node(
         package='tm_task_manager',
         executable='task_manager_node',
@@ -114,6 +119,7 @@ def launch_setup(context):
 
 
 def _profile_robot_ip(fallback):
+    """robot_ip 기본값 결정 — 프로브 응답 IP → 프로필 값 → fallback 순."""
     try:
         from tm_task_manager import robot_profile
 
@@ -134,6 +140,7 @@ def _profile_robot_ip(fallback):
     return fallback
 
 def generate_launch_description():
+    """robot_ip launch 인자 선언 + launch_setup 을 OpaqueFunction 으로 등록한다."""
     return LaunchDescription([
         DeclareLaunchArgument(
             'robot_ip',

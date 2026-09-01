@@ -1,13 +1,20 @@
+"""모션 송신 단일 관문 — 사전 검사(MotionGuard)와 이동 중 감시(BoundaryMonitor)를 묶는다."""
 from contextlib import contextmanager
 from typing import Callable, Optional, Sequence, Tuple
 
 from ..safety import motion_guard as mg
 from ..safety.boundary_monitor import STATE_STOPPED
 
+# 실제 전송을 수행하는 콜러블 (SendScript/SetPositions 등 — 실체는 호출측 소관)
 Sender = Callable[[], Tuple[bool, str]]
 
 
 class MotionGateway:
+    """이동 명령의 검사→감시→송신을 한 경로로 강제하는 관문.
+
+    send 반환 (False, ...) 중 감시 정지 건은 '전송은 됐으나 이동 중 침범으로
+    자동 정지됨'을 뜻한다 — 전송 성공과 경로 안전은 별개다.
+    """
 
     def __init__(self, guard: mg.MotionGuard,
                  tcp_pose_fn: Optional[Callable[[], Optional[Sequence[float]]]] = None,
@@ -42,12 +49,14 @@ class MotionGateway:
             return None
 
     def _clear_stopped_state(self) -> None:
+        """직전 자동 정지(STOPPED)를 해제한다 — 위반 상태에 갇히지 않고 탈출 이동을 허용."""
         if self._monitor is not None and self._monitor.state == STATE_STOPPED:
             self._log('[안전구역] 직전 자동 정지 상태를 해제합니다 — 목표점 검사로 탈출을 허용합니다.')
             self._monitor.reset()
 
     @contextmanager
     def _watching(self):
+        """monitor.start/stop 괄호 — start 실패(이미 감시 중 등)면 stop 도 하지 않는다."""
         started = False
         if self._monitor is not None:
             started = self._monitor.start()
@@ -60,6 +69,7 @@ class MotionGateway:
     def check(self, kind: str, target_mm: Optional[Sequence[float]] = None,
               offset_mm: Optional[Sequence[float]] = None,
               label: str = '') -> mg.GuardDecision:
+        """전송 없이 사전 검사만 수행한다 (현재 TCP 는 tcp_pose_fn 으로 조회)."""
         return self._guard.check(
             kind, tcp_pose=self._tcp_pose(), target_mm=target_mm,
             offset_mm=offset_mm, label=label)
@@ -68,6 +78,11 @@ class MotionGateway:
              target_mm: Optional[Sequence[float]] = None,
              offset_mm: Optional[Sequence[float]] = None,
              label: str = '', watch: bool = True) -> Tuple[bool, str]:
+        """검사 통과 시 감시 하에 sender() 를 실행한다.
+
+        좌표 단위는 로봇 베이스 mm. 감시가 이동 중 정지를 걸었으면 sender 의
+        성공 반환을 뒤집어 (False, 정지 사유)로 돌려준다.
+        """
         self._clear_stopped_state()
 
         decision = self._guard.check(

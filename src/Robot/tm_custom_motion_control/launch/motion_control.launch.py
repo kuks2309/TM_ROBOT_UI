@@ -1,3 +1,4 @@
+"""motion_control_node 를 launch 인자 7종의 파라미터와 함께 기동하는 launch 구성."""
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument
@@ -5,6 +6,7 @@ from launch.substitutions import LaunchConfiguration
 
 
 def generate_launch_description():
+    """인자 7종 선언 + motion_control_node 1개 기동 (home_position·current_tool_name 은 노드 기본값)."""
     return LaunchDescription([
         DeclareLaunchArgument(
             'default_velocity_ptp',

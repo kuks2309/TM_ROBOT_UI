@@ -16,6 +16,8 @@
 namespace comm::modbus_tcp::test
 {
 
+// 연결 1회를 핸들러 λ 로 서빙하는 최소 mock(테스트 픽스처). 루프백에 자동 포트로 listen 하며,
+// 프레임 유틸(requestTid/recvRequest/buildFrame/sendAll)은 sim·타 패키지 테스트가 공유한다.
 class MockGl9089Server
 {
   public:
@@ -60,11 +62,13 @@ class MockGl9089Server
         return port_;
     }
 
+    // 다음 accept 되는 클라이언트 fd 의 SO_RCVTIMEO(ms) 예약 — 핸들러가 recv 에서 영구 대기하지 않게.
     void setRecvTimeout(std::chrono::milliseconds timeout)
     {
         recv_timeout_ = timeout;
     }
 
+    // accept 1회 후 handler 를 별도 스레드에서 실행. 종료 대기는 join()/소멸자가 보장.
     void serveOnce(ConnHandler handler)
     {
         if (thread_.joinable())
@@ -116,6 +120,7 @@ inline std::vector<uint8_t> recvRequest(int fd)
     return std::vector<uint8_t>(buf, buf + n);
 }
 
+// MBAP 응답 프레임 조립 — length 필드는 unit id(1B) + PDU 길이(빅엔디언).
 inline std::vector<uint8_t> buildFrame(uint16_t tid, uint8_t unit_id, const std::vector<uint8_t> &pdu)
 {
     std::vector<uint8_t> f;

@@ -1,3 +1,4 @@
+"""tools/convert_to_runtime 의 기준점(reference) 결정과 상대화 변환을 검증한다."""
 import os
 import sys
 

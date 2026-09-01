@@ -18,6 +18,7 @@ GripperControl::GripperControl(
 
 bool GripperControl::open()
 {
+  // 반대(닫힘) 핀을 먼저 꺼서 양핀 동시 ON 구간을 만들지 않는다 — close() 도 대칭.
   bool success = client_->setIO(
     static_cast<int>(module_),
     static_cast<int>(IOType::DIGITAL_OUT),

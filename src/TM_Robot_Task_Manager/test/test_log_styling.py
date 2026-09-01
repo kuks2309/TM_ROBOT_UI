@@ -1,3 +1,4 @@
+"""main_window 로그 색상 규칙(성공/실패/경고 판정·스타일 누출 방지)을 검증한다."""
 import pytest
 
 from tm_task_manager.main_window import MainWindow

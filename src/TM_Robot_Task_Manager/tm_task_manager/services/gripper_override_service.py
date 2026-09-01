@@ -1,15 +1,25 @@
+"""그리퍼 강제 열기(비상 해제) — SMC 액션·SCHUNK 서비스를 순서대로 시도한다."""
 import rclpy
 
 GRIPPER_ACTION_TIMEOUT_SEC = 30.0
 _SERVER_WAIT_SEC = 3.0
 _GOAL_ACCEPT_WAIT_SEC = 5.0
 
+# 백엔드별 시도 결과 3상: 성공 / 이 기계에 없음(다음 백엔드로) / 있는데 실패(중단)
 _OK, _UNAVAILABLE, _FAILED = 'ok', 'unavailable', 'failed'
 
+# tc_msgs GripperCommand 의 release 명령 코드
 SCHUNK_RELEASE_COMMAND = 2
 
 
 class GripperOverrideService:
+    """비상용 그리퍼 강제 열기.
+
+    클라이언트는 루트 노드 속성(gripper_action_client/schunk_gripper_client)을
+    차용한다 — 생성은 루트 소관. 내부에서 spin_until_future_complete 로 노드를
+    spin 하므로 루트 executor 가 같은 노드를 spin 중인 컨텍스트에서는 부르면
+    안 된다 (비상 UI 단독 호출 전제).
+    """
 
     def __init__(self, ros_node, log_callback=None):
         self._node = ros_node
@@ -23,6 +33,7 @@ class GripperOverrideService:
         return getattr(self._node, 'schunk_gripper_client', None)
 
     def backends(self):
+        """노드에 클라이언트가 존재하는 백엔드 이름 목록 (서버 생존과는 별개)."""
         found = []
         if self._smc_client() is not None:
             found.append('SMC')
@@ -41,6 +52,14 @@ class GripperOverrideService:
 
 
     def force_release(self, timeout_sec: float = GRIPPER_ACTION_TIMEOUT_SEC):
+        """SMC→SCHUNK 순으로 강제 열기를 시도한다.
+
+        unavailable 이면 다음 백엔드로 넘어가고, failed(백엔드는 있는데 실패)면
+        즉시 중단한다 — 있는 그리퍼의 실패를 다른 백엔드 시도로 가리지 않기 위해.
+
+        Returns:
+            (성공 여부, 사유 문구).
+        """
         if self._node is None:
             reason = "ROS2 노드가 없습니다 — 실행하지 않았습니다"
             self._log(f"[그리퍼 강제 열기] {reason}")
@@ -63,6 +82,7 @@ class GripperOverrideService:
 
 
     def _force_release_smc(self, timeout_sec: float):
+        """SMC 액션 경로 — bypass_interlock=True 로 인터록을 우회해 release 프로파일 실행."""
         client = self._smc_client()
         if client is None:
             return _UNAVAILABLE, "gripper_ros 미소싱"
@@ -110,6 +130,7 @@ class GripperOverrideService:
 
 
     def _force_release_schunk(self, timeout_sec: float):
+        """SCHUNK 서비스 경로 — received=True 는 수신 확인일 뿐 실제 열림 보증이 아니다."""
         client = self._schunk_client()
         if client is None:
             return _UNAVAILABLE, "tc_msgs 미소싱"

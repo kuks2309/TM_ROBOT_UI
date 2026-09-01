@@ -1,3 +1,4 @@
+"""job_executor pose-keep 이동·감속 로직을 검증한다."""
 import math
 import pytest
 from unittest.mock import MagicMock

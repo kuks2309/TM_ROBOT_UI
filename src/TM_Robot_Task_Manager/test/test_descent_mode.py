@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""pallet_recipe_generator 의 하강 모드(평면 법선/tcp_linear) 분기를 검증한다."""
 import os
 import sys
 import tempfile

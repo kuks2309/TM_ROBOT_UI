@@ -1,9 +1,12 @@
+"""정밀도 반복 측정 관리 — 측정 축적·통계(평균/σ/3σ)·CSV·동적(레시피 반복) 테스트."""
 import numpy as np
 from typing import List, Dict, Tuple, Optional, Callable, Any
 from datetime import datetime
 
 
 class MeasurementData:
+    """측정 1건 — 랜드마크 6축 + 측정 시점 TCP 6축 (mm/deg)."""
+
     def __init__(self, x: float, y: float, z: float, rx: float, ry: float, rz: float,
                  tcp_x: float = 0.0, tcp_y: float = 0.0, tcp_z: float = 0.0,
                  tcp_rx: float = 0.0, tcp_ry: float = 0.0, tcp_rz: float = 0.0,
@@ -41,6 +44,8 @@ class MeasurementData:
 
 
 class Statistics:
+    """6축 평균/표준편차(ddof=1)/3σ 값 홀더 — 측정 1건 이하면 산포는 0 유지."""
+
     def __init__(self):
         self.mean_x = 0.0
         self.mean_y = 0.0
@@ -65,6 +70,14 @@ class Statistics:
 
 
 class PrecisionTestManager:
+    """측정 축적·통계·CSV 와, job_executor 를 반복 구동하는 동적 테스트.
+
+    각도 통계는 산술 계산이다(원형 아님) — ±180° 경계 근방 각도는
+    landmark_analyzer 의 circular 계열로 별도 처리해야 한다.
+    동적 테스트는 job_executor 의 on_measure_point/on_state_changed 콜백을
+    자신 것으로 재배선하며, 종료 후 원 콜백을 복원하지 않는다.
+    """
+
     def __init__(self):
         self.measurements: List[MeasurementData] = []
         self.statistics = Statistics()
@@ -96,6 +109,7 @@ class PrecisionTestManager:
     def add_measurement(self, x: float, y: float, z: float, rx: float, ry: float, rz: float,
                         tcp_x: float = 0.0, tcp_y: float = 0.0, tcp_z: float = 0.0,
                         tcp_rx: float = 0.0, tcp_ry: float = 0.0, tcp_rz: float = 0.0):
+        """측정을 추가하고 통계를 즉시 재계산한다 (mm/deg)."""
         measurement = MeasurementData(x, y, z, rx, ry, rz, tcp_x, tcp_y, tcp_z, tcp_rx, tcp_ry, tcp_rz)
         self.measurements.append(measurement)
         self.current_iteration = len(self.measurements)
@@ -149,6 +163,7 @@ class PrecisionTestManager:
         }
 
     def export_to_csv(self, filepath: str) -> bool:
+        """측정 원본 + 통계 요약을 CSV 로 저장한다."""
         try:
             import csv
 
@@ -208,6 +223,7 @@ class PrecisionTestManager:
 
 
     def start_dynamic_test(self, recipe, job_executor, ros_node) -> Tuple[bool, str]:
+        """레시피 반복 테스트 시작 — measure_point(end) 잡이 있어야 측정이 잡힌다."""
         if not recipe or not recipe.jobs:
             return False, "동적 테스트를 위해 Recipe를 먼저 로드해주세요."
 
@@ -231,6 +247,7 @@ class PrecisionTestManager:
         return True, "동적 테스트 시작됨"
 
     def run_next_iteration(self):
+        """콜백 재배선 후 레시피를 다시 로드·실행한다 (반복 상한 도달 시 종료)."""
         if not self.is_running:
             self._finish_test()
             return
@@ -256,6 +273,7 @@ class PrecisionTestManager:
             self.on_recipe_completed()
 
     def on_measure_point_reached(self):
+        """(executor 콜백) measure point 도달 시점의 TCP 를 측정으로 기록한다."""
         if not self.ros_node:
             self._log("ROS 노드가 없습니다")
             return
@@ -271,6 +289,7 @@ class PrecisionTestManager:
             self._log("TCP 위치를 읽을 수 없습니다")
 
     def on_recipe_completed(self):
+        """(executor 콜백) 레시피 완료 — 종료 조건이 아니면 다음 반복을 요청한다."""
         if not self.is_running:
             self._finish_test()
             return

@@ -25,6 +25,9 @@ using namespace std::chrono_literals;
 namespace rio = remote_io::hal;
 namespace rc = remote_io::ros_assembly;
 
+// 추상 유닉스 소켓(sun_path[0]='\0') bind 로 단일 인스턴스 잠금 — 스테이션 쓰기 마스터를
+// 프로세스 수준에서 0 또는 1 로 강제한다. 커널 소유라 프로세스가 죽으면 자동 해제되어
+// 파일 락과 달리 잔재가 남지 않는다. 실패(-1) = 이미 다른 인스턴스가 점유.
 int acquireSingleInstanceLock(const std::string &name)
 {
     const int fd = ::socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0);
@@ -43,6 +46,10 @@ int acquireSingleInstanceLock(const std::string &name)
     return fd;
 }
 
+// remote_io_hal 위의 얇은 ROS 조립층 — 레거시 tc_io 공개 계약 유지:
+// io_resp(20ms, 읽기 성공 시에만) · io_service(쓰기) · io_alarms(0/1101/1102/1103).
+// 틱 정책 판단은 io_contract 순수 함수가, Modbus 접근·RMW·워치독은 포트가 소유한다.
+// 단일 스레드 executor 라 tick/handleWrite 는 상호 배제된다.
 class RemoteIoNode : public rclcpp::Node
 {
   public:
@@ -254,6 +261,7 @@ class RemoteIoNode : public rclcpp::Node
                                 "io_service — 미연결, 재시도 없이 실패 반환(legacy 파리티)");
                 break;
             }
+            // 주의: 이 sleep 은 단일 스레드 executor 를 점유한다 — 백오프 중에는 tick 도 멎는다.
             std::this_thread::sleep_for(std::chrono::milliseconds(write_backoff_ms_));
         }
         error_code_ = rc::AlarmCode::kWritingFail;
@@ -267,6 +275,7 @@ class RemoteIoNode : public rclcpp::Node
             return;
         tc_msgs::msg::AmrAlarm a;
         a.code = static_cast<int32_t>(d.code);
+        // state 는 레거시 tc_io 와 동일하게 세트하지 않는다 — 소비자는 code≠0 여부로 판별한다.
         a.state = false;
         alarm_pub_->publish(a);
     }

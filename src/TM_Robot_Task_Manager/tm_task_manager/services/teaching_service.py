@@ -1,3 +1,8 @@
+"""티칭·조그·위치 이동 서비스 — 현재 자세 취득, TCP 조그, SetPositions 이동 위임.
+
+좌표 단위: TCP 는 mm/deg (서비스 포맷 변환은 CoordinateTransformer 가 m/rad 로 수행),
+관절은 deg. 실제 서비스 호출은 주입받은 move_callback(루트 노드 소유)이 한다.
+"""
 import time
 from typing import Optional, List, Dict, Any, Tuple, Callable
 from PyQt5.QtCore import QObject, pyqtSignal
@@ -7,6 +12,8 @@ from .decomposed_move_planner import build_decomposed_tcp_waypoints
 
 
 class TeachingService(QObject):
+    """티칭/조그 로직. jog_in_progress 는 락 없는 플래그 — GUI 단일 스레드 호출 전제."""
+
     position_taught = pyqtSignal(dict)
     jog_completed = pyqtSignal(str)
     move_completed = pyqtSignal(bool, str)
@@ -22,6 +29,7 @@ class TeachingService(QObject):
                               current_joint_position: Optional[List[float]],
                               current_tcp_pose: Optional[List[float]],
                               motion_type: str = 'tcp') -> Optional[Dict[str, Any]]:
+        """현재 자세를 티칭 데이터로 변환 — joint 는 deg, tcp 는 mm/deg, 소수 2자리 반올림."""
         if motion_type == 'joint':
             if current_joint_position and len(current_joint_position) >= 6:
                 taught_data = {
@@ -53,6 +61,11 @@ class TeachingService(QObject):
                 current_tcp_pose: Optional[List[float]],
                 current_tcp_orientation: List[float],
                 move_callback: Callable) -> Tuple[bool, str]:
+        """단발 조그 — step_mm 는 병진 mm, 회전축(rx/ry/rz)에서는 deg 로 쓰인다.
+
+        연타 보호: 최소 0.5s 간격 + jog_in_progress 플래그.
+        move_callback 이 예외를 던지면 플래그가 True 로 잔류한다(호출측 예외 없음 전제).
+        """
         if not current_tcp_pose:
             return False, "현재 로봇 위치를 알 수 없습니다"
 
@@ -115,6 +128,7 @@ class TeachingService(QObject):
                           current_tcp_pose: Optional[List[float]],
                           current_tcp_orientation: List[float],
                           move_callback: Callable) -> Tuple[bool, str]:
+        """연속(키 홀드) 조그 — 단발 조그와 달리 0.5s 최소 간격 제한이 없다."""
         if not current_tcp_pose:
             return False, "현재 로봇 위치를 알 수 없습니다"
 
@@ -171,6 +185,10 @@ class TeachingService(QObject):
                         velocity: float,
                         move_callback: Callable,
                         decomposed_tcp: bool = False) -> Tuple[bool, str]:
+        """지정 자세로 이동 — joint→PTP_J(deg), tcp→PTP_T(mm/deg), velocity 는 %.
+
+        decomposed_tcp=True 면 축 분해 LINE_T 웨이포인트 순차 이동으로 대체.
+        """
         from tm_msgs.srv import SetPositions
 
         if motion_type == 'joint':
@@ -199,6 +217,7 @@ class TeachingService(QObject):
                              positions: List[float],
                              velocity: float,
                              move_callback: Callable) -> Tuple[bool, str]:
+        """축 분해 이동 — 현재 TCP 에서 목표까지 축별 LINE_T 웨이포인트를 순차 실행, 중간 실패 시 중단."""
         from tm_msgs.srv import SetPositions
 
         current_tcp_pose = getattr(self.ros_node, 'current_tcp_pose', None)
@@ -235,6 +254,7 @@ class TeachingService(QObject):
         return True, done_msg
 
     def extract_position_from_params(self, param_widgets: Dict[str, Any]) -> Optional[Tuple[str, List[float]]]:
+        """Job 파라미터 위젯에서 (motion_type, [x,y,z,rx,ry,rz]) 추출 — motion_type 위젯 없으면 None."""
         if 'motion_type' in param_widgets:
             motion_type = param_widgets['motion_type'].currentText()
 
@@ -254,6 +274,7 @@ class TeachingService(QObject):
                                param_widgets: Dict[str, Any],
                                motion_type: str,
                                positions: List[float]) -> bool:
+        """티칭 결과를 Job 파라미터 위젯에 기입 — 위젯 유형(개별 스핀박스/문자열)별 3경로."""
         if 'motion_type' in param_widgets:
             current_type = param_widgets['motion_type'].currentText()
             if current_type != motion_type:

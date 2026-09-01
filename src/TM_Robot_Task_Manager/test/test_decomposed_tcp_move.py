@@ -1,3 +1,4 @@
+"""job_executor 분해 TCP 이동(웨이포인트 순서·축별 단일 스텝·Line-T 사용)을 검증한다."""
 import math
 import pytest
 from unittest.mock import MagicMock

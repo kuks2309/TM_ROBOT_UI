@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""tabs/precision_test_tab 데이터셋 블록 UI 로직을 검증한다(Qt offscreen)."""
 import os
 import sys
 from pathlib import Path

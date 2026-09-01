@@ -1,3 +1,4 @@
+"""C++ fast_vision 백엔드 Canny 플러그인 — 모듈 부재 시 OpenCV 로 폴백."""
 import numpy as np
 from typing import Any, Dict, Optional
 
@@ -5,6 +6,8 @@ from .base_plugin import BaseVisionPlugin
 
 
 class FastEdgePlugin(BaseVisionPlugin):
+    """C++ 우선 Canny 플러그인. 어느 백엔드가 쓰였는지는 data['backend'] 로 드러난다."""
+
     def __init__(self):
         super().__init__(
             name="fast_edge",
@@ -14,6 +17,7 @@ class FastEdgePlugin(BaseVisionPlugin):
         self._load_cpp_module()
 
     def _load_cpp_module(self) -> bool:
+        """fast_vision(.so — Vision/Cpp 빌드 산출물) import 시도. 실패해도 폴백이 있어 예외로 만들지 않는다."""
         try:
             import fast_vision
             self._fast_vision = fast_vision
@@ -27,6 +31,7 @@ class FastEdgePlugin(BaseVisionPlugin):
         return self._fast_vision is not None
 
     def process(self, image: np.ndarray, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Canny 엣지 검출(C++ 우선, ImportError 시 OpenCV 폴백 — 두 경로 모두 블러 5×5 σ1.4)."""
         params = params or {}
         threshold1 = params.get('threshold1', 50.0)
         threshold2 = params.get('threshold2', 150.0)

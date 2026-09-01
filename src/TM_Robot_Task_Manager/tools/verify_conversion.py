@@ -1,10 +1,19 @@
 #!/usr/bin/env python3
+"""Runtime 레시피의 상대좌표가 reference 기준점으로 original_absolute 를 재현하는지 검증하는 CLI.
+
+실행: python3 tools/verify_conversion.py [runtime.yaml] (무인자 시 고정 경로의 *_runtime.yaml 전수 검사).
+허용 오차: 위치 0.1mm, 각도 0.1°.
+"""
 import yaml
 import numpy as np
 from scipy.spatial.transform import Rotation
 
 
 def create_transform_matrix(pose):
+    """pose(X/Y/Z[mm], Rx/Ry/Rz[deg], ZYX 오일러)를 4x4 동차변환행렬로 만든다.
+
+    convert_to_runtime.py 와 같은 식의 독립 구현 — 변환기와 별도 경로로 검산하기 위한 사본.
+    """
     x, y, z = pose['X'], pose['Y'], pose['Z']
     rx, ry, rz = pose['Rx'], pose['Ry'], pose['Rz']
 
@@ -19,6 +28,7 @@ def create_transform_matrix(pose):
 
 
 def extract_pose(T):
+    """동차변환행렬에서 pose 를 추출한다(소수 2자리 반올림 — mm/deg)."""
     x, y, z = T[:3, 3]
 
     R = T[:3, :3]
@@ -36,6 +46,10 @@ def extract_pose(T):
 
 
 def verify_runtime_file(runtime_file):
+    """relative job 전부를 T_tm @ T_rel 로 재계산해 original_absolute 와 대조한다. 통과 여부 반환.
+
+    주의: reference 키를 `tm_landmark` 로 읽는다 — convert_to_runtime.py 는 `tm_jig_landmark` 로 쓴다(스키마 불일치).
+    """
     print("=" * 70)
     print("변환 로직 검증")
     print("=" * 70)

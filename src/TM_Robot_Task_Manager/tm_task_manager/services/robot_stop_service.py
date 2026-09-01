@@ -1,9 +1,18 @@
+"""TM Driver set_event 서비스로 정지/일시정지/재개 명령을 보낸다."""
 from typing import Callable, Optional, Tuple
 
 SERVICE_NAME = 'set_event'
 
 
 class RobotStopService:
+    """set_event(SetEvent) 클라이언트 래퍼.
+
+    stop/pause/resume 은 fire-and-forget(call_async 후 결과 미확인) — 반환의
+    '요청 전송'은 수락 보증이 아니다. 결과 확인이 필요하면 stop_sync 를 쓰되,
+    stop_sync 는 호출 스레드에서 노드를 spin 하므로 루트 executor 가 같은
+    노드를 spin 중인 컨텍스트·감시 스레드(BoundaryMonitor stop_fn)에서는
+    부르면 안 된다.
+    """
 
     def __init__(self, node, log_callback: Optional[Callable[[str], None]] = None):
         self._node = node
@@ -15,6 +24,7 @@ class RobotStopService:
             self._log_callback(message)
 
     def _get_client(self):
+        """SetEvent 클라이언트 지연 생성 (노드 없으면 None)."""
         if self._client is None:
             if self._node is None:
                 return None
@@ -31,6 +41,7 @@ class RobotStopService:
         return request
 
     def _send(self, func_value: int, what: str, timeout_sec: float = 0.5) -> Tuple[bool, str]:
+        """wait_for_service(timeout_sec) 후 call_async 전송 — future 는 버린다."""
         client = self._get_client()
         if client is None:
             return False, 'ROS2 노드가 없습니다'
@@ -56,6 +67,7 @@ class RobotStopService:
         return self._send(SetEvent.Request.RESUME, '재개(RESUME)')
 
     def stop_sync(self, timeout_sec: float = 3.0) -> Tuple[bool, str]:
+        """STOP 을 보내고 응답 ok 까지 확인한다 — 호출 스레드에서 spin (클래스 주석 참조)."""
         import rclpy
         from tm_msgs.srv import SetEvent
 

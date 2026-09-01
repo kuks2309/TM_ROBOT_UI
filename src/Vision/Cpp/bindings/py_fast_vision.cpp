@@ -6,6 +6,9 @@
 
 namespace py = pybind11;
 
+// 2D/3D uint8 numpy → cv::Mat 깊은 복사(그 외 차원은 예외).
+// 주의: buf.ptr 를 rows×cols×ch packed 로 해석한다 — C-연속 배열 전제이며,
+// 슬라이스 뷰 같은 비연속 배열은 stride 가 무시되어 왜곡된 이미지가 된다.
 cv::Mat numpy_to_mat(py::array_t<uint8_t> input) {
     py::buffer_info buf = input.request();
 
@@ -27,6 +30,7 @@ cv::Mat numpy_to_mat(py::array_t<uint8_t> input) {
     return mat.clone();
 }
 
+// cv::Mat → numpy 복사 — Mat 의 step 을 stride 로 넘겨 행 패딩이 있어도 안전하다.
 py::array_t<uint8_t> mat_to_numpy(const cv::Mat& mat) {
     std::vector<ssize_t> shape;
     std::vector<ssize_t> strides;

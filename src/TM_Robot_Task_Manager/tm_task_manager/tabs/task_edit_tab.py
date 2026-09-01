@@ -1,3 +1,4 @@
+"""Recipe 편집 탭 — Job 추가/삭제/이동, 타입별 파라미터 폼 동적 생성, 개별 Task 수동 실행·티칭을 담당한다."""
 import os
 
 from PyQt5.QtCore import Qt
@@ -12,6 +13,8 @@ from .base_tab import BaseTab
 
 
 class TaskEditTab(BaseTab):
+    """Task 시퀀스 편집·파라미터 폼·수동 실행(job.type 분기 디스패치)·오차 preset·PS2 jog 연동을 담당하는 탭."""
+
     def __init__(self, main_window):
         super().__init__(main_window)
         self.mw = main_window
@@ -500,6 +503,7 @@ class TaskEditTab(BaseTab):
                 job.params[param_name] = widget.toPlainText()
             elif isinstance(widget, QLineEdit):
                 text = widget.text()
+                # 대괄호로 감싼 텍스트는 리스트로 역직렬화 시도 — 실패하면 원문 문자열을 그대로 보존
                 if text.startswith('[') and text.endswith(']'):
                     try:
                         import ast
@@ -520,6 +524,7 @@ class TaskEditTab(BaseTab):
         return recipe.jobs[current_row]
 
     def _on_teach_position(self):
+        """현재 로봇 위치를 선택 Job 의 파라미터 폼에 티칭한다 (job.type·파라미터 구성별 분기)."""
         if not self.param_widgets:
             self._log("먼저 Task를 선택하세요")
             return
@@ -585,6 +590,7 @@ class TaskEditTab(BaseTab):
             self._log("입력 가능한 위치 파라미터가 없습니다")
 
     def _on_move_to_params(self):
+        # command_gate 로 수동 실행 동시 진입을 막는다 — 획득 실패 시 실행하지 않고, 성공 시 finally 에서 반드시 해제
         gate = getattr(self.mw, 'command_gate', None)
         if gate is not None and not gate.acquire("Task 수동 실행"):
             return
@@ -596,6 +602,7 @@ class TaskEditTab(BaseTab):
                 gate.release()
 
     def _move_to_params(self):
+        """선택 Job 을 type 별 수동 실행 핸들러(_exec_*)로 디스패치한다 — 동기 실행이라 로봇 동작 완료까지 GUI 가 멈춘다."""
         if not self.param_widgets:
             self._log("먼저 Task를 선택하세요")
             return
@@ -1239,10 +1246,12 @@ class TaskEditTab(BaseTab):
             self._log("이미지 캡처 진행 중...")
             return
 
+        # 일회성 동적 연결 — 결과/에러 콜백이 수신 시 disconnect 한다 (플래그로 본 요청 여부 구분)
         self._pending_ai_inspection = True
         service.detection_completed.connect(self._on_ai_inspection_result)
         service.detection_error.connect(self._on_ai_inspection_error)
 
+        # AI 탭의 단건 캡처 경로도 함께 활성화 — 캡처 완료 시 그 탭이 추론을 트리거한다
         if hasattr(self.mw, 'ai_detection_tab') and self.mw.ai_detection_tab:
             self.mw.ai_detection_tab._pending_single_detection = True
 

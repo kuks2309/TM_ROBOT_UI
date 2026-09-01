@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+"""지그 4점 마크의 평면 pose 계산과 평면/공구 좌표계 변환 유틸.
+
+pose dict 는 x/y/z mm, rx/ry/rz deg — 로봇 베이스 좌표계, 오일러는 ZYX 합성.
+CLI(main)로 positions.yaml 검산도 가능하다.
+"""
 import math
 import argparse
 from dataclasses import dataclass
@@ -13,6 +18,7 @@ from scipy.spatial.transform import Rotation
 
 @dataclass
 class Mark:
+    """마크 한 점의 6축 측정값 (x/y/z mm, rx/ry/rz deg)."""
     x: float
     y: float
     z: float
@@ -23,6 +29,7 @@ class Mark:
 
 @dataclass
 class PlanePose:
+    """계산된 평면 좌표계 pose — 원점=4점 중심, Z축=평면 법선 (mm/deg)."""
     x: float
     y: float
     z: float
@@ -32,10 +39,17 @@ class PlanePose:
 
 
 class JigPlaneCalculator:
+    """4점 마크에서 평면 pose 를 계산한다.
+
+    마크 순서 계약: 1=좌하, 2=좌상, 3=우하, 4=우상 — 축 벡터를 인덱스 고정
+    대각/변 벡터로 만들기 때문에 순서가 바뀌면 틀린 축으로도 성공 반환한다.
+    """
+
     def __init__(self):
         self.marks: List[Mark] = []
 
     def load_from_yaml(self, yaml_path: str) -> bool:
+        """positions.yaml 의 coordinate_definitions.jig_plate.scan_data 4점을 읽는다."""
         try:
             with open(yaml_path, 'r') as f:
                 data = yaml.safe_load(f)
@@ -81,6 +95,11 @@ class JigPlaneCalculator:
         return True
 
     def calculate_plane_pose(self) -> Optional[PlanePose]:
+        """4점에서 평면 pose 를 계산한다 (퇴화 배치는 None).
+
+        중심은 산술 평균, X축은 좌→우 변 벡터 2개 평균, Y축은 하→상 변 벡터
+        2개 평균, Z축은 그 외적 — 마크 자세(rx..rz)는 쓰지 않고 위치만 쓴다.
+        """
         if len(self.marks) != 4:
             print(f"4개의 mark가 필요합니다 (현재: {len(self.marks)}개)")
             return None
@@ -127,6 +146,7 @@ class JigPlaneCalculator:
 
     @staticmethod
     def _rotation_matrix_to_euler_zyx(R: np.ndarray) -> Tuple[float, float, float]:
+        """회전행렬에서 ZYX 오일러 각(deg)을 추출한다 (짐벌락은 rx=0 고정 분기)."""
         sy = -R[2, 0]
         sy = np.clip(sy, -1.0, 1.0)
         ry = math.asin(float(sy))
@@ -141,6 +161,7 @@ class JigPlaneCalculator:
         return (math.degrees(rx), math.degrees(ry), math.degrees(rz))
 
     def get_plane_info(self) -> Optional[str]:
+        """입력 마크·계산 결과를 사람이 읽을 리포트 텍스트로 만든다."""
         result = self.calculate_plane_pose()
         if result is None:
             return None
@@ -193,6 +214,7 @@ class JigPlaneCalculator:
         }
 
     def calculate_distance_matrix(self) -> Optional[Dict[str, float]]:
+        """4점 사이 6개 상호 거리(mm) — 배치 검산·직사각 검사용."""
         if len(self.marks) != 4:
             return None
 
@@ -210,6 +232,7 @@ class JigPlaneCalculator:
         }
 
     def to_full_dict(self) -> Optional[Dict[str, Any]]:
+        """평면 pose + 거리 행렬 + 계산 시각을 담은 저장용 dict."""
         pose = self.calculate_plane_pose()
         distances = self.calculate_distance_matrix()
 
@@ -232,6 +255,7 @@ MIN_KEEP_PROJECTION = 1e-6
 
 
 def _rotation_matrix_from_pose(pose: Dict[str, float]) -> np.ndarray:
+    """pose 의 rx/ry/rz(deg)로 ZYX 합성 회전행렬을 만든다 (scipy Rotation)."""
     return Rotation.from_euler(
         'ZYX',
         [pose['rz'], pose['ry'], pose['rx']],
@@ -240,6 +264,7 @@ def _rotation_matrix_from_pose(pose: Dict[str, float]) -> np.ndarray:
 
 
 def plane_normal_from_pose(pose: Dict[str, float]) -> np.ndarray:
+    """평면 pose 의 단위 법선(Z축 열) — 퇴화 시 ValueError."""
     normal = _rotation_matrix_from_pose(pose)[:, 2]
     norm = np.linalg.norm(normal)
     if norm < MIN_AXIS_NORM:
@@ -251,6 +276,7 @@ def signed_point_to_plane_distance(
     point: Tuple[float, float, float],
     plane_pose: Dict[str, float],
 ) -> float:
+    """점과 평면 사이 부호 거리(mm) — 법선 방향이 양수."""
     normal = plane_normal_from_pose(plane_pose)
     origin = np.array(
         [plane_pose['x'], plane_pose['y'], plane_pose['z']], dtype=float
@@ -262,6 +288,7 @@ def pose_in_plane_frame(
     plate_pose: Dict[str, float],
     tcp_pose: Dict[str, float],
 ) -> Dict[str, float]:
+    """절대(베이스) pose 를 평면 좌표계 상대 pose 로 환산한다."""
     plane_rotation = _rotation_matrix_from_pose(plate_pose)
     tool_rotation = _rotation_matrix_from_pose(tcp_pose)
 
@@ -284,6 +311,7 @@ def pose_from_plane_frame(
     plate_pose: Dict[str, float],
     relative_pose: Dict[str, float],
 ) -> Dict[str, float]:
+    """평면 좌표계 상대 pose 를 절대(베이스) pose 로 되돌린다."""
     plane_rotation = _rotation_matrix_from_pose(plate_pose)
     relative_rotation = _rotation_matrix_from_pose({
         'rx': float(relative_pose.get('rx', 0.0)),
@@ -314,6 +342,11 @@ def pose_from_plane_frame(
 def average_landmarks_from_files(
     file_paths: List[Any],
 ) -> Tuple[Optional[List[Dict[str, float]]], List[Any], List[Tuple[Any, str]]]:
+    """측정 yaml 들의 jig1~4 마크를 단순 산술 평균한다 (outlier 제거 없음).
+
+    Returns:
+        (평균 마크 4개 또는 None, 사용 파일, (건너뛴 파일, 사유)).
+    """
     keys = ('x', 'y', 'z', 'rx', 'ry', 'rz')
     sums = {i: {k: 0.0 for k in keys} for i in range(1, 5)}
     used: List[Any] = []
@@ -355,6 +388,14 @@ def tcp_pose_for_plane_normal(
     rz_mode: str = 'keep',
     current_tcp: Optional[List[float]] = None,
 ) -> Dict[str, float]:
+    """평면 법선 위 standoff_mm 지점에서 평면을 내려다보는 TCP 자세를 만든다.
+
+    공구 Z축은 법선 반대(평면을 향함). rz_mode='keep' 은 현재 공구 X축을
+    평면에 투영해 회전을 유지, 'plane' 은 평면 Y축(긴 변)에 정렬한다.
+
+    Raises:
+        ValueError: standoff 비양수, 모드 오류, keep 에 current_tcp 부재, 축 퇴화.
+    """
     if standoff_mm <= 0:
         raise ValueError(f"standoff_mm 은 양수여야 합니다 (입력: {standoff_mm})")
     if rz_mode not in ('keep', 'plane'):
@@ -412,6 +453,11 @@ def apply_tool_offset(
     base_pose: Dict[str, float],
     offset: Dict[str, float],
 ) -> Dict[str, float]:
+    """공구 좌표계 5키 오프셋(TOOL_OFFSET_KEYS)을 합성한다 — 병진 z 는 0 고정.
+
+    평면 정렬 보정 용도라 접근 높이(z)는 오프셋에 포함하지 않는다.
+    z 까지 필요하면 landmark_frame.apply_tool_offset_6dof 를 쓴다.
+    """
     base_rotation = _rotation_matrix_from_pose(base_pose)
     offset_rotation = _rotation_matrix_from_pose({
         'rx': float(offset.get('rx', 0.0)),
@@ -443,6 +489,12 @@ def tool_offset_from_poses(
     base_pose: Dict[str, float],
     actual_pose: Dict[str, float],
 ) -> Tuple[Dict[str, float], float]:
+    """두 pose 간 공구 좌표계 오프셋을 역산한다.
+
+    Returns:
+        (5키 오프셋 dict, 공구 z 방향 잔여 변위 dz mm) — dz 는 오프셋에서
+        제외해 별도 보고한다.
+    """
     base_rotation = _rotation_matrix_from_pose(base_pose)
 
     delta = np.array([
@@ -463,6 +515,7 @@ def tool_offset_from_poses(
 
 
 def main():
+    """CLI: yaml 설정(기본 config/positions.yaml)의 4점으로 평면 리포트를 출력한다."""
     parser = argparse.ArgumentParser(description='Jig 4-Landmark 평면 좌표 계산기')
     parser.add_argument('--config', '-c', type=str, help='YAML 설정 파일 경로')
     args = parser.parse_args()

@@ -1,3 +1,4 @@
+"""설정 탭 — 로봇 연결, 좌표계(TCP Pose) 선택, jig 랜드마크/플레이트 티칭, 조그, TF 발행, 기준점 학습."""
 from PyQt5.QtWidgets import (QComboBox, QGroupBox, QMessageBox, QPushButton,
                              QVBoxLayout)
 
@@ -8,6 +9,8 @@ from tm_task_manager.services.vision_origin_check_service import POSE_KEYS
 
 
 class SettingsTab(BaseTab):
+    """연결·좌표계·티칭·조그 설정 UI. 로봇 동작은 GUI 스레드에서 동기 실행됨(블로킹 주의)."""
+
     def __init__(self, main_window):
         super().__init__(main_window)
         self.mw = main_window
@@ -113,6 +116,7 @@ class SettingsTab(BaseTab):
         self.combo_named_positions.addItems(self.config_manager.get_position_names())
 
     def _on_move_to_named_position(self):
+        """positions.yaml 등록 자세로 이동 — 확인 다이얼로그 후 속도 10% 고정, joint/tcp 유형별 분기."""
         name = self.combo_named_positions.currentText().strip()
         if not name:
             self._log("이동할 등록 자세가 없습니다")
@@ -151,6 +155,7 @@ class SettingsTab(BaseTab):
         self.mw.actionConnect.setEnabled(False)
         self.mw.actionDisconnect.setEnabled(False)
 
+        # 최대 5s 블로킹 — GUI 스레드에서 동기 대기하므로 그동안 화면이 멈춘다
         success, message = self.mw.connection_manager.connect(robot_ip, timeout_sec=5.0)
 
         if success:
@@ -244,6 +249,7 @@ class SettingsTab(BaseTab):
         if base_name:
             self.ros_node.current_base_name = base_name
 
+        # RobotBase 외 = 비전 좌표계 — TCP 표시값이 로봇 베이스 기준이 아님을 경고색으로 구분
         is_vision_base = base_name and base_name != "RobotBase"
 
         if base_name:
@@ -277,6 +283,7 @@ class SettingsTab(BaseTab):
         self.mw.jog_service.jog(axis, direction)
 
     def _on_jog_params_changed(self, step_mm: float, velocity_percent: int):
+        # blockSignals: 서비스→UI 반영이 다시 valueChanged→서비스로 되돌아가는 피드백 루프 차단
         self.mw.spinBox_jogStep.blockSignals(True)
         self.mw.spinBox_jogVelocity.blockSignals(True)
         self.mw.spinBox_jogStep.setValue(step_mm)
@@ -299,9 +306,11 @@ class SettingsTab(BaseTab):
         self._update_tcp_pose_labels()
 
     def _update_tcp_pose_labels(self):
+        """자리표시자 — 라디오버튼 라벨 갱신 훅(현재 갱신할 라벨 없음)."""
         pass
 
     def _on_tcp_pose_changed(self, name: str, checked: bool):
+        # toggled 는 해제되는 버튼에서도 발화 — checked 인 쪽 1회만 처리
         if not checked:
             return
 
@@ -727,6 +736,7 @@ class SettingsTab(BaseTab):
         repeat_count = self.mw.spinBox_refRepeat.value()
         outlier_method = self.mw.comboBox_refOutlier.currentText()
 
+        # repeat_count 회 반복 스캔을 GUI 스레드에서 동기 실행 — 완료까지 화면이 멈춘다
         landmark, analysis = self.job_executor.scan_landmark_averaged(
             repeat_count, outlier_method, 0.1
         )

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""robot_profile 의 로봇 IP 프로브(후보 순서·포트 5890·타임아웃·환경변수 우선순위) 검증."""
 import os
 import socket
 import sys

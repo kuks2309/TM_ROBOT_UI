@@ -1,3 +1,4 @@
+"""TeachingService 병진 조그가 공구 자세와 무관하게 베이스 좌표계 단일 축으로 움직이는지 검증."""
 import pytest
 from unittest.mock import MagicMock
 

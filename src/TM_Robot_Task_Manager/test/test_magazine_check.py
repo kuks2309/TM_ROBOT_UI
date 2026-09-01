@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""magazine_state_service 재고 판정과 check_magazine job 의 on_mismatch 정책을 검증한다."""
 import sys
 from pathlib import Path
 

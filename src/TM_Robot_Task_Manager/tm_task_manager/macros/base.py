@@ -1,11 +1,19 @@
+"""매크로 프레임워크 코어 — 결과/컨텍스트/스펙 정의와 전역 레지스트리.
+
+매크로는 register 데코레이터로 MACROS 에 등록되고, run_macro 가 기본값 병합→
+선행조건 검사→실행→반환형 검증을 수행한다. 등록은 macros/__init__ 의 import
+부수효과로 일어난다(단일 스레드 import 전제, 락 없음).
+"""
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+# requires 항목 중 blackboard 가 아닌 외부 설정(예: config:taught_origin)을 뜻하는 접두어
 EXTERNAL_PREFIX = 'config:'
 
 
 @dataclass
 class MacroResult:
+    """매크로 실행 결과 (성공 여부 + 메시지 + 부가 데이터)."""
     ok: bool
     message: str = ''
     data: Dict[str, Any] = field(default_factory=dict)
@@ -20,6 +28,11 @@ class MacroResult:
 
 
 class MacroContext:
+    """매크로가 보는 실행 환경 — executor 프록시 + 매크로 간 공유 blackboard.
+
+    executor(job_executor)가 _log·ros_node·_stop_requested·_move_to_position
+    등의 속성을 제공한다는 규약에 결합한다 — 속성 부재 시 AttributeError.
+    """
 
     def __init__(self, executor, blackboard: Optional[Dict[str, Any]] = None):
         self._executor = executor
@@ -46,6 +59,8 @@ class MacroContext:
 
     @property
     def is_stop_requested(self) -> bool:
+        # GUI 스레드가 세우고 매크로 실행 스레드가 폴링하는 bool 플래그 —
+        # 단순 대입 읽기라 락 없이 둔다
         return self._executor._stop_requested
 
     def clear_stop_request(self) -> None:
@@ -64,11 +79,13 @@ class MacroContext:
         return self._executor.scan_landmark_averaged(*args, **kwargs)
 
     def emit(self, callback_name: str, payload: Any) -> None:
+        """executor 의 콜백 속성(예: on_origin_check_alarm)을 이름으로 발화한다."""
         callback = getattr(self._executor, callback_name, None)
         if callback:
             callback(payload)
 
     def put(self, key: str, value: Any) -> None:
+        """blackboard 에 산출물을 기록한다 — 후속 매크로의 requires 가 참조."""
         self.blackboard[key] = value
 
     def get(self, key: str, default: Any = None) -> Any:
@@ -80,6 +97,7 @@ class MacroContext:
 
 @dataclass
 class MacroSpec:
+    """매크로 한 개의 선언 — 이름·파라미터 스펙·요구(requires)/산출(produces)."""
     name: str
     summary: str
     category: str
@@ -89,12 +107,15 @@ class MacroSpec:
     produces: List[str] = field(default_factory=list)
 
     def defaults(self) -> Dict[str, Any]:
+        """파라미터 기본값 dict."""
         return {key: spec.get('default') for key, spec in self.params.items()}
 
     def blackboard_requires(self) -> List[str]:
+        """blackboard 로 충족되는 요구 (config: 접두어 제외)."""
         return [r for r in self.requires if not r.startswith(EXTERNAL_PREFIX)]
 
     def external_requires(self) -> List[str]:
+        """외부 설정으로 충족되는 요구 (config: 접두어 벗긴 이름)."""
         return [r[len(EXTERNAL_PREFIX):] for r in self.requires if r.startswith(EXTERNAL_PREFIX)]
 
 
@@ -105,6 +126,7 @@ def register(name: str, summary: str, category: str,
              params: Optional[Dict[str, Dict[str, Any]]] = None,
              requires: Optional[List[str]] = None,
              produces: Optional[List[str]] = None):
+    """매크로 함수를 MACROS 레지스트리에 등록하는 데코레이터 (이름 중복 시 ValueError)."""
     def decorator(fn: Callable) -> Callable:
         if name in MACROS:
             raise ValueError(f"매크로 이름 중복: {name}")
@@ -123,6 +145,12 @@ def get_macro(name: str) -> Optional[MacroSpec]:
 
 def run_macro(name: str, ctx: MacroContext,
               params: Optional[Dict[str, Any]] = None) -> MacroResult:
+    """매크로 하나를 실행한다.
+
+    기본값에 params 를 덮어 병합(스펙에 없는 키는 무시)하고, blackboard
+    선행조건을 검사한 뒤 실행한다. 반환형이 MacroResult/bool 이 아니면
+    실패로 감싼다 — 매크로 구현 실수를 호출부까지 전파하지 않기 위해서다.
+    """
     spec = MACROS.get(name)
     if spec is None:
         return MacroResult.failure(f"등록되지 않은 매크로: {name}")
@@ -147,6 +175,11 @@ def run_macro(name: str, ctx: MacroContext,
 
 
 def validate_sequence(uses: List[str]) -> Tuple[bool, List[str]]:
+    """매크로 나열 순서의 requires/produces 정합성을 실행 없이 정적 검사한다.
+
+    Returns:
+        (문제 없음 여부, 문제 설명 목록).
+    """
     available: set = set()
     problems: List[str] = []
 

@@ -1,3 +1,4 @@
+"""팔레트 티칭 마법사 탭 — 5단계(종류/마커 촬영/4점 측정/중심 접근·티칭/레시피 생성)를 매크로 실행으로 안내한다."""
 import os
 import threading
 from typing import Any, Callable, Dict, List, Optional
@@ -26,12 +27,14 @@ FLOATING_SEQUENCE = ['pallet_capture_marker'] + FIXED_SEQUENCE
 
 
 class PalletTeachTab(BaseTab):
+    """코드 구성 UI 의 팔레트 티칭 탭 — 각 단계 매크로를 워커 스레드로 실행하고 blackboard 로 단계 간 결과를 공유한다."""
 
     def __init__(self, main_window):
         super().__init__(main_window)
         self.mw = main_window
 
         self.ui_widget: Optional[QWidget] = None
+        # 단계 간 결과 공유 dict — 매크로(워커 스레드)가 쓰고 GUI(done 콜백)가 읽는다
         self.blackboard: Dict[str, Any] = {}
 
         self._busy = False
@@ -438,7 +441,8 @@ class PalletTeachTab(BaseTab):
 
     def _run(self, macro_name: str, params: Dict[str, Any],
              on_done: Callable[[Any], None]):
-        if self._busy:
+        """매크로를 워커 스레드에서 실행하고 150ms poll 타이머로 완료를 회수한다 — 로봇 동작 중 GUI 프리즈 방지 구조."""
+        if self._busy:  # 동시 실행 방지 게이트 — 실행 중에는 관련 버튼도 _refresh_enabled 가 비활성화
             return
         executor = self.job_executor
         if executor is None:
@@ -455,6 +459,7 @@ class PalletTeachTab(BaseTab):
         context.clear_stop_request()
 
         def worker():
+            # 워커 스레드 — _result 기록 후 _done 을 세운다 (poll 이 _done 확인 후에만 _result 를 읽는 순서 계약, 락 없음)
             try:
                 self._result = run_macro(macro_name, context, params)
             except Exception as exc:
@@ -463,6 +468,7 @@ class PalletTeachTab(BaseTab):
                 self._done = True
 
         def poll():
+            # GUI 스레드(QTimer) — Qt 위젯 접근은 이쪽에서만 수행한다
             if not self._done:
                 return
             self._poll_timer.stop()

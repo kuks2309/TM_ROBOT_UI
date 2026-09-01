@@ -1,3 +1,5 @@
+// 동시성 계약 시험(TSan 게이트) — 트랜잭션 스레드와 관측 스레드의 isLinkUp() 교차 관측이
+// data race 없이 성립하는지 검증(isLinkUp 은 유일한 교차 스레드 허용 API).
 #include "modbus_tcp/mbap_client.hpp"
 
 #include <atomic>

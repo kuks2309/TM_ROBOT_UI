@@ -1,3 +1,4 @@
+"""safety/motion_guard·boundary_monitor 와 motion_gateway 의 이동 차단 규칙을 검증한다."""
 import pytest
 
 from tm_task_manager.safety import motion_guard as mg

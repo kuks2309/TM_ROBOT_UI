@@ -1,3 +1,8 @@
+"""SetPositions 서비스 기반 모션 파사드 — 루트 노드의 _call_set_positions 에 위임한다.
+
+입력 단위: PTP_J 는 조인트 rad, PTP_T/LINE_T 는 TCP m/rad (SetPositions 규약).
+velocity 는 % 로 로그에 표기하며 해석은 위임처(_call_set_positions) 규약을 따른다.
+"""
 import time
 import rclpy
 from rclpy.node import Node
@@ -6,6 +11,8 @@ from tm_msgs.srv import SetPositions
 
 
 class TmRobotRos2Motion:
+    """PTP_J/PTP_T/LINE_T 3종 이동을 입력 검증·로그 후 노드에 위임하는 래퍼."""
+
     PTP_J = SetPositions.Request.PTP_J
     PTP_T = SetPositions.Request.PTP_T
     LINE_T = SetPositions.Request.LINE_T
@@ -28,6 +35,7 @@ class TmRobotRos2Motion:
         blend_percentage: int = 0,
         fine_goal: bool = False
     ) -> Tuple[bool, str]:
+        """조인트 6축(rad)으로 PTP_J 이동을 위임한다."""
         if len(joint_positions) != 6:
             return False, "Joint 위치는 6개 값이 필요합니다"
 
@@ -44,6 +52,7 @@ class TmRobotRos2Motion:
         blend_percentage: int = 0,
         fine_goal: bool = False
     ) -> Tuple[bool, str]:
+        """TCP pose(m/rad)로 PTP_T 이동을 위임한다."""
         if len(tcp_position) != 6:
             return False, "TCP 위치는 6개 값이 필요합니다"
 
@@ -60,6 +69,7 @@ class TmRobotRos2Motion:
         blend_percentage: int = 0,
         fine_goal: bool = False
     ) -> Tuple[bool, str]:
+        """TCP pose(m/rad)로 LINE_T 직선 이동을 위임한다."""
         if len(tcp_position) != 6:
             return False, "TCP 위치는 6개 값이 필요합니다"
 
@@ -77,6 +87,7 @@ class TmRobotRos2Motion:
         blend_percentage: int = 0,
         fine_goal: bool = False
     ) -> Tuple[bool, str]:
+        """루트 노드의 비공개 _call_set_positions 에 위임한다 (메서드 부재 시 실패 문구)."""
         if not self.ros_node:
             return False, "ROS2 노드가 없습니다"
 

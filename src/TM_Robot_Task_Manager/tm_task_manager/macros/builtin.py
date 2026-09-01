@@ -1,3 +1,4 @@
+"""기본 매크로 — wait(정지 요청 감응 대기)와 vision_origin_check(기준점 판정)."""
 import time
 
 from .base import MacroContext, MacroResult, register
@@ -13,6 +14,10 @@ from .base import MacroContext, MacroResult, register
     },
 )
 def wait(ctx: MacroContext, duration: int = 1000) -> MacroResult:
+    """duration(ms)만큼 대기하되 100ms 마다 정지 요청을 확인해 즉시 중단한다.
+
+    경과는 sleep 명목치 누적이라 실제 벽시계와 수십 ms 오차가 날 수 있다.
+    """
     duration_s = duration / 1000.0
     ctx.log(f"[WAIT] 대기 시작: {duration}ms ({duration_s}초)")
 
@@ -55,6 +60,11 @@ def vision_origin_check(ctx: MacroContext,
                         repeat_count: int = 5,
                         outlier_method: str = 'iqr',
                         wait_after_command: int = 100) -> MacroResult:
+    """학습 기준점 대비 6축 편차(xyz mm / rpy deg)를 판정하는 매크로 본체.
+
+    RobotBase 좌표계에서만 유효하다 — 측정 pose 와 학습 기준이 같은 좌표계라야
+    편차 비교가 성립하기 때문. 판정 실패 시 on_origin_check_alarm 콜백 발화.
+    """
     service = ctx.vision_origin_check_service
     if not service:
         return MacroResult.failure("기준점 확인 서비스가 없습니다")

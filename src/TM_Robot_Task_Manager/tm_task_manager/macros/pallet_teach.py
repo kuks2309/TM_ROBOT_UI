@@ -1,3 +1,8 @@
+"""팔레트 티칭 워크플로 매크로 — 4점 측정→평면 계산→티칭→레시피 발행.
+
+단위는 mm/deg, 좌표는 로봇 베이스 좌표계. 매크로 간 산출물은 blackboard
+(plate_pose·plate_marks·teach_poses·position_marker_pose 등)로 연쇄된다.
+"""
 import glob
 import os
 from typing import Any, Dict, List, Optional, Tuple
@@ -14,6 +19,9 @@ from ..tools.jig_plane_calculator import (
     tcp_pose_for_plane_normal,
 )
 
+# 꼭짓점 순회 계획 (jig 번호, 마커 간격 단위의 X·Y 이동량) — 1사분면(jig4)에서
+# 출발해 ㄷ자로 도는 순서. pallet_recipe_generator.CORNER_PLAN 과 값이 같아야
+# 캘리 레시피의 순회 순서와 티칭 순서가 일치한다.
 DEFAULT_CORNER_PLAN: Tuple[Tuple[int, float, float], ...] = (
     (4, 0.0, 0.0),
     (2, 1.0, 0.0),
@@ -38,6 +46,11 @@ def _tcp_dict(pose: List[float]) -> Dict[str, float]:
 
 
 def normalize_plate_pose_up(plate_pose: Dict[str, float]) -> Dict[str, float]:
+    """평면 법선이 아래(-Z)를 향하면 y·z 축을 반전해 위를 보게 정규화한다.
+
+    4점 순서에 따라 법선 방향이 뒤집힐 수 있는데, 이후 접근/하강 계산은
+    법선이 위(+Z)라는 전제를 쓴다.
+    """
     rotation = _rotation_matrix_from_pose(plate_pose)
     if rotation[2, 2] >= 0:
         return dict(plate_pose)
@@ -54,6 +67,7 @@ def package_root() -> str:
 
 
 def resolve_measurement_dir(source_path: str) -> str:
+    """상대 경로를 패키지 루트 기준 절대 경로로 만든다 (절대 경로는 그대로)."""
     if os.path.isabs(source_path):
         return source_path
     return os.path.normpath(os.path.join(package_root(), source_path))
@@ -61,6 +75,7 @@ def resolve_measurement_dir(source_path: str) -> str:
 
 def list_measurement_files(source_path: str, file_prefix: str = '',
                            max_files: int = 0) -> List[str]:
+    """측정 yaml 파일을 수정시각 최신순으로 나열한다 (max_files=0 은 전부)."""
     directory = resolve_measurement_dir(source_path)
     if not os.path.isdir(directory):
         return []
@@ -75,6 +90,13 @@ def list_measurement_files(source_path: str, file_prefix: str = '',
 def average_marks_with_outliers(file_paths: List[str],
                                 outlier_method: str = 'iqr') -> Tuple[
         Optional[List[Dict[str, float]]], List[str], List[Tuple[str, str]], Dict[int, Dict]]:
+    """측정 파일들의 jig1~4 마크를 파일 간 outlier 제거 후 평균낸다.
+
+    jig1~4 가 모두 없는 파일은 건너뛴다.
+
+    Returns:
+        (평균 마크 4개 또는 None, 사용 파일, (건너뛴 파일, 사유), jig별 통계).
+    """
     from ..services.landmark_analyzer import LandmarkAnalyzer
 
     keys = ('x', 'y', 'z', 'rx', 'ry', 'rz')
@@ -146,6 +168,10 @@ def pallet_load_measurements(ctx: MacroContext,
                              max_files: int = 5,
                              outlier_method: str = 'iqr',
                              file_paths: Optional[List[str]] = None) -> MacroResult:
+    """저장 측정 평균으로 plate_pose·plate_marks 를 만든다 (로봇 이동 없음).
+
+    file_paths 를 주면 source_path·file_prefix·max_files 검색은 건너뛴다.
+    """
     paths = list(file_paths) if file_paths else list_measurement_files(
         source_path, file_prefix, max_files)
     if not paths:
@@ -208,6 +234,7 @@ def pallet_capture_marker(ctx: MacroContext,
                           repeat_count: int = 10,
                           outlier_method: str = '3sigma',
                           wait_after_command: int = 0) -> MacroResult:
+    """비고정식 팔레트의 위치 마커 6축을 반복 측정해 촬영 TCP 와 함께 저장한다."""
     view = _current_tcp(ctx)
     if view is None:
         return MacroResult.failure("현재 TCP 를 읽지 못했습니다")
@@ -269,6 +296,12 @@ def pallet_scan_4corners(ctx: MacroContext,
                          repeat_count: int = 10,
                          outlier_method: str = '3sigma',
                          wait_after_command: int = 0) -> MacroResult:
+    """마커 간격(pitch, mm)만큼 XY 이동하며 4꼭짓점을 스캔해 평면 pose 를 만든다.
+
+    Z·자세는 시작 TCP 그대로 고정하고 XY 만 움직인다 — 시작 자세를 조그로
+    팔레트와 평행하게 맞춰 뒀다는 전제이며, 팔레트가 크게 기울어져 있으면
+    이동 중 마커가 시야를 벗어날 수 있다.
+    """
     if pitch_x <= 0 or pitch_y <= 0:
         return MacroResult.failure(
             "마커 간격(가로·세로)이 필요합니다 — 1사분면에서 나머지 3점으로 갈 거리를 "
@@ -366,6 +399,7 @@ def pallet_center_approach(ctx: MacroContext,
                            standoff_mm: float = 150.0,
                            rz_mode: str = 'plane',
                            velocity: float = 20.0) -> MacroResult:
+    """평면 법선 위 standoff_mm 지점으로 공구를 평면에 정렬해 이동한다."""
     plate_pose = ctx.get('plate_pose')
     current = _current_tcp(ctx)
     if current is None:
@@ -409,6 +443,7 @@ def pallet_center_approach(ctx: MacroContext,
     produces=['teach_poses'],
 )
 def pallet_capture_teach(ctx: MacroContext, slot: str = 'pick') -> MacroResult:
+    """현재 TCP 를 평면 좌표계 상대값으로 환산해 티칭 슬롯에 저장한다."""
     if slot not in TEACH_SLOTS:
         return MacroResult.failure(f"알 수 없는 티칭 슬롯: {slot} (가능: {', '.join(TEACH_SLOTS)})")
 
@@ -468,6 +503,7 @@ def pallet_emit_recipes(ctx: MacroContext,
                         gripper: str = '',
                         descent: str = 'plane_normal',
                         overwrite: bool = False) -> MacroResult:
+    """그리퍼를 확정(resolve)하고 PalletRecipeGenerator 로 레시피 yaml 을 발행한다."""
     from ..services.pallet_recipe_generator import PalletRecipeGenerator
 
     name = (pallet_name or '').strip()

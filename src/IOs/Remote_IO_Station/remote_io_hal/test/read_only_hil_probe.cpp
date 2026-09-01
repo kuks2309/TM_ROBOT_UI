@@ -1,3 +1,5 @@
+// 실기 스테이션 읽기 전용 HIL 프로브 — FC3 판독(DI/DO + 0x1119)만 N회 순회, 쓰기 0회.
+// 사용법: read_only_hil_probe [host=192.168.192.14] [rounds=5], 순회 간격 200ms.
 #include <cstdio>
 #include <cstdlib>
 #include <thread>

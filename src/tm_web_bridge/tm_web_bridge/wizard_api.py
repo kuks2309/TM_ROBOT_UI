@@ -1,10 +1,16 @@
 # -*- coding: utf-8 -*-
+"""웹 마법사·하드웨어 API — PyQt 팔레트 티칭 탭과 같은 매크로 실행을 HTTP 로 연다.
+
+매크로는 작업 스레드에서 돌고 결과는 폴링으로 받는다. 로봇이 하나뿐이므로
+한 번에 매크로 1개만 허용하고, 로봇을 움직이는 매크로는 motion_enabled 게이트를 요구한다.
+"""
 import threading
 import time
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
+# 웹에서 실행을 허용하는 매크로 — 팔레트 티칭 마법사와 무해한 보조만
 MACRO_WHITELIST = {
     'pallet_load_measurements',
     'pallet_capture_marker',
@@ -16,6 +22,7 @@ MACRO_WHITELIST = {
     'wait',
 }
 
+# 로봇을 실제로 움직이는 매크로 — motion_enabled 게이트가 추가로 걸린다
 MOTION_MACROS = {
     'pallet_capture_marker',
     'pallet_scan_4corners',
@@ -23,7 +30,7 @@ MOTION_MACROS = {
     'pallet_capture_teach',
 }
 
-MAX_LOG_LINES = 400
+MAX_LOG_LINES = 400  # 러너 로그 보존 상한(줄)
 
 
 class MacroRunRequest(BaseModel):
@@ -36,6 +43,7 @@ class SessionRequest(BaseModel):
 
 
 class _Runner:
+    """프로세스 전역 매크로 실행기 — 동시에 1개만 돌리고 세션별 blackboard 를 보관한다."""
 
     def __init__(self):
         self._lock = threading.Lock()
@@ -52,10 +60,12 @@ class _Runner:
         self.sessions: Dict[str, Dict[str, Any]] = {}
 
     def blackboard(self, session: str) -> Dict[str, Any]:
+        """세션 blackboard 반환 — 락 해제 후에는 내부 dict 참조가 그대로 공유된다."""
         with self._lock:
             return self.sessions.setdefault(session or 'default', {})
 
     def reset(self, session: str) -> None:
+        """세션 blackboard 를 새 dict 로 비운다."""
         with self._lock:
             self.sessions[session or 'default'] = {}
 
@@ -66,6 +76,7 @@ class _Runner:
                 del self.logs[:-MAX_LOG_LINES]
 
     def status(self) -> Dict[str, Any]:
+        """실행 상태 스냅샷 (락 보호 복사)."""
         with self._lock:
             return {
                 'busy': self.busy,
@@ -81,6 +92,10 @@ class _Runner:
             }
 
     def start(self, node, name: str, params: Dict[str, Any], session: str):
+        """busy 가 아니면 매크로 워커 스레드를 기동한다. Returns: (수락 여부, 메시지).
+
+        실행 로그는 executor.on_log 를 일시 후킹해 수집하고 종료 시 복원한다.
+        """
         from tm_task_manager.macros import MacroContext, run_macro
 
         with self._lock:
@@ -103,6 +118,7 @@ class _Runner:
         previous_on_log = getattr(executor, 'on_log', None)
 
         def bridge_log(message):
+            # 러너 로그에 쌓고, 물려받은 on_log 핸들러에도 그대로 전달한다
             self.log(message)
             if callable(previous_on_log):
                 try:
@@ -114,6 +130,7 @@ class _Runner:
             try:
                 executor.on_log = bridge_log
                 try:
+                    # 마법사는 레시피 밖에서 매크로를 직접 부르므로 남은 정지 요청을 먼저 지운다
                     ctx.clear_stop_request()
                 except Exception:
                     pass
@@ -138,6 +155,7 @@ class _Runner:
         return True, '시작했습니다'
 
     def stop(self, node) -> (bool, str):
+        """실행 중 매크로에 정지를 요청한다 — executor 정지 플래그 위임."""
         executor = getattr(node, 'job_executor', None)
         if executor is None:
             return False, '실행기가 없습니다'
@@ -148,15 +166,18 @@ class _Runner:
         return True, '정지를 요청했습니다'
 
 
-RUNNER = _Runner()
+RUNNER = _Runner()  # 프로세스 전역 러너 싱글턴
 
 
 def register(app, node):
+    """FastAPI 앱에 매크로·마법사·그리퍼·프로필 라우트를 등록한다."""
 
     @app.get('/macros')
     def list_macros():
+        """전체 매크로 스펙 목록 — web_allowed·moves_robot 플래그 포함."""
         from tm_task_manager.macros import MACROS
         out = []
+        # blackboard_requires()·external_requires() 는 메서드다 — 필드는 requires·produces 뿐
         for name, spec in sorted(MACROS.items()):
             out.append({
                 'name': name,
@@ -175,6 +196,7 @@ def register(app, node):
 
     @app.post('/macros/{name}/run')
     def run_macro_endpoint(name: str, req: MacroRunRequest):
+        """화이트리스트·모션 게이트 통과 시 매크로 실행을 시작한다."""
         if name not in MACRO_WHITELIST:
             return {'success': False,
                     'message': '웹에서 실행이 허용되지 않은 매크로입니다: %s' % name}
@@ -187,15 +209,18 @@ def register(app, node):
 
     @app.get('/macros/status')
     def macro_status():
+        """러너 실행 상태·로그 조회 (폴링용)."""
         return RUNNER.status()
 
     @app.post('/macros/stop')
     def macro_stop():
+        """실행 중 매크로 정지 요청."""
         ok, message = RUNNER.stop(node)
         return {'success': ok, 'message': message}
 
     @app.get('/wizard/blackboard')
     def wizard_blackboard(session: str = 'default'):
+        """세션 blackboard 요약 조회 — numpy·튜플이 섞일 수 있어 키와 타입 요약만 준다."""
         board = RUNNER.blackboard(session)
         summary = {}
         for key, value in board.items():
@@ -211,11 +236,13 @@ def register(app, node):
 
     @app.post('/wizard/reset')
     def wizard_reset(req: SessionRequest):
+        """세션 blackboard 초기화."""
         RUNNER.reset(req.session)
         return {'success': True, 'session': req.session}
 
     @app.get('/gripper/state')
     def gripper_state():
+        """그리퍼 백엔드 감지 상태 조회 (survey 결과·감지 기종)."""
         from tm_task_manager.hardware.gripper import LIVE, ORDER, survey
         rows = survey(node)
         detected = next((b.id for b, s in rows if s == LIVE), None)
@@ -237,6 +264,7 @@ def register(app, node):
 
     @app.get('/robot/profile')
     def robot_profile_endpoint():
+        """활성 로봇 프로필 조회 — 미확정이면 후보 목록과 안내를 반환한다."""
         from tm_task_manager import robot_profile as rp
         try:
             active = rp.active()

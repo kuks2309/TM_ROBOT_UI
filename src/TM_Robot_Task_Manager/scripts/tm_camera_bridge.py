@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+"""TMflow 외부 감지(External Detection) HTTP POST 이미지를 받아 ROS2 `techman_image` 토픽으로 재발행하는 브리지 노드.
+
+실행: ros2 run tm_task_manager tm_camera_bridge.py (TM_CAMERA_PORTS 환경변수로 복수 포트, 기본 6189).
+감지 결과 응답은 고정 payload(fake_result) — 실제 인식은 하지 않는다.
+"""
 import os
 import sys
 import socket
@@ -20,6 +25,12 @@ import threading
 
 
 class ImagePub(Node):
+    """HTTP 수신 이미지를 큐→발행 스레드 경유로 `techman_image` 에 내보내는 노드 겸 Flask 핸들러 묶음.
+
+    Flask 워커 스레드가 큐에 넣고 Condition notify, 전용 발행 스레드가 꺼내 발행하는
+    생산자-소비자 구조 — ROS 발행을 단일 스레드로 직렬화하기 위함.
+    """
+
     def __init__(self,nodeName,isTest,path):
         super().__init__(nodeName)
         self.publisher = self.create_publisher(Image, 'techman_image', 10)
@@ -36,18 +47,22 @@ class ImagePub(Node):
         self.t.start()
                           
     def set_image_and_notify_send(self, img):
+        """이미지(HTTP 원시 bytes 또는 ndarray)를 큐에 넣고 발행 스레드를 깨운다."""
         self.con.acquire()
         self.imageQ.put(img)
         self.con.notify()
         self.con.release()
     def signal_handler(self, signal, frame):
+        """SIGINT 시 발행 스레드를 종료시킨다."""
         self.close_thread()
         
     def publish_test_image(self):
+        """(테스트 모드 전용) 1초 타이머마다 좌우 반전한 이미지를 큐잉한다."""
         self.img = cv2.flip(self.img, 1)
         self.set_image_and_notify_send(self.img)
 
     def image_publisher(self, image):
+        """ndarray 를 채널 수로 인코딩(mono8/bgr8/bgra8) 판정해 sensor_msgs/Image 로 발행한다."""
         if image is None:
             self.get_logger().error('[카메라] 디코딩 실패 — 이미지를 버립니다')
             return
@@ -69,6 +84,7 @@ class ImagePub(Node):
             % (image.shape[1], image.shape[0], encoding, self.imageQ.qsize()))
     
     def close_thread(self):
+        """leaveThread 를 세우고 notify 로 발행 스레드의 wait 를 깨워 탈출시킨다."""
         self.leaveThread = True
         self.con.acquire()
         self.con.notify()
@@ -93,6 +109,7 @@ class ImagePub(Node):
                 self.get_logger().error('[카메라] 발행 실패: %r' % (exc,))
 
     def pub_data_thread(self, isRequestData):
+        """발행 스레드 본체 — Condition wait(1s) 루프로 큐를 소비한다(타임아웃은 놓친 notify 대비)."""
         self.con.acquire()
         self._drain_queue(isRequestData)
         while True:
@@ -103,6 +120,7 @@ class ImagePub(Node):
         self.con.release()
 
     def fake_result(self,m_method):
+        """TMflow 가 기대하는 CLS/DET 감지 응답 형식의 고정 더미 결과를 만든다(실제 인식 없음)."""
         if m_method == 'CLS':
             result = {
                 "message": "success",
@@ -151,7 +169,8 @@ class ImagePub(Node):
             }
         return result
 
-    def get_none(self):    
+    def get_none(self):
+        """`GET /api` — 서버 동작 확인 응답."""
         print('\n[{0}] [{1}] -> Get()'.format(request.environ['REMOTE_ADDR'], datetime.now()))
         result = {
             "result": "api",
@@ -160,6 +179,7 @@ class ImagePub(Node):
         return jsonify(result)
 
     def get(self,m_method):
+        """`GET /api/<m_method>` — status 조회 응답."""
         print('\n[{0}] [{1}] -> Get({2})'.format(request.environ['REMOTE_ADDR'], datetime.now(), m_method))
         if m_method == 'status':
             result = {
@@ -174,6 +194,7 @@ class ImagePub(Node):
         return jsonify(result)
 
     def post(self,m_method):
+        """`POST /api/<m_method>` — image/file 필드의 이미지를 큐잉하고 fake_result 를 응답한다."""
         print('\n[{0}] [{1}] -> Post({2})'.format(request.environ['REMOTE_ADDR'], datetime.now(), m_method))
 
         print(f'Request files: {list(request.files.keys())}')
@@ -210,6 +231,10 @@ class ImagePub(Node):
         return jsonify(result)
       
 def set_route(app, node):
+    """Flask 앱에 /api·/ai 라우트와 미등록 경로 catch-all 을 등록한다.
+
+    catch-all 은 TMflow 쪽 URL 설정 실수(경로 오타)여도 이미지 수신이 되도록 한 방어.
+    """
     app.route('/api/<string:m_method>', methods=['POST'])(node.post)
     app.route('/api/<string:m_method>', methods=['GET'])(node.get)
     app.route('/api', methods=['GET'])(node.get_none)
@@ -230,6 +255,7 @@ def set_route(app, node):
                      methods=['GET', 'POST'])
 
 def main():
+    """rclpy 초기화 → 노드·라우트 구성 → 포트별 waitress 서버 스레드 기동 → spin."""
     rclpy.init(args=None)
     isTest = False
     app = Flask(__name__)

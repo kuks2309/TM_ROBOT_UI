@@ -1,3 +1,4 @@
+"""CommandGate 의 명령 직렬화(획득/해제/거부 로그)와 JogService 의 게이트 연동을 검증한다."""
 import pytest
 
 from tm_task_manager.services.command_gate import CommandGate

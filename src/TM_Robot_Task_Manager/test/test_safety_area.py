@@ -1,3 +1,4 @@
+"""safety/safety_area 의 안전 영역 판정을 검증한다."""
 import pytest
 
 from tm_task_manager.safety import safety_area as sa

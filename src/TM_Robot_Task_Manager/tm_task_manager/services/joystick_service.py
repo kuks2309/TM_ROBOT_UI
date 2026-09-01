@@ -1,3 +1,4 @@
+"""리눅스 joydev(/dev/input/js*) 기반 PS2 조이스틱 조그 서비스."""
 import os
 import struct
 import select
@@ -5,14 +6,17 @@ import yaml
 from typing import Optional, Dict, Any
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, QTimer
 
+# joydev 이벤트 레코드: u32 time(ms) + s16 value + u8 type + u8 number = 8바이트
 JS_EVENT_SIZE = 8
 JS_EVENT_FORMAT = 'IhBB'
 JS_EVENT_BUTTON = 0x01
 JS_EVENT_AXIS = 0x02
-JS_EVENT_INIT = 0x80
+JS_EVENT_INIT = 0x80   # 장치 초기 상태 통지 비트 — 실이벤트와 구분용
 
 
 class JoystickWorker(QThread):
+    """joydev 장치를 select 로 읽어 축/버튼 이벤트를 Qt 시그널로 바꾸는 워커."""
+
     axis_changed = pyqtSignal(int, float)
     button_changed = pyqtSignal(int, bool)
     connection_changed = pyqtSignal(bool)
@@ -24,6 +28,7 @@ class JoystickWorker(QThread):
         self._running = False
 
     def run(self):
+        """(워커 스레드) 8바이트 이벤트 루프 — 축 값은 -32767~32767 을 ±1.0 으로 정규화."""
         self._running = True
 
         try:
@@ -31,6 +36,7 @@ class JoystickWorker(QThread):
                 self.connection_changed.emit(True)
 
                 while self._running:
+                    # 0.1s 타임아웃 select — 종료 플래그를 주기적으로 확인하기 위해
                     readable, _, _ = select.select([js], [], [], 0.1)
 
                     if not readable:
@@ -67,15 +73,24 @@ class JoystickWorker(QThread):
             self.connection_changed.emit(False)
 
     def stop(self):
+        # GUI 스레드가 세우고 워커 루프가 확인하는 bool — 단순 대입이라 락 없음
         self._running = False
 
 
 class JoystickService(QObject):
+    """데드맨 축 상태로 XYZ/RxRyRz 모드를 전환하며 jog_requested 를 발행한다.
+
+    워커 시그널은 큐드 커넥션으로 GUI 스레드 슬롯에서 처리되므로 내부 상태는
+    전부 GUI 스레드 단일 접근이다. 장치 분리 시 5초 주기 재연결을 시도한다.
+    """
+
     jog_requested = pyqtSignal(str, int)
     mode_changed = pyqtSignal(str)
     connection_changed = pyqtSignal(bool)
     status_changed = pyqtSignal(str)
 
+    # z 와 rz 가 같은 물리축(7)을 공유한다 — 데드맨 두 개를 동시에 쥐면
+    # 두 모드의 조그가 같은 틱에 함께 발행될 수 있다
     DEFAULT_CONFIG = {
         'joystick': {
             'device_path': '/dev/input/js0',
@@ -117,6 +132,11 @@ class JoystickService(QObject):
         self._reconnect_timer.setInterval(5000)
 
     def _load_config(self, config_path: Optional[str]) -> Dict[str, Any]:
+        """yaml 설정 로드 (실패 시 DEFAULT_CONFIG 얕은 사본).
+
+        사용자 yaml 은 기본값과 병합하지 않는다 — joystick 하위 키가 빠진
+        파일을 주면 이후 접근에서 KeyError 가 난다 (완전한 파일 전제).
+        """
         if config_path and os.path.exists(config_path):
             try:
                 with open(config_path, 'r') as f:
@@ -140,6 +160,7 @@ class JoystickService(QObject):
 
 
     def start(self):
+        """장치 읽기 워커를 만들어 기동한다 (이미 있으면 무시)."""
         if self._worker is not None:
             return
 
@@ -154,6 +175,7 @@ class JoystickService(QObject):
         self._worker.start()
 
     def stop(self):
+        """타이머·워커를 모두 멈춘다 (워커 종료 최대 0.5s 대기)."""
         self._jog_timer.stop()
         self._reconnect_timer.stop()
 
@@ -163,6 +185,7 @@ class JoystickService(QObject):
             self._worker = None
 
     def set_enabled(self, enabled: bool):
+        """조그 발행 on/off — 켜면 워커 기동 + 폴링 타이머 시작."""
         self._enabled = enabled
         if enabled:
             self.start()
@@ -175,6 +198,10 @@ class JoystickService(QObject):
 
 
     def _on_axis_changed(self, axis_id: int, value: float):
+        """(GUI 슬롯) 데드맨 판정·모드 전환 후 데드존 적용 값을 저장한다.
+
+        데드맨 축은 트리거(누르면 +1)라 value > threshold 로 판정한다.
+        """
         deadzone = self._config['joystick']['deadzone']
         deadman_axes = self._config['joystick']['deadman_axes']
         threshold = deadman_axes.get('threshold', 0.5)
@@ -223,6 +250,7 @@ class JoystickService(QObject):
         self.status_changed.emit(message)
 
     def _try_reconnect(self):
+        """(5s 타이머) 장치 파일이 다시 보이면 워커를 재기동한다."""
         device_path = self._config['joystick']['device_path']
         if os.path.exists(device_path):
             self._reconnect_timer.stop()
@@ -230,6 +258,7 @@ class JoystickService(QObject):
             self.start()
 
     def _process_jog(self):
+        """(폴링 타이머) 활성 데드맨 모드의 축별로 jog_requested(axis, ±1)를 발행한다."""
         if not self._enabled:
             return
 

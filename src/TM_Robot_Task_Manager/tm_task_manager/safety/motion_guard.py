@@ -1,3 +1,9 @@
+"""이동 명령 사전 안전 게이트 — 모션 종류별로 구역 판정 후 허용/거부를 기록한다.
+
+좌표계 전제: tcp_pose·target_mm 은 로봇 베이스 좌표계 mm 로 가정하며 코드가
+이를 강제하지 않는다 — ChangeBase 로 다른 좌표계(vision base 등)에 있는 동안
+Line 목표를 넘기면 베이스 구역과 잘못 대조된다. 호출측이 좌표계를 보장할 것.
+"""
 import math
 from dataclasses import dataclass, field
 from typing import Callable, List, Optional, Sequence
@@ -18,6 +24,7 @@ MAX_RECORDS = 200
 
 @dataclass
 class GuardDecision:
+    """한 번의 이동 검사 결과 (허용 여부·검사 여부·사유·시작/목표점 mm)."""
 
     allowed: bool
     kind: str
@@ -29,6 +36,7 @@ class GuardDecision:
     target_mm: Optional[List[float]] = None
 
     def summary(self) -> str:
+        """허용/거부·검사 여부·사유를 한 줄 로그 문장으로 만든다."""
         verdict = '허용' if self.allowed else '거부'
         mark = '검사함' if self.checked else '미검사'
         head = f'[안전구역] {verdict}/{mark} {self.label or self.kind}'
@@ -37,6 +45,7 @@ class GuardDecision:
 
 
 def rotation_matrix_deg(rx_deg: float, ry_deg: float, rz_deg: float) -> List[List[float]]:
+    """오일러 각(deg)에서 Rz·Ry·Rx 순 합성 3x3 회전행렬을 만든다 (순수 파이썬)."""
     rx, ry, rz = math.radians(rx_deg), math.radians(ry_deg), math.radians(rz_deg)
     cx, sx = math.cos(rx), math.sin(rx)
     cy, sy = math.cos(ry), math.sin(ry)
@@ -50,6 +59,7 @@ def rotation_matrix_deg(rx_deg: float, ry_deg: float, rz_deg: float) -> List[Lis
 
 def tool_offset_to_base(tcp_pose: Sequence[float],
                         dx: float, dy: float, dz: float) -> List[float]:
+    """공구 좌표계 오프셋(mm)을 현재 TCP 자세로 회전시켜 베이스 목표점(mm)으로 환산한다."""
     R = rotation_matrix_deg(tcp_pose[3], tcp_pose[4], tcp_pose[5])
     offset = (float(dx), float(dy), float(dz))
     return [
@@ -59,6 +69,12 @@ def tool_offset_to_base(tcp_pose: Sequence[float],
 
 
 class MotionGuard:
+    """모션 종류별 사전 판정기.
+
+    구역 활성 시 정책: Line 계열만 시작-목표 선분을 정확 검사, PTP 는 실경로
+    비보증으로 무조건 거부, vision_job 은 목표 좌표 불명으로 '미검사 허용'.
+    기록(_records)은 락 없이 다루므로 단일 스레드(GUI/executor 계열) 호출 전제.
+    """
 
     def __init__(self, area: Optional[dict] = None,
                  log_callback: Optional[Callable[[str], None]] = None):
@@ -75,6 +91,7 @@ class MotionGuard:
         return sa.is_enabled(self._area)
 
     def reload(self, path: Optional[str] = None) -> dict:
+        """설정 파일에서 구역을 다시 읽어 적용하고 돌려준다."""
         self._area = sa.load_area(path)
         return self._area
 
@@ -82,9 +99,11 @@ class MotionGuard:
         self._area = area
 
     def records(self) -> List[GuardDecision]:
+        """판정 기록 사본 (최대 MAX_RECORDS 건)."""
         return list(self._records)
 
     def unchecked_records(self) -> List[GuardDecision]:
+        """'허용됐지만 미검사'인 기록만 — 무검사 통과분 감사용."""
         return [r for r in self._records if r.allowed and not r.checked]
 
     def clear_records(self) -> None:
@@ -95,6 +114,7 @@ class MotionGuard:
             self._log_callback(message)
 
     def _record(self, decision: GuardDecision) -> GuardDecision:
+        """기록 append 후 상한 트림 — 거부/미검사 건만 로그로 띄운다."""
         self._records.append(decision)
         if len(self._records) > MAX_RECORDS:
             del self._records[:-MAX_RECORDS]
@@ -106,6 +126,17 @@ class MotionGuard:
               target_mm: Optional[Sequence[float]] = None,
               offset_mm: Optional[Sequence[float]] = None,
               label: str = '') -> GuardDecision:
+        """이동 한 건을 판정해 기록한다.
+
+        Args:
+            kind: MOTION_* 상수 중 하나.
+            tcp_pose: 현재 TCP [x,y,z,rx,ry,rz] (베이스 좌표계 mm/deg).
+            target_mm: 절대 목표점 (line/ptp 용, 베이스 mm).
+            offset_mm: 공구 좌표계 상대 오프셋 (line_relative 용, mm).
+
+        시작점이 이미 위반 상태면 갇힘 방지를 위해 목표점만 검사한다
+        (구역 밖에서 안으로 복귀하는 이동을 허용하기 위해).
+        """
         if not self.enabled:
             return self._record(GuardDecision(
                 allowed=True, kind=kind, label=label, checked=False,

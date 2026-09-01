@@ -1,3 +1,4 @@
+"""robot_motion_service 의 TM 조인트 메시지 판별(is_tm_joint_state)을 검증한다."""
 from tm_task_manager.services.robot_motion_service import (
     TM_JOINT_NAMES,
     is_tm_joint_state,

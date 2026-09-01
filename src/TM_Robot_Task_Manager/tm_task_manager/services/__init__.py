@@ -1,3 +1,8 @@
+"""services 공개 API 재수출 — 나머지 서비스 모듈은 사용처에서 직접 import 한다.
+
+import 연쇄로 rclpy·tm_msgs·cv2·PyQt5 가 로드되므로 ROS 환경 미소싱 셸에서는
+패키지 import 자체가 실패한다.
+"""
 from .vision_manager import VisionManager
 from .config_manager import ConfigManager
 from .network_manager import NetworkManager

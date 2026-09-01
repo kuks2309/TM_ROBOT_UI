@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+"""RecipeManager/Job/Recipe 의 Runtime 확장 필드(coordinate_mode 등) 생성·직렬화·왕복 보존을 5단계로 검증하는 수동 스크립트.
+
+실행: python3 tools/verify_recipe_manager.py (pytest 미사용, print 기반 — 고정 워크스페이스 경로 의존).
+"""
 import sys
 import os
 
@@ -11,6 +15,7 @@ Recipe = recipe_manager.Recipe
 
 
 def verify_job_class():
+    """Job 생성과 to_dict/from_dict 왕복에서 확장 필드 보존을 출력으로 확인한다(항상 True 반환)."""
     print("=" * 70)
     print("1. Job 클래스 검증")
     print("=" * 70)
@@ -46,6 +51,7 @@ def verify_job_class():
 
 
 def verify_recipe_class():
+    """Recipe 메타필드(master_file·reference 등) 왕복 보존을 출력으로 확인한다(항상 True 반환)."""
     print("\n" + "=" * 70)
     print("2. Recipe 클래스 검증")
     print("=" * 70)
@@ -92,6 +98,7 @@ def verify_recipe_class():
 
 
 def verify_runtime_file_loading():
+    """실제 runtime YAML 을 로드해 필드 체크리스트로 판정한다."""
     print("\n" + "=" * 70)
     print("3. Runtime 파일 로드 상세 검증")
     print("=" * 70)
@@ -135,6 +142,7 @@ def verify_runtime_file_loading():
 
 
 def verify_save_load_cycle():
+    """임시 파일로 저장→재로드 후 필드 동등성을 비교한다."""
     print("\n" + "=" * 70)
     print("4. 저장 → 로드 사이클 상세 검증")
     print("=" * 70)
@@ -181,6 +189,7 @@ def verify_save_load_cycle():
 
 
 def verify_all_runtime_files():
+    """runtime YAML 전체의 필수 필드 존재를 전수 확인한다."""
     print("\n" + "=" * 70)
     print("5. 모든 Runtime 파일 필드 검증")
     print("=" * 70)

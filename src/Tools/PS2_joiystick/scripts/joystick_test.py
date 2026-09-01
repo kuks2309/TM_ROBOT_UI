@@ -1,15 +1,23 @@
 #!/usr/bin/env python3
+"""리눅스 joydev(/dev/input/jsN)를 직접 읽어 축·버튼 이벤트를 출력하는 조이스틱 진단 CLI."""
 import sys
 import struct
 import select
 
+# 커널 joydev 이벤트 구조체(struct js_event): u32 time(ms) · s16 value · u8 type · u8 number = 8B.
 JS_EVENT_SIZE = 8
 JS_EVENT_FORMAT = 'IhBB'
 JS_EVENT_BUTTON = 0x01
 JS_EVENT_AXIS = 0x02
+# 열자마자 커널이 현재 상태를 쏟아내는 합성 이벤트 플래그 — type 에 OR 되어 온다.
 JS_EVENT_INIT = 0x80
 
 def main():
+    """이벤트 루프 — select 0.1s 폴링, 축 값은 s16 최대치 32767 로 나눠 [-1, 1] 정규화.
+
+    INIT 이벤트는 집계만 하고 출력하지 않는다(연결 직후 도배 방지).
+    장치 부재·권한 없음은 안내 후 rc=1, Ctrl+C 시 감지된 축/버튼 수 요약.
+    """
     device_path = sys.argv[1] if len(sys.argv) > 1 else '/dev/input/js0'
 
     print(f"조이스틱 테스트: {device_path}")

@@ -1,3 +1,4 @@
+"""job_executor 스캔 실패 로그의 원인 구분 메시지를 검증한다."""
 import pytest
 from unittest.mock import MagicMock
 

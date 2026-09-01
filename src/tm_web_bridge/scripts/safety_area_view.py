@@ -1,3 +1,5 @@
+"""안전 구역(keep-in/keep-out) 오프라인 도식화 CLI — safety_area.yaml 을 3D 로 그리고
+TCP 이동 선분의 허용구역 이탈·금지구역 교차를 판정한다 (ROS 미사용, 좌표 단위 mm)."""
 import argparse
 import os
 import sys
@@ -11,8 +13,10 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
+# 공구 확장 기본값 — radius_mm 는 금지구역 확장에 더해지는 공구 반경
 DEFAULT_TOOL = {"enabled": True, "radius_mm": 45.0, "length_mm": None}
 
+# 설정 파일 부재 시 기본값 — 비활성(제약 없음)으로 그린다
 DEFAULT_AREA = {
     "enabled": False,
     "margin_mm": 20.0,
@@ -22,6 +26,7 @@ DEFAULT_AREA = {
     "tool": dict(DEFAULT_TOOL),
 }
 
+# --demo 용 내장 구성 (셀·피더 허용, 기둥·컨베이어 금지)
 DEMO_AREA = {
     "enabled": True,
     "margin_mm": 20.0,
@@ -37,14 +42,16 @@ DEMO_AREA = {
     "tool": {"enabled": True, "radius_mm": 45.0, "length_mm": None},
 }
 
-BASE_POINT_MM = (0.0, 0.0, 0.0)
+BASE_POINT_MM = (0.0, 0.0, 0.0)  # 로봇 베이스 원점 (mm)
 
+# 도식 색상 — keep-in/keep-out/margin/경로 통과/경로 거부
 C_KEEPIN = "#2e9e5b"
 C_KEEPOUT = "#d94040"
 C_MARGIN = "#8a6d00"
 C_OK = "#1f6fd0"
 C_BAD = "#c0007a"
 
+# corners() 인덱스 기준 박스 6면 정의
 FACE_ORDER = [
     (0, 1, 3, 2), (4, 5, 7, 6),
     (0, 1, 5, 4), (2, 3, 7, 6),
@@ -53,6 +60,7 @@ FACE_ORDER = [
 
 
 def pick_korean_font():
+    """설치된 폰트 중 한글 지원 폰트를 고른다 (없으면 None)."""
     names = {f.name for f in font_manager.fontManager.ttflist}
     for cand in ("Noto Sans CJK KR", "NanumGothic", "Noto Sans CJK JP",
                  "Noto Sans CJK SC", "Malgun Gothic", "UnDotum"):
@@ -62,11 +70,16 @@ def pick_korean_font():
 
 
 def package_config_path():
+    """패키지 config/safety_area.yaml 기본 경로."""
     here = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(os.path.dirname(here), "config", "safety_area.yaml")
 
 
 def load_area(path, demo=False):
+    """구성 로드 — yaml 에 기본값을 병합한다. 파일 부재 시 데모/기본값 fallback.
+
+    Returns: (area dict, 출처 표시 문자열, 데모 여부).
+    """
     if demo:
         return dict(DEMO_AREA), "(내장 데모 구성)", True
     if path is None:
@@ -91,17 +104,20 @@ def load_area(path, demo=False):
 
 
 def corners(lo, hi):
+    """AABB 8꼭짓점 — 인덱스 비트(4/2/1)가 축별 lo/hi 를 선택한다."""
     return np.array([[lo[0] if not (i & 4) else hi[0],
                       lo[1] if not (i & 2) else hi[1],
                       lo[2] if not (i & 1) else hi[2]] for i in range(8)], dtype=float)
 
 
 def faces(lo, hi):
+    """AABB 6면의 꼭짓점 목록."""
     c = corners(lo, hi)
     return [[c[i] for i in quad] for quad in FACE_ORDER]
 
 
 def add_box(ax, lo, hi, color, alpha, lw, linestyle="-", fill=True):
+    """박스 1개를 Poly3DCollection 으로 3D 축에 추가한다."""
     poly = Poly3DCollection(faces(lo, hi), linewidths=lw, linestyles=linestyle)
     poly.set_facecolor(matplotlib.colors.to_rgba(color, alpha if fill else 0.0))
     poly.set_edgecolor(color)
@@ -109,6 +125,7 @@ def add_box(ax, lo, hi, color, alpha, lw, linestyle="-", fill=True):
 
 
 def point_in_area(area, p):
+    """점이 허용 박스 합집합 안인지 판정 — 비활성이거나 박스가 없으면 항상 True."""
     if not area.get("enabled"):
         return True
     boxes = area.get("allowed_boxes") or []
@@ -122,6 +139,7 @@ def point_in_area(area, p):
 
 
 def segment_intersects_box(p0, p1, lo, hi):
+    """slab 법 선분-AABB 교차 판정 (t 매개변수 0~1 구간 교집합)."""
     tmin, tmax = 0.0, 1.0
     for i in range(3):
         d = float(p1[i]) - float(p0[i])
@@ -141,6 +159,7 @@ def segment_intersects_box(p0, p1, lo, hi):
 
 
 def tool_inflation_mm(area):
+    """공구 반경 확장값(mm) — 공구 비활성이거나 반경이 무효면 0."""
     tool = area.get("tool") or {}
     if not tool.get("enabled"):
         return 0.0
@@ -151,10 +170,15 @@ def tool_inflation_mm(area):
 
 
 def inflation_mm(area):
+    """금지구역 확장 총량(mm) = margin + 공구 반경."""
     return float(area.get("margin_mm", 0.0)) + tool_inflation_mm(area)
 
 
 def check_segment(area, p0, p1, step_mm=10.0):
+    """선분 판정 — 허용구역은 step_mm 간격 샘플링 검사, 금지구역은 확장 박스와 교차 검사.
+
+    Returns: (통과 여부, 사유 문자열).
+    """
     if not area.get("enabled"):
         return True, "안전 구역 비활성"
     reasons = []
@@ -176,6 +200,7 @@ def check_segment(area, p0, p1, step_mm=10.0):
 
 
 def parse_path(text):
+    """"x0,y0,z0:x1,y1,z1" 문자열을 두 점으로 파싱한다 (mm)."""
     a, b = text.split(":")
     p0 = [float(v) for v in a.split(",")]
     p1 = [float(v) for v in b.split(",")]
@@ -185,6 +210,7 @@ def parse_path(text):
 
 
 def scene_bounds(area, paths):
+    """모든 박스·경로·베이스를 포함하는 장면 경계 + 패딩."""
     pts = [list(BASE_POINT_MM)]
     for b in (area.get("allowed_boxes") or []) + (area.get("keep_out_boxes") or []):
         pts.append(list(b["min"]))
@@ -199,6 +225,7 @@ def scene_bounds(area, paths):
 
 
 def draw(area, paths, title, out, show, elev, azim):
+    """3D 도식 생성 — 구역·경로 판정을 표시하고 PNG 저장/창 표시 후 판정을 stdout 에 출력한다."""
     font = pick_korean_font()
     if font:
         plt.rcParams["font.family"] = font
@@ -280,6 +307,7 @@ def draw(area, paths, title, out, show, elev, azim):
 
 
 def main():
+    """CLI 진입점 — 인자 파싱 후 구성 로드·경로 판정·도식화."""
     ap = argparse.ArgumentParser(
         description="안전 구역(keep-in / keep-out) 3차원 도식화")
     ap.add_argument("--config", "-c", default=None,
@@ -296,6 +324,7 @@ def main():
     args = ap.parse_args()
 
     if args.no_show or (args.out and not os.environ.get("DISPLAY")):
+        # 헤드리스 환경에서 저장 전용이면 디스플레이 없는 Agg 백엔드로 전환
         matplotlib.use("Agg")
 
     area, src, is_demo = load_area(args.config, args.demo)

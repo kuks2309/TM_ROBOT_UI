@@ -1,3 +1,4 @@
+"""조그 파사드 — 파라미터 보관 + CommandGate 점유 하에 TeachingService 로 위임."""
 from typing import Callable, List, Optional, Tuple
 
 from PyQt5.QtCore import QObject, pyqtSignal
@@ -7,6 +8,12 @@ JOG_VELOCITY_PERCENT_DEFAULT = 20
 
 
 class JogService(QObject):
+    """키보드 탭·조이스틱이 함께 쓰는 조그 공용 진입점 (Qt 메인 스레드 전제).
+
+    step(mm)·velocity(%) 를 보관하고, CommandGate 로 중복 실행을 막은 뒤
+    TeachingService.jog_tcp(_continuous) 에 위임한다. 실패는 jog_failed 시그널.
+    """
+
     jog_failed = pyqtSignal(str)
     params_changed = pyqtSignal(float, int)
 
@@ -32,6 +39,7 @@ class JogService(QObject):
 
     def set_params(self, step_mm: Optional[float] = None,
                    velocity_percent: Optional[int] = None) -> bool:
+        """조그 스텝(mm)/속도(%)를 갱신한다 — 값이 실제로 바뀐 경우만 시그널."""
         changed = False
 
         if step_mm is not None and float(step_mm) != self._step_mm:
@@ -53,6 +61,7 @@ class JogService(QObject):
         return getattr(self._ros_node, 'current_tcp_pose', None)
 
     def _prepare(self) -> Tuple[bool, Optional[List[float]], str]:
+        """의존성·현재 TCP 존재를 사전 점검한다 — (가능 여부, pose, 오류 문구)."""
         if not self._teaching_service:
             return False, None, "TeachingService 가 초기화되지 않았습니다"
         if not self._move_callback:
@@ -83,6 +92,7 @@ class JogService(QObject):
             self._command_gate.release()
 
     def jog(self, axis: str, direction: int) -> bool:
+        """단발 조그 — 게이트 점유 실패(다른 명령 실행 중)면 조용히 False."""
         if not self._acquire(f"조그 {axis}{'+' if direction > 0 else '-'}"):
             return False
 
@@ -107,6 +117,7 @@ class JogService(QObject):
         return success
 
     def jog_continuous(self, axis: str, direction: int) -> bool:
+        """연속 조그(레이트리밋 없는 반복 호출용) — 점유 실패 시 False."""
         if not self._acquire(f"연속 조그 {axis}{'+' if direction > 0 else '-'}"):
             return False
 

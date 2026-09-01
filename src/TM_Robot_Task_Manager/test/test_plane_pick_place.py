@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""job_executor 평면 프레임 pick/place job 을 검증한다."""
 import sys
 from pathlib import Path
 

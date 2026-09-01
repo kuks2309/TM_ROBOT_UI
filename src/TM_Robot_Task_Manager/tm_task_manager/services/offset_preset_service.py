@@ -1,3 +1,4 @@
+"""평면 정렬 오차 preset(x/y mm, rx/ry/rz deg) 의 yaml CRUD."""
 import os
 from typing import Dict, List, Optional, Tuple
 
@@ -9,6 +10,12 @@ DEFAULT_PRESET_FILENAME = 'plane_align_offsets.yaml'
 
 
 class OffsetPresetService:
+    """preset 파일을 매 호출 통째로 읽고(정규화 포함) 저장/삭제 시 전체 재기록한다.
+
+    캐시가 없어 다중 인스턴스 간 불일치는 없지만, 읽기-수정-쓰기가 파일
+    수준에서 원자적이지 않다 — 단일 프로세스 사용 전제.
+    """
+
     def __init__(self, config_path: Optional[str] = None):
         if config_path is None:
             config_path = os.path.join(
@@ -18,6 +25,7 @@ class OffsetPresetService:
         self.config_path = os.path.normpath(config_path)
 
     def _load_all(self) -> Dict[str, Dict[str, float]]:
+        """파일 전체를 읽어 preset 별 정규화 dict 로 (없거나 깨졌으면 빈 dict)."""
         if not os.path.exists(self.config_path):
             return {}
 
@@ -39,6 +47,7 @@ class OffsetPresetService:
 
     @staticmethod
     def _normalize(values: Dict) -> Dict[str, float]:
+        """TOOL_OFFSET_KEYS 5키를 float 화한다 — 비수치·누락은 0.0 으로."""
         normalized = {}
         for key in TOOL_OFFSET_KEYS:
             try:
@@ -54,6 +63,7 @@ class OffsetPresetService:
         return self._load_all().get(name)
 
     def save(self, name: str, offset: Dict[str, float]) -> Tuple[bool, str]:
+        """preset 저장/덮어쓰기 — (성공 여부, 안내 문구)."""
         name = (name or "").strip()
         if not name:
             return False, "preset 이름이 비어 있습니다"
@@ -70,6 +80,7 @@ class OffsetPresetService:
         return True, f"오차 preset '{name}' 을(를) {action}"
 
     def delete(self, name: str) -> Tuple[bool, str]:
+        """preset 삭제 — (성공 여부, 안내 문구)."""
         presets = self._load_all()
         if name not in presets:
             return False, f"오차 preset '{name}' 이(가) 없습니다"

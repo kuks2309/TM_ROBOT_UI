@@ -1,3 +1,4 @@
+"""YOLOv8 세그먼테이션 기반 검출 서비스 — 래치 OPEN/CLOSE 각도 판정 포함."""
 import sys
 import os
 import glob
@@ -12,6 +13,7 @@ from .. import paths
 
 @dataclass
 class DetectionResult:
+    """검출 1건 — bbox/center 는 픽셀, angle 은 deg, state 는 OPEN/CLOSE/UNKNOWN."""
     class_id: int
     class_name: str
     confidence: float
@@ -23,6 +25,13 @@ class DetectionResult:
 
 
 class AIDetectionService(QObject):
+    """task(jig_latch/tag_detect)·runtime(pc/hailo)별 모델 관리와 추론 실행.
+
+    ultralytics 는 시스템이 아닌 전용 venv(yolov8_env)의 site-packages 를
+    sys.path 에 주입해 로드한다. run_inference 는 호출 스레드 블로킹 —
+    스레딩은 호출 탭 소관이다.
+    """
+
     model_loaded = pyqtSignal(bool, str)
     detection_completed = pyqtSignal(list, object, float)
     detection_error = pyqtSignal(str)
@@ -57,6 +66,12 @@ class AIDetectionService(QObject):
         self._last_inference_time = 0.0
 
     def _add_venv_to_path(self):
+        """yolov8_env 의 site-packages 를 sys.path 맨 앞에 넣는다.
+
+        프로세스 전역 패키지 해석 순서가 바뀐다 — venv 쪽 numpy 등이 앱 것보다
+        우선된다. 부재 시 detection_error 를 emit 하지만 생성자 시점이라 아직
+        연결된 슬롯이 없으면 통지가 유실된다.
+        """
         venv_site_packages = os.path.join(
             self.YOLOV8_VENV_PATH,
             "lib",
@@ -71,6 +86,7 @@ class AIDetectionService(QObject):
             self.detection_error.emit(f"YOLOv8 venv not found: {venv_site_packages}")
 
     def get_available_tasks(self) -> List[Tuple[str, str]]:
+        """tasks/ 하위에 실재하는 task 만 (id, 표시명) 으로 나열한다."""
         tasks = []
         for task_id, display_name in self.DETECTION_TASKS.items():
             task_dir = os.path.join(self.TASKS_ROOT, task_id)
@@ -82,6 +98,7 @@ class AIDetectionService(QObject):
         return [(rid, cfg[0]) for rid, cfg in self.RUNTIME_CONFIG.items()]
 
     def get_available_models(self, task: str = "", runtime: str = "") -> List[Tuple[str, str]]:
+        """task·runtime 의 모델 파일(.pt/.hef)을 (이름, 경로)로 나열한다."""
         models = []
 
         if not task or not runtime:
@@ -102,6 +119,7 @@ class AIDetectionService(QObject):
         return models
 
     def load_model(self, model_path: str) -> bool:
+        """ultralytics YOLO 모델을 로드한다 — 결과는 model_loaded 시그널로도 통지."""
         try:
             self.status_changed.emit(f"Loading model: {model_path}")
 
@@ -133,10 +151,12 @@ class AIDetectionService(QObject):
             return False
 
     def set_confidence_threshold(self, threshold: float):
+        """검출 신뢰도 문턱 설정 (0.0~1.0 클램프)."""
         self._confidence_threshold = max(0.0, min(1.0, threshold))
         self.status_changed.emit(f"Confidence threshold: {self._confidence_threshold:.2f}")
 
     def set_angle_threshold(self, threshold: float):
+        """래치 CLOSE 판정 각도 문턱(deg, 1~45 클램프) 설정."""
         self._angle_threshold = max(1.0, min(45.0, threshold))
 
     @property
@@ -148,6 +168,10 @@ class AIDetectionService(QObject):
         return self._model is not None
 
     def run_inference(self, cv_image: np.ndarray) -> bool:
+        """BGR 이미지를 추론해 DetectionResult 목록·어노테이션 이미지·fps 를 시그널로 낸다.
+
+        호출 스레드에서 predict 가 끝날 때까지 블로킹한다.
+        """
         if not self.is_model_loaded:
             self.detection_error.emit("No model loaded")
             return False
@@ -227,6 +251,11 @@ class AIDetectionService(QObject):
     def _calc_mask_angle_and_state(
         self, mask: np.ndarray, image_shape: Tuple[int, int]
     ) -> Tuple[Optional[float], Optional[str]]:
+        """마스크 최대 윤곽의 minAreaRect 각도로 래치 상태를 판정한다.
+
+        각도를 장축 기준 ±90° 로 정규화한 뒤, |각도| 가 90° 에서
+        angle_threshold(deg) 이내면 CLOSE(래치가 세로로 잠김), 아니면 OPEN.
+        """
         try:
             import cv2
         except ImportError:
@@ -268,6 +297,7 @@ class AIDetectionService(QObject):
         return round(angle, 1), state
 
     def _draw_annotations(self, image: np.ndarray, results: List[DetectionResult]) -> np.ndarray:
+        """마스크 오버레이·박스·라벨·중심점을 그린 어노테이션 이미지를 만든다."""
         try:
             import cv2
         except ImportError:
@@ -322,6 +352,7 @@ class AIDetectionService(QObject):
         return image
 
     def _get_class_color(self, class_id: int) -> Tuple[int, int, int]:
+        """클래스별 표시 색 (BGR, 10색 순환)."""
         colors = [
             (255, 0, 0),
             (0, 255, 0),

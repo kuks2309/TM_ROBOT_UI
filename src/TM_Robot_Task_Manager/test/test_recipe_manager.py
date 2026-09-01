@@ -1,3 +1,4 @@
+"""recipe_manager 의 Job·Recipe·RecipeManager 직렬화/로드/저장을 검증한다."""
 import pytest
 import os
 import yaml

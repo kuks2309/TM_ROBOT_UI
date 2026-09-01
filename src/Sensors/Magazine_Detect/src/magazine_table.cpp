@@ -7,6 +7,8 @@ namespace magazine_detect
 
 namespace
 {
+// 파일 스코프 constexpr 이어야 한다 — 지역 배열로 내리면 slotName 이 댕글링 포인터를 반환한다.
+// 순서는 슬롯 번호와 같다(앞/뒤 교차 배선 — 도면 일련번호와 4자리가 어긋난다).
 constexpr const char * kSlotNames[kSlotCount] = {
   "앞 왼", "뒤 왼", "앞 중", "뒤 중", "앞 오", "뒤 오"};
 }

@@ -1,14 +1,25 @@
+"""TCP 목표를 축 분해 경유점 열로 바꾸는 계획기 (mm/deg)."""
 from typing import List, Tuple
 
 from .coordinate_transformer import CoordinateTransformer
 
 
+# 이 값 미만의 축 변화는 경유점을 만들지 않는다 (불필요한 미세 이동 방지)
 DECOMPOSED_MIN_STEP_MM = 0.1
 DECOMPOSED_MIN_STEP_DEG = 0.1
 
 
 def build_decomposed_tcp_waypoints(current_pose: List[float],
                                    target: List[float]) -> Tuple[List[Tuple[str, List[float]]], str]:
+    """현재→목표 TCP 이동을 축별 경유점 열로 분해한다.
+
+    하강이면 회전→긴 수평축→짧은 수평축→Z 순 (Z 를 마지막에 내려 장애물
+    위에서 XY 정렬을 끝내려는 의도), 상승/수평이면 회전→Z→수평 순.
+    마지막 경유점은 누적 오차가 남지 않게 목표 원본으로 스냅한다.
+
+    Returns:
+        ([(축 라벨, pose[6])], 순서 라벨('하강'/'상승/수평')).
+    """
     pose = list(current_pose[:6])
     target = list(target[:6])
 

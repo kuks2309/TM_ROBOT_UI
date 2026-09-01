@@ -1,3 +1,5 @@
+// MbapClient 전송 계층 시험 — FC3/FC6 정상 왕복, 프레임 재조립·재동기(TID/PID/UID),
+// 타임아웃·FIN/RST·EINTR·SIGPIPE 장애 경로.
 #include "modbus_tcp/mbap_client.hpp"
 
 #include <pthread.h>

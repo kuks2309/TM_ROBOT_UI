@@ -99,6 +99,7 @@ bool MotionControl::moveCircular(
 
 bool MotionControl::moveHome()
 {
+  // 전 조인트 0 자세(TMflow 홈)로 PTP — 속도 25%.
   std::string script = "QueueTag(1)\nPTP(\"JPP\",0,0,0,0,0,0,25,200,0,false)";
   return client_->sendScript(script);
 }

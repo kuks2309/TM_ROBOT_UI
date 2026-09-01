@@ -1,3 +1,4 @@
+"""AI 검출 탭 — 모델 선택/로드, confidence 조정, 연속·단건 검출 실행과 결과 표시를 담당한다."""
 from typing import List
 from PyQt5 import uic
 from PyQt5.QtWidgets import QVBoxLayout, QFileDialog, QTableWidgetItem
@@ -12,6 +13,8 @@ from .base_tab import BaseTab
 
 
 class AIDetectionTab(BaseTab):
+    """ai_detection_service 의 task/runtime/모델 콤보 구성과 검출 실행·결과 테이블 표시를 담당하는 탭."""
+
     def __init__(self, main_window):
         super().__init__(main_window)
         self.mw = main_window
@@ -20,6 +23,7 @@ class AIDetectionTab(BaseTab):
 
         self._detection_timer = None
 
+        # 단건 검출 대기 플래그 — 공유 image_captured 시그널이 이 탭의 단건 요청에 의한 것인지 구분
         self._pending_single_detection = False
 
     def init_ui(self):
@@ -52,6 +56,7 @@ class AIDetectionTab(BaseTab):
 
         self._init_confidence_controls()
 
+        # 연속 검출용 주기 타이머 — 100ms 간격, GUI 스레드에서 추론 실행
         self._detection_timer = QTimer()
         self._detection_timer.setInterval(100)
         self._detection_timer.timeout.connect(self._run_detection)
@@ -259,6 +264,8 @@ class AIDetectionTab(BaseTab):
 
 
     def _run_detection(self):
+        # 연속 모드는 보관된 current_camera_image 를 재추론할 뿐 새 프레임을 캡처하지 않는다
+        # (이미지 갱신 주체는 단건 캡처 경로와 vision 탭의 update_camera_image)
         if not hasattr(self.mw, 'current_camera_image') or self.mw.current_camera_image is None:
             self._log("Image Capture를 먼저 실행하세요")
             return

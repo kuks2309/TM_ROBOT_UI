@@ -1,3 +1,6 @@
+// remote_io_gui 용 stdin/stdout JSON 브리지 — 명령: read / status / set <bit> <level> / quit.
+// set 은 사전 read + seedOutputMirror 로 장치 잔존 DO 를 미러에 흡수한 뒤 writeBits 한다
+// (미러가 0 인 채 쓰면 같은 워드의 다른 비트를 꺼뜨린다).
 #include <cstdio>
 #include <string>
 

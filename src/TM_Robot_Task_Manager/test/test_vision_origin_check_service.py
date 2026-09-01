@@ -1,3 +1,4 @@
+"""services/vision_origin_check_service 의 원점확인 판정을 검증한다."""
 import pytest
 
 from tm_task_manager.services.config_manager import ConfigManager

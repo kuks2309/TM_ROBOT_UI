@@ -19,6 +19,7 @@ namespace comm::modbus_tcp
 namespace
 {
 
+// Modbus 는 와이어에서 빅엔디언 — 워드 직렬화/역직렬화는 전부 이 두 헬퍼를 거친다.
 void putBE16(std::vector<uint8_t> &buf, uint16_t v)
 {
     buf.push_back(static_cast<uint8_t>(v >> 8));
@@ -30,6 +31,8 @@ uint16_t getBE16(const uint8_t *p)
     return static_cast<uint16_t>((static_cast<uint16_t>(p[0]) << 8) | static_cast<uint16_t>(p[1]));
 }
 
+// Modbus 예외코드 → TcpError. 01 Illegal Function/04 Device Failure 는 kProtocol,
+// 02 Illegal Address/03 Illegal Value 는 kOutOfRange, 06 Busy 는 kBusy. 미지 코드는 kProtocol.
 TcpError mapExceptionCode(uint8_t code)
 {
     switch (code)
@@ -81,6 +84,8 @@ Result<void> MbapClient::boundedConnect()
 {
     close();
 
+    // 블로킹 connect 는 OS 기본 타임아웃(수십 초)까지 걸릴 수 있어,
+    // 논블로킹 + poll(POLLOUT) + SO_ERROR 검사로 connect_timeout 을 직접 강제한다.
     const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0)
     {
@@ -160,6 +165,8 @@ Result<void> MbapClient::boundedConnect()
         return Result<void>::err(TcpError::kNotConnected);
     }
 
+    // 개별 recv/send 가 무한 블로킹하지 않게 기본 상한을 건다.
+    // 수신 데드라인은 recvAtLeast 가 남은 시간으로 매 회 다시 조정한다.
     timeval tv{};
     const auto ms = config_.request_timeout.count();
     tv.tv_sec = static_cast<time_t>(ms / 1000);
@@ -210,6 +217,7 @@ Result<void> MbapClient::recvAtLeast(size_t n, TimePoint deadline)
         const auto now = std::chrono::steady_clock::now();
         if (now >= deadline)
         {
+            // 부분 수신분을 남기면 다음 트랜잭션이 낡은 프레임 조각과 어긋난다 — 비워서 재동기.
             rx_buffer_.clear();
             return Result<void>::err(TcpError::kTimeout);
         }
@@ -226,6 +234,7 @@ Result<void> MbapClient::recvAtLeast(size_t n, TimePoint deadline)
         const ssize_t k = ::recv(fd_, chunk, sizeof(chunk), 0);
         if (k == 0)
         {
+            // 0 바이트 = 상대 FIN — 링크 폐기(다음 호출에서 백오프 후 재연결).
             setLinkDown();
             return Result<void>::err(TcpError::kNotConnected);
         }
@@ -250,6 +259,8 @@ Result<std::vector<uint8_t>> MbapClient::recvFrame(TimePoint deadline)
     {
         return Result<std::vector<uint8_t>>::err(hr.error());
     }
+    // MBAP length 필드(오프셋 4~5)는 unit id 를 포함한 이후 바이트 수 —
+    // 전체 프레임 = 헤더 6B + length. unit id 가 헤더 7B 에 이미 포함돼 있어 -1.
     const uint16_t length = getBE16(&rx_buffer_[4]);
     if (length == 0)
     {
@@ -289,6 +300,7 @@ Result<std::vector<uint8_t>> MbapClient::transact(uint8_t fc, const std::vector<
     size_t off = 0;
     while (off < req.size())
     {
+        // MSG_NOSIGNAL: 상대가 끊은 소켓에 써도 SIGPIPE 로 프로세스가 죽지 않게(EPIPE 로 받는다).
         const ssize_t sent = ::send(fd_, req.data() + off, req.size() - off, MSG_NOSIGNAL);
         if (sent < 0)
         {
@@ -316,6 +328,7 @@ Result<std::vector<uint8_t>> MbapClient::transact(uint8_t fc, const std::vector<
         const uint8_t resp_uid = frame[6];
         if (resp_pid != 0x0000 || resp_uid != config_.unit_id || resp_tid != tid)
         {
+            // 낡은/무관 응답 잔재 — 폐기하고 같은 데드라인 안에서 내 TID 프레임을 재수신.
             continue;
         }
         if (frame.size() < 8)
@@ -384,6 +397,8 @@ Result<void> MbapClient::writeSingleRegister(uint16_t addr, uint16_t value)
         return Result<void>::err(r.error());
     }
     const std::vector<uint8_t> &frame = r.value();
+    // 정규 FC6 에코는 12B. GL-9089 는 후행 여분 바이트를 붙여 오므로(HIL 실측)
+    // 길이 초과는 허용하고 addr/value 에코 일치만 대조한다.
     if (frame.size() < 12 || getBE16(&frame[8]) != addr || getBE16(&frame[10]) != value)
     {
         return Result<void>::err(TcpError::kProtocol);

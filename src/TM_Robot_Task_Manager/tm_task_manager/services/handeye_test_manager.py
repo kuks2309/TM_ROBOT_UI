@@ -1,3 +1,4 @@
+"""Hand-Eye 정밀도 테스트 오케스트레이터 — 그리드 이동·스캔·통계·CSV (mm/deg)."""
 import os
 import csv
 from datetime import datetime
@@ -7,6 +8,12 @@ import numpy as np
 
 
 class HandEyeTestManager:
+    """기준 자세 주변 XYZ 그리드를 지그재그 순회하며 랜드마크를 반복 측정한다.
+
+    위치별 Y/Ry 산포는 측정 반복성, 위치 간 평균 편차(range)는 Hand-Eye
+    캘리브레이션 오차의 지표다. 측정 루프의 스레딩·반복 구동은 탭 소관.
+    """
+
     def __init__(
         self,
         job_executor=None,
@@ -43,6 +50,11 @@ class HandEyeTestManager:
         y_step: float, y_count: int,
         z_step: float, z_count: int
     ) -> List[Dict[str, float]]:
+        """기준 자세 주변 측정 그리드를 만든다.
+
+        XY 는 ±count 대칭 오프셋(총 2·count+1 개), Z 는 0 부터 위로 count 개 층.
+        자세(rx/ry/rz)는 기준값 그대로 유지한다.
+        """
         self.test_positions.clear()
 
         x_offsets = self._generate_xy_offsets(x_step, x_count)
@@ -73,6 +85,7 @@ class HandEyeTestManager:
     def _generate_zigzag_xy(self, base_position: Dict[str, float],
                            x_offsets: List[float], y_offsets: List[float],
                            z_off: float) -> List[Dict[str, float]]:
+        """X 열마다 Y 방향을 번갈아 뒤집는 지그재그 순회 — 이동 거리 최소화."""
         positions = []
 
         for i, x_off in enumerate(x_offsets):
@@ -138,6 +151,7 @@ class HandEyeTestManager:
 
 
     def start_test(self, repeat_count: int = 3, scan_delay_sec: float = 0.5) -> Tuple[bool, str]:
+        """실행 상태를 초기화하고 테스트를 시작 상태로 만든다 (실제 루프는 탭이 돌린다)."""
         if not self.test_positions:
             return False, "측정 위치가 없습니다"
 
@@ -169,6 +183,11 @@ class HandEyeTestManager:
         self._log("테스트 결과 초기화 완료")
 
     def run_single_measurement(self) -> Tuple[bool, Optional[Dict[str, Any]], str]:
+        """1스텝 수행: 위치 이동 → 랜드마크 스캔 → TCP 기록 → 인덱스 전진.
+
+        스캔 실패 건도 lm_* 를 0.0 으로 채워 기록된다(success 필드로 구분) —
+        통계 집계 시 success 필터 없이는 0 값이 섞인다.
+        """
         if not self.is_running:
             return False, None, "테스트가 실행 중이 아닙니다"
 
@@ -224,6 +243,13 @@ class HandEyeTestManager:
         return True, measurement, "측정 완료"
 
     def _move_to_position(self, pos: Dict[str, float]) -> Tuple[bool, str]:
+        """가드 검사 후 TMflow 스크립트 채널로 Line("CPP") 이동을 보낸다.
+
+        send_script 클라이언트는 루트 노드 차용, 응답 대기는 호출 스레드
+        spin(최대 30s). 응답 ok 는 스크립트 수리까지만 보증하므로 도달은
+        고정 sleep(2.0s)으로 가정한다 — 저속·장거리에서는 미도달 상태로
+        다음 단계(스캔)에 들어갈 수 있다.
+        """
         if not self.job_executor:
             return False, "JobExecutor가 없습니다"
 
@@ -270,6 +296,7 @@ class HandEyeTestManager:
             return False, "Line CPP 명령 실패"
 
     def _execute_landmark_scan(self) -> Tuple[bool, Dict[str, float]]:
+        """vision_manager 로 스캔·읽기 — 미검출·실패는 (False, 0 pose)."""
         empty_result = {'x': 0.0, 'y': 0.0, 'z': 0.0, 'rx': 0.0, 'ry': 0.0, 'rz': 0.0}
 
         if not self.vision_manager:
@@ -294,6 +321,7 @@ class HandEyeTestManager:
             return False, empty_result
 
     def get_current_tcp(self) -> List[float]:
+        """현재 TCP [x..rz] (mm/deg) — 읽을 수 없으면 0 벡터."""
         if self.job_executor and self.job_executor.ros_node:
             tcp = self.job_executor.ros_node.current_tcp_pose
             if tcp:
@@ -304,6 +332,7 @@ class HandEyeTestManager:
         return self.get_current_tcp()
 
     def _advance_to_next(self):
+        """위치 인덱스 전진 — 한 바퀴 돌면 반복 인덱스를 올리고 처음 위치로."""
         self.current_position_index += 1
 
         if self.current_position_index >= len(self.test_positions):
@@ -318,6 +347,10 @@ class HandEyeTestManager:
 
 
     def calculate_statistics(self) -> Dict[str, Any]:
+        """위치별 Y/Ry 평균·표준편차(ddof=1)와 위치 간 range 를 계산한다.
+
+        success 필터 없이 전 측정을 집계하므로 스캔 실패의 0 기록도 포함된다.
+        """
         if not self.measurements:
             return {}
 
@@ -410,6 +443,11 @@ class HandEyeTestManager:
             return False
 
     def get_default_csv_path(self) -> str:
+        """소스 트리의 data/<날짜>/ 아래 저장 경로를 만든다.
+
+        install/build 경로 문자열 분해로 워크스페이스를 역산한다 — 경로에
+        'install'/'build' 단어가 들어 있는 환경에서는 오동작할 수 있다.
+        """
         now = datetime.now()
         date_str = now.strftime('%Y%m%d')
         datetime_str = now.strftime('%Y%m%d_%H%M%S')

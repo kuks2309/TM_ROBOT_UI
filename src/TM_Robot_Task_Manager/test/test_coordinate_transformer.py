@@ -1,3 +1,4 @@
+"""CoordinateTransformer 의 단위 변환·오일러/쿼터니언·툴→베이스 변환을 검증한다."""
 import pytest
 import math
 import numpy as np

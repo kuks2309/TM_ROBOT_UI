@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+"""정밀 테스트 CSV(precision_test_*.csv)의 랜드마크 자세를 3D/2D(XY·XZ·YZ)로 시각화하는 PyQt5 도구.
+
+실행: python3 scripts/landmark_visualizer.py [csv경로] — rclpy 가 있으면 ROS2 로 현재 TCP 를 겹쳐 표시(없으면 오프라인 모드).
+"""
 import sys
 import threading
 from pathlib import Path
@@ -9,7 +13,7 @@ import pandas as pd
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from matplotlib.patches import Polygon
 
-LANDMARK_SIZE = 40.0
+LANDMARK_SIZE = 40.0  # TM Landmark 사각 마커 한 변 길이 [mm]
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PACKAGE_DIR = SCRIPT_DIR.parent
@@ -47,6 +51,7 @@ except ImportError:
 
 
 def rotation_matrix_from_euler(rx, ry, rz):
+    """오일러각(rx, ry, rz [deg])을 Rz@Ry@Rx 순서(고정축 X→Y→Z 회전)의 3x3 회전행렬로 변환한다."""
     rx, ry, rz = np.radians(rx), np.radians(ry), np.radians(rz)
 
     Rx = np.array([[1, 0, 0],
@@ -65,6 +70,7 @@ def rotation_matrix_from_euler(rx, ry, rz):
 
 
 def get_landmark_corners(x, y, z, rx, ry, rz, size=LANDMARK_SIZE):
+    """랜드마크 중심 pose(mm/deg)에서 사각 마커 4모서리의 월드좌표 (4,3) 배열을 계산한다."""
     half = size / 2.0
     corners_local = np.array([
         [-half, -half, 0],
@@ -82,6 +88,8 @@ def get_landmark_corners(x, y, z, rx, ry, rz, size=LANDMARK_SIZE):
 
 
 class GraphWidget(QWidget):
+    """2D/3D 겸용 matplotlib 캔버스 위젯 — 2D 는 휠 줌, 더블클릭으로 저장된 뷰 복원."""
+
     def __init__(self, parent=None, is_3d=False, compact=False):
         super().__init__(parent)
         self.is_3d = is_3d
@@ -92,6 +100,7 @@ class GraphWidget(QWidget):
         self.setup_ui()
 
     def setup_ui(self):
+        """Figure·캔버스·툴바를 구성하고 스크롤/클릭 이벤트를 연결한다."""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -130,6 +139,7 @@ class GraphWidget(QWidget):
         else:
             return
 
+        # 3D 축은 matplotlib 자체 회전/줌 조작에 맡기고 휠 줌을 적용하지 않는다.
         if self.is_3d:
             pass
         else:
@@ -150,12 +160,14 @@ class GraphWidget(QWidget):
             self.reset_view()
 
     def save_original_limits(self):
+        """현재 축 범위(3D 는 z 포함)를 뷰 복원용 원본으로 저장한다."""
         self._xlim_orig = self.ax.get_xlim()
         self._ylim_orig = self.ax.get_ylim()
         if self.is_3d:
             self._zlim_orig = self.ax.get_zlim()
 
     def reset_view(self):
+        """저장된 원본 축 범위로 복원한다."""
         if self._xlim_orig and self._ylim_orig:
             self.ax.set_xlim(self._xlim_orig)
             self.ax.set_ylim(self._ylim_orig)
@@ -167,12 +179,15 @@ class GraphWidget(QWidget):
         self.ax.clear()
 
     def draw(self):
+        """레이아웃 정리 후 렌더링하고 축 범위를 원본으로 저장한다."""
         self.figure.tight_layout()
         self.canvas.draw()
         self.save_original_limits()
 
 
 class ROS2Thread(threading.Thread):
+    """stop 이벤트까지 rclpy.spin_once(0.1s) 를 반복하는 데몬 스핀 스레드."""
+
     def __init__(self, node):
         super().__init__(daemon=True)
         self.node = node
@@ -183,10 +198,14 @@ class ROS2Thread(threading.Thread):
             rclpy.spin_once(self.node, timeout_sec=0.1)
 
     def stop(self):
+        """스핀 루프 종료를 요청한다."""
         self._stop_event.set()
 
 
 class LandmarkVisualizerWindow(QMainWindow):
+    """CSV 테이블·그래프 표시와 선택적 ROS2 TCP 오버레이를 담당하는 메인 창."""
+
+    # ROS 스핀 스레드에서 GUI 를 직접 만지면 안 되므로 시그널로 메인스레드에 위임한다.
     tcp_updated = pyqtSignal(list)
     joint_updated = pyqtSignal(list)
 
@@ -209,6 +228,7 @@ class LandmarkVisualizerWindow(QMainWindow):
         self.joint_updated.connect(self._on_joint_updated)
 
     def setup_ui(self):
+        """ui/landmark_visualizer.ui 를 이 창(self)에 직접 로드한다."""
         self.setWindowTitle("TM Landmark Visualizer")
         self.setMinimumSize(1200, 800)
 
@@ -216,6 +236,7 @@ class LandmarkVisualizerWindow(QMainWindow):
         uic.loadUi(str(ui_path), self)
 
     def setup_graphs(self):
+        """.ui 의 placeholder 를 GraphWidget 으로 교체한다(메인 3D+2D 3면, 오버뷰 4개)."""
         graph_configs = [
             ('widget_view3D', True, False),
             ('widget_viewXY', False, False),
@@ -245,6 +266,7 @@ class LandmarkVisualizerWindow(QMainWindow):
         layout = parent.layout()
         index = layout.indexOf(old_widget)
 
+        # grid 레이아웃은 (row, col) 자리를, box 레이아웃은 index 를 보존해야 배치가 유지된다.
         if hasattr(layout, 'getItemPosition'):
             row, col, _, _ = layout.getItemPosition(index)
             layout.removeWidget(old_widget)
@@ -260,6 +282,7 @@ class LandmarkVisualizerWindow(QMainWindow):
         self.graph_widgets[widget_name] = new_widget
 
     def setup_connections(self):
+        """버튼·테이블·체크박스·메뉴 시그널을 슬롯에 연결한다."""
         self.pushButton_openCSV.clicked.connect(self.open_csv)
         self.pushButton_recentFile.clicked.connect(self.open_recent_file)
 
@@ -276,6 +299,7 @@ class LandmarkVisualizerWindow(QMainWindow):
         self.action_zoomFit.triggered.connect(self.zoom_fit)
 
     def open_csv(self):
+        """파일 다이얼로그로 CSV 를 선택해 로드한다."""
         file_path, _ = QFileDialog.getOpenFileName(
             self, "CSV 파일 열기", str(DATA_DIR),
             "CSV Files (*.csv);;All Files (*)"
@@ -284,6 +308,7 @@ class LandmarkVisualizerWindow(QMainWindow):
             self.load_csv(file_path)
 
     def open_recent_file(self):
+        """data/ 의 최신 precision_test_*.csv 를 찾아 로드한다."""
         csv_files = sorted(DATA_DIR.glob("precision_test_*.csv"), reverse=True)
         if csv_files:
             self.load_csv(str(csv_files[0]))
@@ -291,9 +316,11 @@ class LandmarkVisualizerWindow(QMainWindow):
             QMessageBox.information(self, "알림", "테스트 파일이 없습니다.")
 
     def load_csv(self, file_path: str):
+        """CSV 를 로드해 하단 통계 요약부를 잘라내고 수치 변환 후 테이블·그래프를 갱신한다."""
         try:
             df = pd.read_csv(file_path)
 
+            # 정밀 테스트 CSV 는 데이터 뒤에 '통계' 요약 행이 붙으므로 그 앞까지만 사용한다.
             stats_idx = df[df.iloc[:, 0].astype(str).str.contains('통계', na=False)].index
             if len(stats_idx) > 0:
                 df = df.iloc[:stats_idx[0]]
@@ -319,6 +346,7 @@ class LandmarkVisualizerWindow(QMainWindow):
             QMessageBox.critical(self, "오류", f"파일 로드 실패:\n{str(e)}")
 
     def update_table(self):
+        """로드된 데이터로 7컬럼(No./X/Y/Z/Rx/Ry/Rz) 테이블을 채운다."""
         if self.data is None:
             return
 
@@ -344,6 +372,7 @@ class LandmarkVisualizerWindow(QMainWindow):
         table.resizeColumnsToContents()
 
     def on_row_selected(self):
+        """테이블 선택 행의 랜드마크/TCP 라벨을 갱신하고 그래프를 다시 그린다."""
         selected = self.tableWidget_data.selectedItems()
         if not selected:
             self.selected_row = -1
@@ -372,6 +401,7 @@ class LandmarkVisualizerWindow(QMainWindow):
         self.update_graphs()
 
     def update_graphs(self):
+        """선택 행 기준으로 3D 2개와 2D 3면(메인+오버뷰)을 모두 갱신한다."""
         show_tcp = self.checkBox_showRobotTCP.isChecked()
 
         selected_point = None
@@ -488,6 +518,7 @@ class LandmarkVisualizerWindow(QMainWindow):
             graph.draw()
 
     def toggle_ros_connection(self):
+        """버튼 체크 상태에 따라 ROS2 연결/해제를 토글한다(미설치 시 경고)."""
         if not ROS2_AVAILABLE:
             QMessageBox.warning(self, "경고", "ROS2가 설치되어 있지 않습니다.")
             self.pushButton_connectROS.setChecked(False)
@@ -499,6 +530,7 @@ class LandmarkVisualizerWindow(QMainWindow):
             self.disconnect_ros()
 
     def connect_ros(self):
+        """rclpy 초기화 후 /tm_robot/tcp_pose·/joint_states 구독 노드와 스핀 스레드를 시작한다."""
         try:
             if not rclpy.ok():
                 rclpy.init()
@@ -531,6 +563,7 @@ class LandmarkVisualizerWindow(QMainWindow):
             self.pushButton_connectROS.setChecked(False)
 
     def disconnect_ros(self):
+        """스핀 스레드를 멈추고 노드를 파괴한 뒤 상태 라벨을 복귀시킨다."""
         if self.ros_thread:
             self.ros_thread.stop()
             self.ros_thread.join(timeout=1.0)
@@ -566,13 +599,16 @@ class LandmarkVisualizerWindow(QMainWindow):
         self.label_jointState.setText(f"Joints: {joints_str}")
 
     def reset_all_views(self):
+        """모든 그래프를 저장된 원본 뷰로 복원한다."""
         for widget in self.graph_widgets.values():
             widget.reset_view()
 
     def zoom_fit(self):
+        """그래프를 재계산해 데이터에 맞춘다(update_graphs 재실행)."""
         self.update_graphs()
 
     def export_image(self):
+        """오버뷰를 제외한 그래프들을 PNG 로 저장한다."""
         if self.data is None and self.current_tcp is None:
             QMessageBox.warning(self, "경고", "표시할 데이터가 없습니다.")
             return
@@ -586,11 +622,13 @@ class LandmarkVisualizerWindow(QMainWindow):
             QMessageBox.information(self, "완료", f"그래프가 {dir_path}에 저장되었습니다.")
 
     def closeEvent(self, event):
+        """창 종료 시 ROS 연결을 정리한다."""
         self.disconnect_ros()
         event.accept()
 
 
 def main():
+    """앱을 기동하고 argv[1] 이 있으면 해당 CSV 를 자동 로드한다."""
     app = QApplication(sys.argv)
     window = LandmarkVisualizerWindow()
     window.show()

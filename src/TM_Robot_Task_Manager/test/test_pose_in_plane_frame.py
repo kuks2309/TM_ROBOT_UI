@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""tools/jig_plane_calculator 의 pose→평면 프레임 변환을 검증한다."""
 import math
 import sys
 from pathlib import Path

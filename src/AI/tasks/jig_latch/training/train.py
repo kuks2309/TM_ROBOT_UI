@@ -1,3 +1,8 @@
+"""yolov8s-seg 단일 클래스(jig latch) 세그멘테이션 학습 스크립트.
+
+data.yaml 경로가 저장소 밖 절대경로로 박혀 있어 이 호스트 전용이다.
+epochs 100000 은 상한일 뿐 — patience 100(개선 없는 epoch 수)이 실질 종료 조건.
+"""
 from ultralytics import YOLO
 import torch
 

@@ -78,6 +78,7 @@ def local_ipv4() -> List[str]:
 
 
 def _detect_id_without_probe() -> Optional[str]:
+    """포트 프로브 없이 프로필 id 를 결정한다: 환경변수 → active.txt → 로컬 IP 교집합."""
     env = (os.environ.get(ENV_VAR) or '').strip()
     if env:
         return env
@@ -104,6 +105,7 @@ def _detect_id_without_probe() -> Optional[str]:
 
 
 def candidate_robot_ips() -> List[Tuple[str, str]]:
+    """프로브 후보 (robot_id, robot_ip) 목록 — 고정 결정된 프로필을 선두에 둔다."""
     order: List[Tuple[str, str]] = []
     seen = set()
 
@@ -129,6 +131,7 @@ def candidate_robot_ips() -> List[Tuple[str, str]]:
 
 def reachable(ip: str, port: int = ROBOT_PORT,
               timeout_sec: float = PROBE_TIMEOUT_SEC) -> bool:
+    """TCP 연결 시도로 ip:port 도달 여부를 검사한다 (timeout_sec: s)."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         sock.settimeout(timeout_sec)
@@ -144,6 +147,7 @@ def reachable(ip: str, port: int = ROBOT_PORT,
 
 def probe_robot_ip(timeout_sec: float = PROBE_TIMEOUT_SEC
                    ) -> Tuple[Optional[str], Optional[str]]:
+    """후보 중 처음 도달되는 로봇의 (robot_id, ip) 를 반환한다. 없으면 (None, None)."""
     for robot_id, ip in candidate_robot_ips():
         if reachable(ip, ROBOT_PORT, timeout_sec):
             return robot_id, ip
@@ -151,6 +155,7 @@ def probe_robot_ip(timeout_sec: float = PROBE_TIMEOUT_SEC
 
 
 def probe_report(timeout_sec: float = PROBE_TIMEOUT_SEC) -> str:
+    """후보별 응답/무응답을 요약한 진단용 문자열을 반환한다."""
     rows = []
     for robot_id, ip in candidate_robot_ips():
         state = '응답' if reachable(ip, ROBOT_PORT, timeout_sec) else '무응답'
@@ -159,6 +164,7 @@ def probe_report(timeout_sec: float = PROBE_TIMEOUT_SEC) -> str:
 
 
 def detect_id() -> Optional[str]:
+    """프로필 id 를 결정한다: 환경변수 → active.txt → IP 교집합 → 포트 프로브 순."""
     env = (os.environ.get(ENV_VAR) or '').strip()
     if env:
         return env
@@ -189,6 +195,7 @@ def detect_id() -> Optional[str]:
 
 
 def active(required: bool = False) -> Optional[Dict[str, Any]]:
+    """감지된 활성 프로필을 로드해 반환한다. required=True 면 미확정 시 ProfileError."""
     robot_id = detect_id()
     if robot_id is None:
         if required:
@@ -202,6 +209,7 @@ def active(required: bool = False) -> Optional[Dict[str, Any]]:
 
 
 def robot_ip(default: Optional[str] = None) -> Optional[str]:
+    """활성 프로필의 robot_ip 를 반환한다 (미확정·미기재 시 default)."""
     try:
         profile = active()
     except ProfileError:
@@ -212,6 +220,7 @@ def robot_ip(default: Optional[str] = None) -> Optional[str]:
 
 
 def gripper_id(default: str = '') -> str:
+    """활성 프로필의 gripper.id 를 반환한다 (미확정·미기재 시 default)."""
     try:
         profile = active()
     except ProfileError:
@@ -222,6 +231,7 @@ def gripper_id(default: str = '') -> str:
 
 
 def describe() -> str:
+    """활성 프로필 요약 문자열을 반환한다 (진단·launch 로그용)."""
     robot_id = detect_id()
     if robot_id is None:
         return '[robot_profile] 프로필 미확정 (IP: %s)' % (', '.join(local_ipv4()) or '없음')

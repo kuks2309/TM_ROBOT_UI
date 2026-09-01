@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""hardware/gripper 백엔드 선택(smc/schunk 탐지·명시 지정)과 레시피의 그리퍼 job 방출을 검증한다."""
 import os
 import sys
 import tempfile

@@ -21,15 +21,22 @@ namespace comm::modbus_tcp::sim
 
 namespace srv = ::comm::modbus_tcp::test;
 
+// Crevis GL-9089 워치독/상태 레지스터 주소(remote_io_hal 과 동일 맵).
+// 0x1020 timeout 은 1 카운트 = 100ms. 0x1100 은 마스터 두절 시 출력 처리 정책 레지스터.
 inline constexpr uint16_t kRegWatchdogTimeout = 0x1020;
 inline constexpr uint16_t kRegWatchdogErrorCounter = 0x1022;
 inline constexpr uint16_t kRegMasterFaultAction = 0x1100;
 inline constexpr uint16_t kRegAdapterStatus = 0x1119;
+// 0x1119 상위 바이트(ModBus 상태)의 ERR_WATCHDOG 비트 — 워드 값으로는 0x8000.
 inline constexpr uint16_t kAdapterStatusErrWatchdogHi = 0x8000;
 
+// GL-9089 인프로세스 시뮬레이터(테스트 전용, 헤더 온리). 루프백에 listen 하고
+// FC3/FC6 을 서빙하며, 워치독 의미론(트랜잭션 간격≥timeout → 카운터 증가·ERR 비트·DO 전체 0)을
+// 가상 시간(setVirtualTime) 기준으로 재현한다. 결함 주입 API 로 클라이언트 장애 경로를 시험한다.
 class Gl9089Server
 {
   public:
+    // 레지스터 배치 — 실기와 같이 DI 는 0x0000, DO 는 0x0800 에서 시작한다.
     struct Config
     {
         uint16_t di_start = 0x0000;
@@ -79,6 +86,7 @@ class Gl9089Server
         return port_;
     }
 
+    // 워치독 판정의 시간축(ms). 실시간이 아니라 가상 시간이라 타이밍 시험이 결정적이다.
     void setVirtualTime(int64_t ms)
     {
         vnow_ms_.store(ms, std::memory_order_relaxed);
@@ -245,6 +253,8 @@ class Gl9089Server
         return it == registers_.end() ? 0 : it->second;
     }
 
+    // 매 트랜잭션 시 직전 트랜잭션과의 가상 시간 간격을 검사 — timeout 이상이면
+    // 장치 거동대로 카운터 증가·0x1119 ERR 비트 세트·DO 전 워드 0 클리어.
     void updateWatchdogOnTxnLocked()
     {
         const int64_t vnow = vnow_ms_.load(std::memory_order_relaxed);
@@ -314,6 +324,8 @@ class Gl9089Server
         registers_[addr] = value;
         if (addr == kRegWatchdogTimeout)
         {
+            // 0x1020 기록 = 워치독 재구성. 레지스터 값 1 카운트 = 100ms, 0 은 비활성.
+            // 재구성 시 에러 카운터를 0 으로 리셋한다(시뮬 정책 — 실기 카운터 거동은 debt-013 참조).
             wd_timeout_reg_ = value;
             wd_enabled_ = (value > 0);
             wd_timeout_ms_ = static_cast<int64_t>(value) * 100;

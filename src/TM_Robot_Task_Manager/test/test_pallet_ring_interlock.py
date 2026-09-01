@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""config/recipes 팔레트 레시피의 링 인터록 일관성을 데이터 차원에서 검증한다."""
 import sys
 from pathlib import Path
 

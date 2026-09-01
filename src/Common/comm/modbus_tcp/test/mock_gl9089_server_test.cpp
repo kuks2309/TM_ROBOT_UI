@@ -1,3 +1,4 @@
+// MockGl9089Server 픽스처 자체 시험 — recv 타임아웃에 의한 핸들러 해방과 정상 왕복.
 #include "mock_gl9089_server.hpp"
 
 #include <gtest/gtest.h>

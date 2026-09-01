@@ -1,3 +1,4 @@
+"""비전 탭 — 카메라/처리 이미지 표시, ArUco 태그 테이블, threshold 처리, 비전용 6축 jog 를 담당한다."""
 import cv2
 from datetime import datetime
 
@@ -8,6 +9,8 @@ from .base_tab import BaseTab
 
 
 class VisionTab(BaseTab):
+    """카메라 영상·태그 포즈 표시와 이미지 처리(threshold)·jog 연동을 담당하는 탭."""
+
     def __init__(self, main_window):
         super().__init__(main_window)
         self.mw = main_window
@@ -42,6 +45,7 @@ class VisionTab(BaseTab):
     def _connect_jog_signals(self):
         for axis, name in [('x', 'X'), ('y', 'Y'), ('z', 'Z'),
                            ('rx', 'Rx'), ('ry', 'Ry'), ('rz', 'Rz')]:
+            # 람다 기본 인자로 axis 를 캡처 — 루프 변수 지연 바인딩으로 전 버튼이 마지막 축에 묶이는 것을 방지
             getattr(self.mw, f'pushButton_visionJog{name}Minus').clicked.connect(
                 lambda _checked=False, a=axis: self.mw.jog_service.jog(a, -1))
             getattr(self.mw, f'pushButton_visionJog{name}Plus').clicked.connect(
@@ -57,6 +61,7 @@ class VisionTab(BaseTab):
         self._on_jog_params_changed(step_mm, velocity_percent)
 
     def _on_jog_params_changed(self, step_mm: float, velocity_percent: int):
+        # blockSignals 로 재기입 시 valueChanged 재발화(서비스와의 피드백 루프) 방지
         self.mw.spinBox_visionJogStep.blockSignals(True)
         self.mw.spinBox_visionJogVelocity.blockSignals(True)
         self.mw.spinBox_visionJogStep.setValue(step_mm)
@@ -69,6 +74,7 @@ class VisionTab(BaseTab):
 
 
     def update_camera_image(self, cv_image):
+        """카메라 프레임(BGR ndarray)을 라벨에 표시하고 mw.current_camera_image 로 보관한다 — ROS 이미지 콜백 수신측(메인 윈도우)이 호출하는 공개 진입점."""
         self.mw.current_camera_image = cv_image.copy()
 
         rgb_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
@@ -80,12 +86,13 @@ class VisionTab(BaseTab):
         pixmap = QPixmap.fromImage(q_image)
         scaled_pixmap = pixmap.scaled(
             self.mw.label_cameraImage.size(),
-            aspectRatioMode=1
+            aspectRatioMode=1  # 1 == Qt.KeepAspectRatio
         )
         self.mw.label_cameraImage.setPixmap(scaled_pixmap)
 
 
     def update_tag_pose(self, pose_msg):
+        """PoseStamped 의 frame_id('aruco_marker_<id>')에서 태그 ID 를 파싱해 vision_manager 에 반영한다 — 구독 생성은 메인 윈도우 소관인 공개 진입점."""
         frame_id = pose_msg.header.frame_id
         tag_id = "unknown"
         if "aruco_marker_" in frame_id:
@@ -185,7 +192,7 @@ class VisionTab(BaseTab):
             pixmap = QPixmap.fromImage(qimg)
             scaled_pixmap = pixmap.scaled(
                 self.mw.label_processedImage.size(),
-                aspectRatioMode=1
+                aspectRatioMode=1  # 1 == Qt.KeepAspectRatio
             )
             self.mw.label_processedImage.setPixmap(scaled_pixmap)
         except Exception as e:

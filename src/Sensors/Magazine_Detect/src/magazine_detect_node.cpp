@@ -13,6 +13,9 @@
 namespace magazine_detect
 {
 
+// io_resp(tc_msgs/Io) 구독 → MagazineTable 판독 → ~/state 발행 노드.
+// io_resp 는 읽기 성공 시에만 나오므로 침묵이 곧 이상 — 200ms 워치독이
+// stale_after_s 초과 두절을 감지해 valid=false 로 1회 발행한다.
 class MagazineDetectNode : public rclcpp::Node
 {
 public:
@@ -39,6 +42,8 @@ public:
   }
 
 private:
+  // 파라미터 적재 + validate. 실패 시 throw — 잘못된 배선 매핑은 조용히 틀리므로
+  // 돌지 않고 기동 자체를 막는 편이 낫다(main 이 FATAL 로 기록).
   Config loadConfig()
   {
     Config cfg;
@@ -92,6 +97,7 @@ private:
 
   void onWatchdog()
   {
+    // 수신 이력 자체가 없으면(기동 직후) stale 판정 대상이 아니다.
     if (last_rx_.nanoseconds() == 0) {
       return;
     }

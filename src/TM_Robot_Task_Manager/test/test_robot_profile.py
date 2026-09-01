@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""robot_profile 의 프로필 파일 처리(활성 로봇 결정)를 검증한다."""
 import os
 import sys
 import unittest

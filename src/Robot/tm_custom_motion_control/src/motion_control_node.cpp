@@ -15,9 +15,13 @@
 namespace tm_custom_motion_control
 {
 
+// custom_motion/* 네임스페이스로 서비스 13종·구독 3종을 노출하는 노드.
+// SetPositions 요청형을 이동 외에 set_tcp/set_payload 의 수치 컨테이너로도 재사용하고,
+// Trigger 응답 message 에 CSV/JSON 문자열을 실어 조회 결과를 반환한다.
 class MotionControlNode : public rclcpp::Node
 {
 public:
+  // 파라미터 9종 선언만 수행 — 객체 조립은 initialize() 에서 한다.
   MotionControlNode()
   : Node("motion_control_node")
   {
@@ -35,6 +39,8 @@ public:
     RCLCPP_INFO(this->get_logger(), "Motion Control Node created");
   }
 
+  // client/motion/gripper 조립 + 서비스 13종·구독 3종 생성.
+  // shared_from_this() 가 생성자 안에서는 불가하므로 생성 후 별도로 호출해야 한다.
   void initialize()
   {
     client_ = std::make_shared<RobotClient>(this->shared_from_this());
@@ -133,6 +139,7 @@ public:
   }
 
 private:
+  // custom_motion/move_joint — 요청 positions 를 PTP 조인트 이동으로 위임 (크기 미검증).
   void moveJointCallback(
     const std::shared_ptr<tm_msgs::srv::SetPositions::Request> request,
     std::shared_ptr<tm_msgs::srv::SetPositions::Response> response)
@@ -145,6 +152,7 @@ private:
       request->fine_goal);
   }
 
+  // custom_motion/move_linear — 직선 TCP 이동 위임 (velocity mm/s).
   void moveLinearCallback(
     const std::shared_ptr<tm_msgs::srv::SetPositions::Request> request,
     std::shared_ptr<tm_msgs::srv::SetPositions::Response> response)
@@ -157,6 +165,7 @@ private:
       request->fine_goal);
   }
 
+  // custom_motion/move_tcp — PTP TCP 이동 위임. 성공 로그가 positions[0..5] 를 접근한다.
   void moveTCPCallback(
     const std::shared_ptr<tm_msgs::srv::SetPositions::Request> request,
     std::shared_ptr<tm_msgs::srv::SetPositions::Response> response)
@@ -175,6 +184,7 @@ private:
     }
   }
 
+  // custom_motion/go_home — home_position 파라미터(6요소)로 조인트 이동.
   void goHomeCallback(
     const std::shared_ptr<std_srvs::srv::Trigger::Request>,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response)
@@ -198,6 +208,7 @@ private:
     }
   }
 
+  // custom_motion/go_tmflow_home — 전 조인트 0 자세(TMflow 홈) 스크립트 이동.
   void goTMflowHomeCallback(
     const std::shared_ptr<std_srvs::srv::Trigger::Request>,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response)
@@ -213,6 +224,7 @@ private:
     }
   }
 
+  // custom_motion/get_joint_position — 조인트 6값을 CSV 로 message 에 실어 반환.
   void getJointPositionCallback(
     const std::shared_ptr<std_srvs::srv::Trigger::Request>,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response)
@@ -235,6 +247,7 @@ private:
     }
   }
 
+  // custom_motion/get_tcp_pose — TCP 포즈 6값을 CSV 로 message 에 실어 반환.
   void getTCPPoseCallback(
     const std::shared_ptr<std_srvs::srv::Trigger::Request>,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response)
@@ -257,6 +270,7 @@ private:
     }
   }
 
+  // custom_motion/gripper_cmd 토픽 — true=열림, false=닫힘.
   void gripperCmdCallback(const std_msgs::msg::Bool::SharedPtr msg)
   {
     if (msg->data) {
@@ -268,6 +282,7 @@ private:
     }
   }
 
+  // custom_motion/stop 토픽 — true 수신 시 StopAndClearBuffer.
   void stopCmdCallback(const std_msgs::msg::Bool::SharedPtr msg)
   {
     if (msg->data) {
@@ -276,6 +291,7 @@ private:
     }
   }
 
+  // custom_motion/speed_override 토픽 — 전역 속도 오버라이드(%) 적용.
   void speedOverrideCallback(const std_msgs::msg::Int32::SharedPtr msg)
   {
     motion_->setSpeed(msg->data);
@@ -283,6 +299,7 @@ private:
   }
 
 
+  // custom_motion/get_tool_list — 공구 이름 목록을 CSV 로 반환.
   void getToolListCallback(
     const std::shared_ptr<std_srvs::srv::Trigger::Request>,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response)
@@ -305,6 +322,7 @@ private:
     }
   }
 
+  // custom_motion/get_tool_info — 공구명·tcp·질량·무게중심을 JSON 문자열로 반환.
   void getToolInfoCallback(
     const std::shared_ptr<std_srvs::srv::Trigger::Request>,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response)
@@ -334,6 +352,7 @@ private:
     }
   }
 
+  // custom_motion/change_tool — 공구명을 current_tool_name 파라미터로 전달받는 규약.
   void changeToolCallback(
     const std::shared_ptr<std_srvs::srv::Trigger::Request>,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response)
@@ -359,6 +378,7 @@ private:
     }
   }
 
+  // custom_motion/set_tcp — positions 6요소를 TCP 오프셋으로 설정 (SetPositions 형 재사용).
   void setTCPCallback(
     const std::shared_ptr<tm_msgs::srv::SetPositions::Request> request,
     std::shared_ptr<tm_msgs::srv::SetPositions::Response> response)
@@ -378,6 +398,7 @@ private:
     }
   }
 
+  // custom_motion/set_payload — positions = [mass(kg), cogX, cogY, cogZ] 규약.
   void setPayloadCallback(
     const std::shared_ptr<tm_msgs::srv::SetPositions::Request> request,
     std::shared_ptr<tm_msgs::srv::SetPositions::Response> response)
@@ -399,6 +420,7 @@ private:
     }
   }
 
+  // custom_motion/test_connection — 서비스 가용 + 조인트 응답으로 연결 진단 JSON 반환.
   void testConnectionCallback(
     const std::shared_ptr<std_srvs::srv::Trigger::Request>,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response)
@@ -471,6 +493,7 @@ int main(int argc, char** argv)
   rclcpp::init(argc, argv);
 
   auto node = std::make_shared<tm_custom_motion_control::MotionControlNode>();
+  // shared_from_this 사용을 위해 생성 후 별도 초기화 — 누락 시 서비스가 하나도 뜨지 않는다
   node->initialize();
 
   rclcpp::spin(node);

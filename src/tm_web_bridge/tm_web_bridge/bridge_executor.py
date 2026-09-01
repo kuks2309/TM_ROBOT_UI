@@ -1,3 +1,4 @@
+"""JobExecutor 확장 — move_linear 잡을 tm_driver send_script(Move_Line) 로 수행한다."""
 import threading
 import time
 
@@ -5,7 +6,14 @@ from tm_task_manager.job_executor import JobExecutor
 
 
 class BridgeJobExecutor(JobExecutor):
+    """웹 시퀀스용 실행기 — move_linear 잡 하나만 오버라이드한다."""
+
     def _exec_move_linear(self, job) -> bool:
+        """Move_Line("TPP", …) 상대 오프셋 직선 이동 (offset mm, velocity mm/s).
+
+        완료는 로봇측 완료 신호가 아니라 motion_service.is_moving 폴링으로 판정한다:
+        이동 시작 감지 최대 2s, 이후 최대 30s 안에 비이동 연속 5회면 완료로 본다.
+        """
         params = job.params if hasattr(job, "params") else job
         offset_x = params.get("offset X", 0.0)
         offset_y = params.get("offset Y", 0.0)

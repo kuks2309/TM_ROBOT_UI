@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+"""YOLOv8 실행 환경 검증 CLI — torch/ultralytics/cv2 import 와 모델 로드를 점검한다."""
 import sys
 
 def main():
+    """설치 검증 실행. 필수 패키지 import 실패는 rc=1, 모델 로드 실패는 경고만(오프라인 허용)."""
     print("=" * 50)
     print("YOLOv8 Installation Verification")
     print("=" * 50)

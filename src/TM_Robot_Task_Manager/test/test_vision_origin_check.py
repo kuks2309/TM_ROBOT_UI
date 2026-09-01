@@ -1,3 +1,4 @@
+"""job_executor vision_origin_check job 과 배치 정책을 검증한다."""
 import pytest
 from unittest.mock import MagicMock
 

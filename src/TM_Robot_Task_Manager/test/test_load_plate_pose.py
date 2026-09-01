@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""job_executor load_plate_pose job(측정 YAML 로드·평균·rect 가드)을 검증한다."""
 import sys
 from pathlib import Path
 

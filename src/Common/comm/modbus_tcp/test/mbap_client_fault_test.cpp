@@ -1,3 +1,4 @@
+// MbapClient 결함 경로 시험 — Modbus 예외코드→TcpError 매핑 전수, 연결 실패·백오프 억제, 에코 불일치.
 #include "modbus_tcp/mbap_client.hpp"
 
 #include <cstdint>

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""services/image_frame_cache 와 techman_image 소스 배선을 검증한다."""
 import os
 import sys
 import threading

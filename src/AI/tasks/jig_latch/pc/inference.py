@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+"""지그 래치(jig latch) 세그멘테이션 추론·개폐 판정 PC 도구.
+
+best.pt(YOLOv8-seg) 추론 → 마스크 오버레이 + minAreaRect 주축 각도로 OPEN/CLOSE 판정.
+모드 3종: --source 단일 이미지 / --no_display 배치(headless) / 기본 대화형 matplotlib 뷰어.
+"""
 import cv2
 import numpy as np
 from ultralytics import YOLO
@@ -84,6 +89,12 @@ def get_class_colors():
 
 
 def draw_segmentation_results(image, results, conf_threshold):
+    """마스크 오버레이 + 개폐 판정 주석을 입힌 이미지를 반환한다.
+
+    판정: 마스크 최대 컨투어의 minAreaRect 주축 각도를 장변 기준으로 보정해
+    (-90, 90]° 로 정규화 — 주축이 수직에 가까우면(|angle| 이 90°±15° 이내) CLOSE,
+    그 외 OPEN, 컨투어 부재 시 UNKNOWN(라벨 미표기).
+    """
     colors = get_class_colors()
     result_img = image.copy()
 
@@ -132,6 +143,8 @@ def draw_segmentation_results(image, results, conf_threshold):
                     rect = cv2.minAreaRect(largest_contour)
                     rect_center, rect_size, angle = rect
 
+                    # minAreaRect 각도는 사각형 방향 의존 — 장변 기준으로 통일한 뒤
+                    # (-90, 90]° 로 접어 판정 임계(±15°)가 한 축에서만 동작하게 한다.
                     width, height = rect_size
                     if width < height:
                         angle = angle + 90
@@ -199,6 +212,8 @@ def draw_segmentation_results(image, results, conf_threshold):
 
 
 class ImageViewer:
+    """대화형 결과 뷰어 — ←/→ 탐색, s 저장, q/ESC 종료 (TkAgg 필요)."""
+
     def __init__(self, image_files, model, args):
         self.image_files = image_files
         self.model = model
@@ -321,6 +336,7 @@ class ImageViewer:
 
 
 def run_batch_inference(model, args):
+    """폴더 전체를 headless 로 추론해 output_dir 에 result_*.png 로 저장한다."""
     test_dir = Path(args.test_dir)
     output_dir = Path(args.output_dir)
 
@@ -373,6 +389,7 @@ def run_batch_inference(model, args):
 
 
 def run_single_inference(model, args):
+    """단일 이미지 추론 — 기본은 화면 표시, --no_display 면 저장만."""
     source_path = Path(args.source)
 
     if not source_path.exists():

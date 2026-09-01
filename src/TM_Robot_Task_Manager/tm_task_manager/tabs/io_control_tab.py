@@ -1,3 +1,4 @@
+"""IO 제어 탭 — Control Box/End-Effector DI·DO 표시와 DO 쓰기, 버퍼 매거진 재고 표시를 담당한다."""
 from typing import List
 from PyQt5 import uic
 from PyQt5.QtWidgets import QVBoxLayout, QGridLayout, QGroupBox, QPushButton, QLabel
@@ -7,6 +8,8 @@ from .. import paths
 
 
 class IOControlTab(BaseTab):
+    """io_control_service 시그널로 DI LED·DO 토글 버튼을 갱신하고 DO 클릭을 서비스에 전달하는 탭."""
+
     LED_ON_STYLE = "background-color: #00ff00; border-radius: 8px; min-width: 16px; min-height: 16px;"
     LED_OFF_STYLE = "background-color: #404040; border-radius: 8px; min-width: 16px; min-height: 16px;"
     MGZ_PRESENT_STYLE = "background-color: #00b050; color: white; border-radius: 4px; padding: 4px;"
@@ -100,6 +103,7 @@ class IOControlTab(BaseTab):
         service = self.mw.magazine_state_service
         label = QLabel(f'{slot} {service.slot_name(slot)}\n미수신')
         label.setStyleSheet(self.MGZ_STALE_STYLE)
+        # 슬롯 번호를 리스트 인덱스로 쓰기 위해 빈 자리를 None 으로 채운다 (생성 순서와 무관하게 정렬 유지)
         while len(self._mgz_labels) <= slot:
             self._mgz_labels.append(None)
         self._mgz_labels[slot] = label
@@ -158,6 +162,7 @@ class IOControlTab(BaseTab):
     def _connect_do_buttons(self):
         service = self.mw.io_control_service
 
+        # 람다 기본 인자로 핀 번호를 캡처 — 루프 변수 지연 바인딩으로 전 버튼이 마지막 핀에 묶이는 것을 방지
         for i, btn in enumerate(self._cb_do_btns):
             btn.setCheckable(True)
             btn.clicked.connect(

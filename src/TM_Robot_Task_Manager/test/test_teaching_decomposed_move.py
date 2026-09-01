@@ -1,3 +1,4 @@
+"""teaching_service 와 decomposed_move_planner 의 분해 이동 위임을 검증한다."""
 import pytest
 from unittest.mock import MagicMock
 

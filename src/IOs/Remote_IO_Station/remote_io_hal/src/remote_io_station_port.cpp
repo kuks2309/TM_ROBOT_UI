@@ -57,6 +57,9 @@ Result<StationSnapshot> RemoteIoStationPort::read() {
     return Result<StationSnapshot>::err(mapTcpError(do_r.error()));
   }
 
+  // 워치독 발화 감지: 0x1119 ERR 비트가 서 있고 0x1022 카운터가 마지막 처리값과
+  // 다를 때만 발화로 본다 — 비트만 보면 과거 발화 잔재를 매 판독마다 재처리한다.
+  // TODO(debt-013): HIL 실측 대기 — 0x1100 발효 조건·0x80 물리 클리어 미확정
   bool watchdog_fired = false;
   if (pending_watchdog_) {
     auto st = readAdapterStatus();
@@ -96,6 +99,8 @@ Result<void> RemoteIoStationPort::writeDoWordVerified(uint16_t word_index, uint1
 }
 
 Result<void> RemoteIoStationPort::writeBits(const std::vector<BitCommand>& commands) {
+  // 1패스: 미러 기준으로 비트를 워드에 병합(같은 워드 여러 비트 = FC6 1회) —
+  // 범위 검증도 여기서 끝내 송신 전에 전체 거부한다. 2패스: 병합된 워드만 검증 쓰기.
   std::vector<std::optional<uint16_t>> pending(config_.layout.do_word_count);
   for (const BitCommand& cmd : commands) {
     const uint16_t word_index = static_cast<uint16_t>(cmd.bit_index / 16);
@@ -146,6 +151,9 @@ Result<void> RemoteIoStationPort::clearAllOutputs() {
   return applyOutputImage(zeros);
 }
 
+// 재적용 상태기계 — 링크 재수립 에지·워치독 발화·직전 실패 보류 중 하나라도 서면
+// 워치독 재구성 + DO 미러 전 워드 재기록으로 마스터 두절 이후의 출력 상태를 복원한다.
+// pending_watchdog_ 미설정(구성 이력 없음)이면 재적용 대상 자체가 없다.
 void RemoteIoStationPort::reapplyIfNeeded(bool watchdog_fired) {
   const bool up_now = client_.isLinkUp();
   if (!up_now) {
@@ -202,6 +210,8 @@ Result<void> RemoteIoStationPort::reapplyAfterReconnect() {
 }
 
 Result<void> RemoteIoStationPort::configureWatchdog(const WatchdogConfig& cfg) {
+  // 장치 0x1020 은 100ms 단위 16bit — ms 입력을 올림 변환(내림이면 요청보다 짧게 무장된다).
+  // 상한은 레지스터 최대 65535 카운트 × 100ms.
   const int64_t ms = cfg.timeout.count();
   constexpr int64_t kMaxWatchdogMs = 65535LL * 100;
   if (ms < 0 || ms > kMaxWatchdogMs) {
@@ -222,6 +232,8 @@ Result<void> RemoteIoStationPort::configureWatchdog(const WatchdogConfig& cfg) {
     return Result<void>::err(rb1 ? RemoteIoError::kProtocol : mapTcpError(rb1.error()));
   }
 
+  // 0x1100(fault action) 기록 + 재독 검증.
+  // TODO(debt-013): HIL 실측 대기 — 0x1100 발효 조건·0x80 물리 클리어 미확정
   const uint16_t fault_action_reg = cfg.master_fault_action_enable ? 0x0001 : 0x0000;
   auto w2 = client_.writeSingleRegister(kRegMasterFaultAction, fault_action_reg);
   if (!w2) {

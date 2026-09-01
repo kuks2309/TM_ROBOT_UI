@@ -1,3 +1,4 @@
+"""정밀도 테스트 탭 — 반복 측정(정적/동적) 통계·산점도와 plate_pose 데이터셋 분석(재현성·형상 검사)을 담당한다."""
 import os
 from datetime import datetime
 
@@ -8,6 +9,7 @@ from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QBrush, QColor
 from PyQt5 import uic
 
+# 모듈-레벨 matplotlib import — tabs 패키지가 eager import 되므로 matplotlib 미설치 환경에서는 앱 기동이 불가
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
@@ -17,6 +19,8 @@ from .. import paths
 
 
 class PrecisionTestTab(BaseTab):
+    """반복 측정 수집·통계(μ/σ/3σ)·matplotlib 산점도와 jig 4점 데이터셋 검사·3D 표시를 담당하는 탭."""
+
     def __init__(self, main_window):
         super().__init__(main_window)
         self.mw = main_window
@@ -44,11 +48,13 @@ class PrecisionTestTab(BaseTab):
         self.ax_jig3d = None
 
     def connect_signals(self):
+        """no-op — 시그널 연결은 .ui 로드가 끝나는 init_ui 내부에서 수행한다."""
         pass
 
     def init_ui(self):
         from ..services.precision_test_manager import PrecisionTestManager
 
+        # 매니저를 mw 에 보관 — run_monitor 탭이 동적 테스트 연계 시 이 속성에 의존한다
         self.mw.precision_test_manager = PrecisionTestManager()
 
         ui_path = paths.ui('precision_test_tab.ui')
@@ -176,6 +182,7 @@ class PrecisionTestTab(BaseTab):
             self._run_dynamic_precision_test()
 
     def _run_static_precision_test(self):
+        """제자리 landmark 스캔 1회 후 100ms 타이머로 자신을 재예약 — 측정 사이 이벤트 루프(UI 갱신) 기회를 준다."""
         manager = self.mw.precision_test_manager
 
         if manager.current_iteration >= manager.total_iterations:
@@ -184,6 +191,7 @@ class PrecisionTestTab(BaseTab):
 
         wait_time = 0.5
 
+        # 스캔(안정화 대기 0.5s 포함)을 동기 실행 — 완료까지 GUI 스레드가 멈춘다
         success, msg = self.vision_manager.execute_tm_landmark_scan(wait_time)
 
         if not success:
@@ -466,7 +474,7 @@ class PrecisionTestTab(BaseTab):
         from ..services.plate_pose_dataset import PlatePoseDataset
 
         self.plate_dataset = PlatePoseDataset()
-        self.mw.plate_dataset = self.plate_dataset
+        self.mw.plate_dataset = self.plate_dataset  # 타 컴포넌트 접근용으로 mw 에도 노출
 
         self._init_plate_dataset_graphs()
         self._connect_plate_dataset_signals()

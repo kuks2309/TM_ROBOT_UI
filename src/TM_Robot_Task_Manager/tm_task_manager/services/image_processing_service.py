@@ -1,3 +1,4 @@
+"""이미지 이진화·저장과 동기식 techman 캡처 (호출 스레드 블로킹판)."""
 import cv2
 import numpy as np
 from PyQt5.QtCore import QObject, pyqtSignal
@@ -7,6 +8,12 @@ from cv_bridge import CvBridge
 
 
 class ImageProcessingService(QObject):
+    """threshold 처리 결과 보관 + TMflow 캡처 동기 실행.
+
+    capture_techman_image 는 캡처 시퀀스 전체(대기 포함 최대 약 timeout_sec
+    + 0.2s)를 호출 스레드에서 블로킹한다 — 스레드판은 ImageCaptureService.
+    """
+
     processing_completed = pyqtSignal(object)
     processing_error = pyqtSignal(str)
     image_captured = pyqtSignal(object, str)
@@ -20,6 +27,7 @@ class ImageProcessingService(QObject):
         self.ros_node = ros_node
 
     def apply_threshold(self, image, threshold_value):
+        """BGR 이미지를 GRAY→이진화→BGR 로 처리해 반환·시그널 이중 통지한다."""
         if image is None:
             self.processing_error.emit("이미지가 없습니다.")
             return None
@@ -39,6 +47,7 @@ class ImageProcessingService(QObject):
             return None
 
     def save_image(self, file_path):
+        """처리 결과를 imwrite 로 저장한다 (실패는 processing_error 시그널)."""
         if self.processed_image is None:
             self.processing_error.emit("저장할 처리된 이미지가 없습니다.")
             return False
@@ -60,6 +69,12 @@ class ImageProcessingService(QObject):
         return self.processed_image is not None
 
     def capture_techman_image(self, timeout_sec: float = 3.0) -> bool:
+        """동기 캡처: g_robot_command=3 + ScriptExit 후 새 프레임을 기다린다.
+
+        sleep(0.2s)은 TMflow 잡 기동 여유. wait_techman_image(spin=True)로
+        호출 스레드에서 노드를 spin 하며 대기한다 — GUI 스레드에서 부르면
+        그 시간만큼 화면이 멎는다.
+        """
         if self.gv_manager is None:
             self.capture_error.emit("GlobalVariableScript 관리자가 초기화되지 않았습니다")
             return False

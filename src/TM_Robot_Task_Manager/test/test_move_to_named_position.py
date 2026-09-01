@@ -1,3 +1,4 @@
+"""positions.yaml 등록 자세 조회(ConfigManager)와 move_to_named_position Job 실행 경로 검증."""
 import os
 import sys
 import tempfile

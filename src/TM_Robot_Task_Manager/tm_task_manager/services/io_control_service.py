@@ -1,3 +1,4 @@
+"""컨트롤박스(CB)·엔드모듈(EE) I/O 상태 캐시 + TM Driver SetIO 송신."""
 import os
 import yaml
 from typing import List, Optional, Tuple
@@ -6,6 +7,14 @@ from tm_msgs.srv import SetIO
 
 
 class IOControlService(QObject):
+    """I/O 피드백 캐시와 이름 기반(Ctrl_DI0/End_DO1 형식) 읽기/쓰기.
+
+    피드백은 루트 노드 구독 콜백(executor 스레드)이 update_io_state 로 넣고
+    GUI 가 property 로 읽는다 — 리스트 재대입이라 찢김은 없다.
+    set_io_client 는 루트 노드 속성 차용, call_async 결과는 확인하지 않으므로
+    반환 True 는 '요청 접수'이지 하드웨어 반영 보증이 아니다.
+    """
+
     cb_di_updated = pyqtSignal(list)
     cb_do_updated = pyqtSignal(list)
     ee_di_updated = pyqtSignal(list)
@@ -14,6 +23,7 @@ class IOControlService(QObject):
     ee_ai_updated = pyqtSignal(list)
     io_error = pyqtSignal(str)
 
+    # TM 컨트롤박스/엔드모듈의 핀 수
     CB_DI_COUNT = 16
     CB_DO_COUNT = 16
     EE_DI_COUNT = 4
@@ -22,6 +32,7 @@ class IOControlService(QObject):
     CB_AI_COUNT = 2
     EE_AI_COUNT = 1
 
+    # SetIO.Request 인코딩 값 (module/type)
     MODULE_CONTROL_BOX = 0
     MODULE_END_MODULE = 1
     IO_TYPE_DO = 1
@@ -43,6 +54,7 @@ class IOControlService(QObject):
         self._gripper_config = self._load_gripper_config()
 
     def _load_gripper_config(self) -> dict:
+        """config/io_config.yaml 의 gripper 절 (없거나 실패 시 기본 핀맵)."""
         config_path = os.path.join(
             os.path.dirname(__file__), '..', '..', 'config', 'io_config.yaml'
         )
@@ -83,6 +95,10 @@ class IOControlService(QObject):
     def update_io_state(self, cb_di: List[bool], cb_do: List[bool],
                         ee_di: List[bool], ee_do: List[bool],
                         cb_ai: List[float] = None, ee_ai: List[float] = None):
+        """(노드 콜백) 피드백을 정규화해 캐시하고, 변경분만 시그널로 발행한다.
+
+        첫 수신은 변경 여부와 무관하게 전 시그널 발행 — 초기 화면 동기화용.
+        """
         first_update = not self._first_update_done
         if first_update:
             self._first_update_done = True
@@ -120,6 +136,7 @@ class IOControlService(QObject):
             self.ee_ai_updated.emit(self._ee_ai.copy())
 
     def _normalize_list(self, data: List, expected_len: int) -> List[bool]:
+        """길이를 expected_len 에 맞춰 bool 화한다 (초과 절단, 부족분 False)."""
         result = [False] * expected_len
         if data:
             for i in range(min(len(data), expected_len)):
@@ -128,6 +145,7 @@ class IOControlService(QObject):
 
 
     def set_digital_output(self, module: int, pin: int, state: bool) -> bool:
+        """SetIO 로 DO 한 핀을 설정한다 — True 는 요청 접수(결과 미확인)."""
         if not self.ros_node or not hasattr(self.ros_node, 'set_io_client'):
             self.io_error.emit("ROS 노드 또는 set_io_client 없음")
             return False
@@ -157,17 +175,25 @@ class IOControlService(QObject):
         return self.set_digital_output(self.MODULE_END_MODULE, pin, state)
 
 
+    # grip/release 는 각자 핀을 True 로만 세팅한다 — 상보 핀 해제(펄스화)는
+    # 하지 않으므로 하드웨어가 상승 에지/래치로 동작한다는 전제다.
     def grip(self) -> bool:
+        """io_config.yaml 의 grip 핀을 ON 으로 세팅한다."""
         module = self._gripper_config.get('module', self.MODULE_END_MODULE)
         pin = self._gripper_config.get('grip_pin', 0)
         return self.set_digital_output(module, pin, True)
 
     def release(self) -> bool:
+        """io_config.yaml 의 release 핀을 ON 으로 세팅한다."""
         module = self._gripper_config.get('module', self.MODULE_END_MODULE)
         pin = self._gripper_config.get('release_pin', 1)
         return self.set_digital_output(module, pin, True)
 
     def read_digital_input(self, di_name: str) -> Tuple[bool, Optional[bool], str]:
+        """이름(Ctrl_DIn/End_DIn)으로 캐시된 DI 를 읽는다 — (성공, 값, 문구).
+
+        접두어 뒤가 숫자가 아니면 int() 에서 ValueError 가 그대로 전파된다.
+        """
         if di_name.startswith('Ctrl_DI'):
             pin = int(di_name.replace('Ctrl_DI', ''))
             if 0 <= pin < self.CB_DI_COUNT:
@@ -186,6 +212,7 @@ class IOControlService(QObject):
             return False, None, f"알 수 없는 DI 이름: {di_name}"
 
     def write_digital_output_by_name(self, do_name: str, state: str) -> Tuple[bool, str]:
+        """이름(Ctrl_DOn/End_DOn)으로 DO 를 쓴다 — state 는 'ON'/'OFF' 문자열."""
         state_bool = (state == 'ON')
 
         if do_name.startswith('Ctrl_DO'):
@@ -206,6 +233,7 @@ class IOControlService(QObject):
             return False, f"알 수 없는 DO 이름: {do_name}"
 
     def read_analog_input(self, ai_name: str) -> Tuple[bool, Optional[float], str]:
+        """이름(Ctrl_AIn/End_AIn)으로 캐시된 AI(V)를 읽는다 — (성공, 값, 문구)."""
         if ai_name.startswith('Ctrl_AI'):
             pin = int(ai_name.replace('Ctrl_AI', ''))
             if 0 <= pin < self.CB_AI_COUNT:

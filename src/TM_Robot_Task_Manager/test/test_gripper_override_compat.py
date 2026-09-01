@@ -1,3 +1,4 @@
+"""gripper_override_service 의 백엔드 가용성 판정과 SMC→SCHUNK 폴백 규칙을 검증한다."""
 import sys
 import types
 from unittest.mock import MagicMock

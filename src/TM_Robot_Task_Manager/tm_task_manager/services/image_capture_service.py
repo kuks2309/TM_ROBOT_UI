@@ -1,3 +1,9 @@
+"""TMflow 비전 잡 트리거식 이미지 캡처 — QThread 워커판.
+
+TMflow 쪽 규약: 전역변수 g_robot_command 에 3(캡처 잡)을 쓰고 ScriptExit 로
+Listen Node 를 빠져나가면 TMflow 잡이 촬영을 수행해 techman 이미지 토픽으로
+프레임이 온다. 토픽 구독·프레임 대기의 실체는 루트 노드 소관.
+"""
 import time
 from typing import Optional, Tuple
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
@@ -9,6 +15,14 @@ VISION_CAPTURE_COMMAND = 3
 
 
 class ImageCaptureWorker(QThread):
+    """캡처 시퀀스를 GUI 밖 QThread 에서 수행하는 워커.
+
+    baseline 확보 → 캡처 명령(motion_gateway 있으면 vision_job 게이트 경유) →
+    baseline 이후 프레임 대기 → cv_bridge 변환 → image_ready.
+    gv_manager 호출이 워커 스레드에서 일어난다 — gv_manager 쪽 스레드 안전
+    계약(루트 spin 과의 동시 서비스 호출)에 종속된다.
+    """
+
     image_ready = pyqtSignal(object)
     status_changed = pyqtSignal(str)
     error_occurred = pyqtSignal(str)
@@ -21,9 +35,11 @@ class ImageCaptureWorker(QThread):
         self._should_stop = False
 
     def stop(self):
+        # GUI 스레드가 세우고 워커가 폴링하는 bool — 단순 대입이라 락 없이 둔다
         self._should_stop = True
 
     def run(self):
+        """(워커 스레드) 캡처 시퀀스 본체 — 실패·중단은 시그널로만 통지."""
         try:
             if not self._ros_node:
                 self.error_occurred.emit("ROS2 노드가 없습니다")
@@ -81,6 +97,8 @@ class ImageCaptureWorker(QThread):
 
 
 class ImageCaptureService(QObject):
+    """워커 생명주기 관리·시그널 중계·마지막 캡처 이미지 보관 (GUI 스레드 전용)."""
+
     image_captured = pyqtSignal(object)
     capture_status = pyqtSignal(str)
     capture_error = pyqtSignal(str)
@@ -109,6 +127,7 @@ class ImageCaptureService(QObject):
         return self._worker is not None and self._worker.isRunning()
 
     def capture_image(self, timeout_sec: float = 3.0) -> None:
+        """캡처 워커를 기동한다 — 진행 중이면 거부, 결과는 image_captured 시그널."""
         if self.is_capturing:
             self.capture_error.emit("이미 캡처가 진행 중입니다")
             return
@@ -134,6 +153,7 @@ class ImageCaptureService(QObject):
         self._worker.start()
 
     def cancel_capture(self) -> None:
+        """중단 플래그를 세우고 워커 종료를 최대 1초 기다린다."""
         if self._worker and self._worker.isRunning():
             self._worker.stop()
             self._worker.wait(1000)

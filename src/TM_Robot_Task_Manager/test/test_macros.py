@@ -1,3 +1,4 @@
+"""macros 패키지(레지스트리·실행 계약·블랙보드·시퀀스 검증)를 검증한다."""
 import pytest
 from unittest.mock import MagicMock
 

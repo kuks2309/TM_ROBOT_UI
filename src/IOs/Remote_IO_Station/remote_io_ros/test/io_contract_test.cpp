@@ -1,3 +1,5 @@
+// io_contract 순수 함수 계약 시험(rclcpp 미링크) — 비트 전개·초기 이미지·요청 검증·
+// 알람 판단·planTick 상태기계·쓰기 재시도/해제. 레거시 tc_io 파리티가 기준선.
 #include "../src/io_contract.hpp"
 
 #include <gtest/gtest.h>

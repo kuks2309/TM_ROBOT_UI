@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""tabs/task_edit_tab 버튼 라벨 규칙을 검증한다."""
 import sys
 from pathlib import Path
 

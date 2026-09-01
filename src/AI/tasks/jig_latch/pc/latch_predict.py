@@ -1,3 +1,8 @@
+"""래치 세그멘테이션 추론 별본 — inference.py 와 같은 파이프라인.
+
+차이: 기본 해상도 320×640, 모델·데이터 경로가 스크립트 기준 상대경로, 폰트 존재 검사 없음.
+새 작업은 inference.py 를 쓸 것.
+"""
 import cv2
 import numpy as np
 from ultralytics import YOLO
@@ -152,6 +157,9 @@ def draw_segmentation_results(image, results, conf_threshold):
             cv2.circle(result_img, (center_x, center_y), 3, color, -1)
             cv2.circle(result_img, (center_x, center_y), 6, (255, 255, 255), 1)
 
+            # 함정: state/state_color 는 컨투어 분기 안에서만 대입된다 — 루프 2회째부터는
+            # 직전 객체의 값이 남아 컨투어 없는 객체에 잘못된 라벨이 붙을 수 있다
+            # (inference.py 는 매 반복 UNKNOWN 초기화로 이 문제가 없다).
             if 'state' in dir():
                 cv2.putText(result_img, state,
                            (x1, y2 + 25),

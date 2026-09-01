@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""services/plate_pose_dataset 의 측정 데이터셋 처리를 검증한다."""
 import sys
 from pathlib import Path
 

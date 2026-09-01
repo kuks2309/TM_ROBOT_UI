@@ -1,3 +1,4 @@
+"""positions.yaml 설정 접근자 — 로봇 IP·등록 자세·점 표기 키 경로의 읽기/쓰기."""
 import os
 import yaml
 from typing import Any, List, Optional
@@ -6,6 +7,12 @@ from .. import paths
 
 
 class ConfigManager:
+    """positions.yaml 캐시 로더.
+
+    캐시는 인스턴스 단위다 — 인스턴스를 여러 곳에서 만들면 한쪽의 저장이
+    다른 쪽 캐시에 보이지 않는다(공유하려면 같은 인스턴스를 주입할 것).
+    """
+
     def __init__(self, config_path: Optional[str] = None):
         if config_path is None:
             config_path = paths.config('positions.yaml')
@@ -13,6 +20,7 @@ class ConfigManager:
         self._config_cache: Optional[dict] = None
 
     def _load_config(self) -> dict:
+        # 최초 1회만 디스크에서 읽음 — 외부에서 파일이 바뀌면 reload() 필요
         if self._config_cache is None:
             if not os.path.exists(self.config_path):
                 self._config_cache = {}
@@ -38,6 +46,7 @@ class ConfigManager:
             raise
 
     def reload(self):
+        """캐시를 버리고 디스크에서 다시 읽는다."""
         self._config_cache = None
         return self._load_config()
 
@@ -56,10 +65,12 @@ class ConfigManager:
         self._save_config(config)
 
     def get_position(self, name: str) -> Optional[dict]:
+        """등록 자세 1건 조회 — {'type': joint|tcp, 'values': [6개]} 형태, 없으면 None."""
         config = self._load_config()
         return (config.get('positions') or {}).get(name)
 
     def get_position_names(self) -> List[str]:
+        """등록 자세 이름 목록(사전순 정렬)."""
         config = self._load_config()
         return sorted((config.get('positions') or {}).keys())
 
@@ -79,6 +90,7 @@ class ConfigManager:
         self._save_config(config)
 
     def get(self, key_path: str, default: Any = None) -> Any:
+        """점 표기 경로 조회 (예: 'robot.ip') — 경로 중간이 없으면 default."""
         config = self._load_config()
         keys = key_path.split('.')
         value = config
@@ -94,6 +106,7 @@ class ConfigManager:
         return value
 
     def set(self, key_path: str, value: Any):
+        """점 표기 경로에 값 기록 — 중간 dict 를 만들어 가며 즉시 파일 저장."""
         config = self._load_config()
         keys = key_path.split('.')
         target = config

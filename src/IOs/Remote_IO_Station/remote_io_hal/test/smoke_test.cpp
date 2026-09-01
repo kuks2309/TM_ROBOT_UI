@@ -1,3 +1,4 @@
+// gtest 없는 스모크 — Result 가드·bitAt(LSB-first)·StationLayout 기본값 계약 확인.
 #include "remote_io_hal/station_port.hpp"
 
 #include <cstdio>

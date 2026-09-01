@@ -1,3 +1,4 @@
+"""job_executor 랜드마크 pose 파일 신선도 가드(max_age·saved_at/mtime 우선순위)를 검증한다."""
 import time
 
 import pytest

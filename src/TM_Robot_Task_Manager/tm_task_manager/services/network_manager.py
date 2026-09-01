@@ -1,3 +1,4 @@
+"""네트워크 유틸(전부 정적) — 인터페이스 열람과 TM 로봇 서브넷 스캔."""
 import socket
 import netifaces
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -5,8 +6,11 @@ from typing import List, Dict, Optional
 
 
 class NetworkManager:
+    """IPv4 인터페이스 분류·로컬 IP 선택·로봇 포트 스캔 정적 함수 모음."""
+
     @staticmethod
     def get_all_network_interfaces() -> List[Dict[str, str]]:
+        """루프백 제외 IPv4 인터페이스를 유선/무선/기타로 분류해 나열한다."""
         interfaces = []
 
         try:
@@ -38,6 +42,7 @@ class NetworkManager:
 
     @staticmethod
     def get_local_ip(preferred_wired: bool = True) -> str:
+        """유선/무선 우선순위로 로컬 IP 를 고른다 (없으면 127.0.0.1)."""
         interfaces = NetworkManager.get_all_network_interfaces()
 
         if preferred_wired:
@@ -67,7 +72,13 @@ class NetworkManager:
                       ports: List[int] = None,
                       timeout: float = 0.1,
                       max_workers: int = 50) -> List[str]:
+        """/24 서브넷 전체에 TMflow 리스닝 포트(5890/5891) TCP 연결을 시도한다.
+
+        호출 스레드 블로킹 — worst 약 (254×포트수×timeout)/max_workers 초.
+        GUI 스레드에서 부르면 그 시간만큼 화면이 멎는다.
+        """
         if ports is None:
+            # TMflow Ethernet Slave/Listen 포트
             ports = [5890, 5891]
 
         if local_ip is None:
@@ -108,6 +119,7 @@ class NetworkManager:
 
     @staticmethod
     def parse_subnet(ip: str) -> str:
+        """IP 의 앞 3옥텟(/24 서브넷 접두)을 돌려준다."""
         parts = ip.split('.')
         if len(parts) >= 3:
             return '.'.join(parts[:3])
@@ -115,6 +127,7 @@ class NetworkManager:
 
     @staticmethod
     def is_valid_ip(ip: str) -> bool:
+        """IPv4 점표기 형식 검증."""
         try:
             parts = ip.split('.')
             if len(parts) != 4:

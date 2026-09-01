@@ -239,6 +239,7 @@ bool RobotClient::getCurrentToolInfo(
     tool_name = "Unknown";
   }
 
+  // tcp 는 0 으로 채워 반환한다 — askSta("01") 응답 파싱은 미구현(빈 블록).
   tcp.clear();
   tcp.resize(6, 0.0);
 
@@ -333,6 +334,7 @@ bool RobotClient::changeTool(const std::string& tool_name)
 
 bool RobotClient::getToolList(std::vector<std::string>& tool_names)
 {
+  // askSta 실패에 대비한 기본 목록 — 응답이 오면 아래에서 통째로 대체된다.
   tool_names.clear();
   tool_names.push_back("NOTOOL");
   tool_names.push_back("tool0");

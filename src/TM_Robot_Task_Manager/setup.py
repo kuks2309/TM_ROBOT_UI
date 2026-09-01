@@ -1,3 +1,4 @@
+"""tm_task_manager ament_python 패키지 메타데이터 — data_files(launch/ui/config/recipes 설치)·scripts·콘솔 엔트리포인트 정의."""
 from setuptools import setup, find_packages
 import os
 from glob import glob

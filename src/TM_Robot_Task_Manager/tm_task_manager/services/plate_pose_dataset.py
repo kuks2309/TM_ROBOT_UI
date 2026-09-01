@@ -1,9 +1,12 @@
+"""plate_pose_calc 측정 데이터셋 로더/통계 — jig 시계열·편차·기하 리포트 (mm/deg)."""
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import yaml
 
+# jig_plate_validator 상단이 PyQt5·matplotlib 를 무조건 import 하므로
+# 이 모듈을 쓰는 헤드리스 사용처에도 GUI 의존성이 연쇄 로드된다
 from ..tools.jig_plate_validator import JigPlateValidator
 
 JIG_KEYS: Tuple[str, ...] = ('jig1', 'jig2', 'jig3', 'jig4')
@@ -18,6 +21,7 @@ VARIANT_CORRECTED = 'corrected'
 
 @dataclass
 class PlateRecord:
+    """측정 파일 1건 — 평면 pose 와 표준 순서로 정렬된 jig 4점."""
     file_name: str
     saved_at: str
     plate_pose: Dict[str, float]
@@ -26,6 +30,7 @@ class PlateRecord:
 
 @dataclass
 class AxisStat:
+    """한 jig·한 축의 통계 (평균·std·3σ·최소/최대 — 위치 mm, 각도 deg)."""
     target: str
     axis: str
     count: int
@@ -41,6 +46,11 @@ class AxisStat:
 
 
 def normalize_jig_order(marks: List[Dict[str, float]]) -> List[Dict[str, float]]:
+    """마크 4점을 장변/단변 기준의 표준 jig 순서로 정렬한다.
+
+    파일마다 저장 순서가 달라도 같은 물리 지그가 같은 인덱스로 비교되게 한다
+    — JigPlaneCalculator 의 순서 계약(1=좌하, 2=좌상, 3=우하, 4=우상)에 대응.
+    """
     if len(marks) != 4:
         return list(marks)
 
@@ -57,6 +67,7 @@ def normalize_jig_order(marks: List[Dict[str, float]]) -> List[Dict[str, float]]
 
 
 class PlatePoseDataset:
+    """data/plate_pose_calc/<팔레트>/ 의 raw/corrected 측정 yaml 묶음을 다룬다."""
 
     def __init__(self):
         self.root: Optional[Path] = None
@@ -70,6 +81,7 @@ class PlatePoseDataset:
         return paths.DATA_DIR / DATASET_DIR_NAME
 
     def set_root(self, root_path) -> bool:
+        """루트를 설정한다 — 디렉토리이고 팔레트 하위 폴더가 있어야 True."""
         root = Path(root_path)
         if not root.is_dir():
             return False
@@ -90,6 +102,11 @@ class PlatePoseDataset:
         return sorted(p for p in pallet_dir.glob('*.yaml') if p.is_file())
 
     def load(self, pallet: str, variant: str = VARIANT_CORRECTED) -> Tuple[bool, str]:
+        """팔레트의 measurement yaml 전체를 파싱해 records 로 적재한다.
+
+        Returns:
+            (성공 여부, 요약 문구 — 건너뛴 파일 수 포함).
+        """
         files = self._variant_files(pallet, variant)
         if not files:
             return False, f"{pallet}/{variant}: YAML 파일이 없습니다."
@@ -117,6 +134,7 @@ class PlatePoseDataset:
         return True, message
 
     def _parse_file(self, path: Path) -> Optional[PlateRecord]:
+        """yaml 1건을 레코드로 파싱한다 — jig1~4 가 모두 없으면 None."""
         try:
             with open(path, 'r', encoding='utf-8') as f:
                 data = yaml.safe_load(f)
@@ -148,6 +166,7 @@ class PlatePoseDataset:
         )
 
     def jig_series(self, jig_index: int) -> Dict[str, List[float]]:
+        """jig 하나의 축별 시계열 (records 순서)."""
         if not 0 <= jig_index < len(JIG_KEYS):
             return {axis: [] for axis in POSE_AXES}
         return {
@@ -156,6 +175,7 @@ class PlatePoseDataset:
         }
 
     def jig_deviation_series(self, jig_index: int) -> Dict[str, List[float]]:
+        """중심 대비 편차 시계열 — 각도 축은 원형 평균 기준 ±180° 정규화."""
         from .landmark_analyzer import angle_deviation_deg, circular_mean_deg
 
         series = self.jig_series(jig_index)
@@ -174,6 +194,7 @@ class PlatePoseDataset:
         return deviations
 
     def jig_statistics(self, jig_index: int) -> List[AxisStat]:
+        """jig 하나의 축별 AxisStat — 위치는 산술, 각도는 원형 통계로 대체한다."""
         from .landmark_analyzer import circular_mean_deg, circular_std_deg
         from .precision_test_manager import PrecisionTestManager
 
@@ -217,6 +238,7 @@ class PlatePoseDataset:
         return rows
 
     def mean_marks(self) -> List[Dict[str, float]]:
+        """jig 별 산술 평균 마크 4개 (기하 검증 입력용)."""
         if not self.records:
             return []
         count = len(self.records)
@@ -229,6 +251,7 @@ class PlatePoseDataset:
         ]
 
     def build_validator(self, marks: Optional[List[Dict[str, float]]] = None) -> Optional[JigPlateValidator]:
+        """평균(또는 지정) 마크로 기하 검증기를 구성한다 (4점 아니면 None)."""
         target_marks = marks if marks is not None else self.mean_marks()
         if len(target_marks) != 4:
             return None
@@ -239,6 +262,7 @@ class PlatePoseDataset:
         return validator
 
     def geometry_report(self, marks: Optional[List[Dict[str, float]]] = None):
+        """직사각·Z 편차 검사 결과 — (변 길이 dict, ValidationResult 목록)."""
         validator = self.build_validator(marks)
         if validator is None:
             return {}, []

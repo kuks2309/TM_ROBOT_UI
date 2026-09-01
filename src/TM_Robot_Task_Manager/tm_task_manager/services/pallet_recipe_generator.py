@@ -1,3 +1,8 @@
+"""팔레트 티칭 산출물로 픽앤플레이스 레시피 yaml 을 발행한다 (mm/deg).
+
+고정식은 `<이름>_pick/place.yaml`(+측정 시작자세가 있으면 `<이름>_cali.yaml`),
+비고정식은 `<이름>_marker_scan/pick/place.yaml` 을 config/recipes/<이름>/ 에 쓴다.
+"""
 import math
 import os
 import re
@@ -9,6 +14,8 @@ import yaml
 from ..tools.landmark_frame import FRAME_MODE_RZ_ONLY, pose_in_landmark_frame
 from ..hardware.gripper import BACKENDS, SCHUNK, GripperBackend
 
+# 4점 순회 계획 — macros/pallet_teach.DEFAULT_CORNER_PLAN 과 같은 값이어야
+# 캘리 레시피 순회와 티칭 순서가 일치한다
 CORNER_PLAN = ((4, 0.0, 0.0), (2, 1.0, 0.0), (1, 0.0, -1.0), (3, -1.0, 0.0))
 
 MOUNT_FIXED = 'fixed'
@@ -19,6 +26,7 @@ NAME_PATTERN = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$')
 
 POSE_KEYS = ('x', 'y', 'z', 'rx', 'ry', 'rz')
 
+# 잡 생성 파라미터 — 리프트 mm, 속도 %(plane 계열)/mm/s(TCP 계열), 타임아웃 s/ms
 APPROACH_LIFT_MM = 20.0
 CLEAR_LIFT_MM = 250.0
 TRAVEL_VELOCITY = 20.0
@@ -56,6 +64,7 @@ def _radius_3d(pose: Dict[str, float]) -> float:
 
 
 def snap_rotation_to_plane(pose: Dict[str, float]) -> Dict[str, float]:
+    """자세를 평면 표준값으로 스냅한다 — rx=180°, ry=0°, rz 는 90° 단위 반올림."""
     snapped = dict(pose)
     snapped['rx'] = 180.0
     snapped['ry'] = 0.0
@@ -64,9 +73,17 @@ def snap_rotation_to_plane(pose: Dict[str, float]) -> Dict[str, float]:
 
 
 class PalletRecipeGenerator:
+    """레시피 문서 생성기 — 실행은 job_executor 소관, 여기서는 yaml 만 만든다.
+
+    잡 시퀀스: 그리퍼 준비 → 상공 진입 → 접근 → 하강(descent 모드별:
+    plane_normal=평면 법선 / tcp_linear=공구축) → 파지/놓기 → 이탈.
+    잡 id 는 _renumber 가 마지막에 1..N 으로 다시 부여하므로 생성 중의
+    id 인자 값은 순서만 맞으면 된다.
+    """
 
     def __init__(self, recipe_dir: Optional[str] = None, package_root: Optional[str] = None,
                  gripper: Any = SCHUNK, descent: str = DESCENT_PLANE_NORMAL):
+        """경로·그리퍼 백엔드·하강 모드를 확정한다 (미지 모드는 ValueError)."""
         if package_root is None:
             from .. import paths
             package_root = str(paths.PACKAGE_ROOT)
@@ -99,6 +116,16 @@ class PalletRecipeGenerator:
              operator: str = '',
              snap_rotation: bool = False,
              overwrite: bool = False) -> List[str]:
+        """검증 → (스냅샷 저장) → mount 별 문서 생성 → yaml 기록.
+
+        Returns:
+            기록한 파일 경로 목록.
+
+        Raises:
+            ValueError: 입력 검증 실패.
+            FileExistsError: overwrite=False 인데 같은 이름 파일 존재 —
+                이때 이미 쓴 앞선 파일은 롤백되지 않는다(부분 발행).
+        """
         self._validate(pallet_name, mount, plate_pose, teach_poses, marker_pose)
 
         snapshot = None
@@ -145,6 +172,7 @@ class PalletRecipeGenerator:
 
     @staticmethod
     def _validate(pallet_name, mount, plate_pose, teach_poses, marker_pose) -> None:
+        """이름 패턴·마운트 종류·티칭/마커 존재를 검증한다 (실패 시 ValueError)."""
         if not NAME_PATTERN.match(pallet_name or ''):
             raise ValueError(
                 f"팔레트 이름이 올바르지 않습니다: '{pallet_name}' — "
@@ -184,6 +212,7 @@ class PalletRecipeGenerator:
 
     @staticmethod
     def _renumber(jobs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """잡 id 를 목록 순서대로 1..N 으로 최종 부여한다 (생성 중 id 는 무시됨)."""
         for index, job in enumerate(jobs, start=1):
             job['id'] = index
         return jobs
@@ -218,6 +247,7 @@ class PalletRecipeGenerator:
 
     def _fixed_cali(self, pallet_name, scan_start_tcp, pitch_x, pitch_y,
                     trim_x, trim_y, operator) -> Dict[str, Any]:
+        """고정식 4점 측정 캘리 레시피 — CORNER_PLAN 순회 후 평면 계산·저장."""
         if not scan_start_tcp:
             raise ValueError("측정 시작 자세가 없습니다 — 4점 측정을 먼저 수행하세요")
         if pitch_x <= 0 or pitch_y <= 0:
@@ -275,6 +305,7 @@ class PalletRecipeGenerator:
 
     def _write_plate_snapshot(self, pallet_name, plate_pose, plate_marks,
                               operator) -> str:
+        """티칭 시점 측정을 data/plate_pose_calc/<이름>/ 스냅샷 yaml 로 남긴다."""
         directory = os.path.join(self.package_root, 'data', 'plate_pose_calc', pallet_name)
         os.makedirs(directory, exist_ok=True)
         stamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -305,6 +336,7 @@ class PalletRecipeGenerator:
         return path
 
     def _load_plate_job(self, job_id: int, pallet_name: str) -> Dict[str, Any]:
+        """저장 평면 로드 잡 — 직사각 가드(변/대각/직각 허용치) 파라미터 포함."""
         return self._job(job_id, 'load_plate_pose', 'Plate Pose 불러오기',
                          f'{pallet_name} 저장 데이터 불러오기', {
                              'source_path': f'data/plate_pose_calc/{pallet_name}',
@@ -318,6 +350,7 @@ class PalletRecipeGenerator:
 
     def _plane_motion(self, pallet_name, teach_poses, slot, operator,
                       snap_rotation: bool = False) -> Dict[str, Any]:
+        """고정식 픽/플레이스 레시피 — 티칭 평면 상대값으로 이동 잡을 짠다."""
         taught = _round_pose(teach_poses[slot]['plane'])
         if snap_rotation:
             taught = _round_pose(snap_rotation_to_plane(taught))
@@ -413,6 +446,7 @@ class PalletRecipeGenerator:
 
 
     def _marker_scan(self, pallet_name, marker_view_tcp, operator) -> Dict[str, Any]:
+        """비고정식 위치 마커 스캔 레시피 — 픽/플레이스 실행 전에 돌려야 한다."""
         if not marker_view_tcp:
             raise ValueError("마커 촬영 자세가 없습니다 — 위치 마커 촬영을 먼저 수행하세요")
 
@@ -456,6 +490,12 @@ class PalletRecipeGenerator:
 
     def _landmark_motion(self, pallet_name, marker_pose, teach_poses, slot,
                          operator, snap_rotation: bool = False) -> Dict[str, Any]:
+        """비고정식 픽/플레이스 레시피 — 티칭 절대 pose 를 마커 상대값으로 환산.
+
+        rz_only 프레임(수평면 + Rz 회전만)이라 팔레트가 크게 기울면 오차가 커진다.
+        max_radius_mm 는 티칭 반경 + RADIUS_MARGIN_MM 로 잡아 이상 마커 검출 시
+        과도한 이동을 막는다.
+        """
         taught_absolute = teach_poses[slot]['absolute']
         taught = _round_pose(
             pose_in_landmark_frame(marker_pose, taught_absolute, FRAME_MODE_RZ_ONLY))
