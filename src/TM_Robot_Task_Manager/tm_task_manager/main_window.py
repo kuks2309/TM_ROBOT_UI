@@ -44,7 +44,7 @@ from .services.io_control_service import IOControlService
 from .services.magazine_state_service import MagazineStateService
 from .services.gripper_override_service import GripperOverrideService
 from .services.ai_detection_service import AIDetectionService
-from .services.coordinate_transformer import CoordinateTransformer
+from .services.coordinate_transformer import CoordinateTransformer, estimate_motion_timeout_s
 from .services.vision_origin_check_service import VisionOriginCheckService
 from tm_msgs.srv import SetPositions, AskItem, SendScript, SetIO
 
@@ -420,7 +420,7 @@ class TaskManagerNode(Node):
         )
 
     def _send_set_positions(self, motion_type, positions, velocity, acc_time, blend_percentage=0, fine_goal=False):
-        """set_positions 를 호출하고 완료를 폴링한다 (30s 한도, 완료 판정 3회 연속이면 성공)."""
+        """set_positions 를 호출하고 완료를 폴링한다 (한도는 거리·속도 기반 동적, 완료 판정 3회 연속이면 성공)."""
         if not self.set_positions_client.wait_for_service(timeout_sec=1.0):
             return False, "TM Driver set_positions 서비스를 사용할 수 없습니다"
 
@@ -438,7 +438,17 @@ class TaskManagerNode(Node):
         if future.result() is not None:
             if future.result().ok:
                 import time
-                timeout = 30.0
+                if motion_type == SetPositions.Request.PTP_J:
+                    kind = 'joint'
+                elif motion_type == SetPositions.Request.LINE_T:
+                    kind = 'line'
+                else:
+                    kind = 'tcp'
+                timeout = estimate_motion_timeout_s(
+                    kind, positions, velocity,
+                    current_tcp_mm_deg=self.motion_service.current_tcp_pose,
+                    current_joint_deg=self.motion_service.current_joint_position)
+                self.get_logger().info(f'[모션] 완료 대기 한도 {timeout:.0f}s ({kind}, vel={velocity}%)')
                 start_time = time.time()
 
                 self.motion_service.target_position = positions.copy()
@@ -461,7 +471,7 @@ class TaskManagerNode(Node):
                     time.sleep(0.05)
 
                 self.motion_service.clear_motion_state()
-                return False, "이동 완료 확인 타임아웃"
+                return False, f"이동 완료 확인 타임아웃 ({timeout:.0f}s 한도)"
             else:
                 error_detail = getattr(future.result(), 'msg', '알 수 없는 오류')
                 return False, f"이동 실패: 로봇이 명령을 거부함 ({error_detail})"

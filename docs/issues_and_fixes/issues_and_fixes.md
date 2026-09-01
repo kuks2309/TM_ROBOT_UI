@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-09-01
+
+### [Fix] 저속·장거리 이동이 "이동 완료 확인 타임아웃"으로 실패 — 고정 30s 한도를 거리·속도 기반 동적 한도로 교체
+
+- **문제**: 긴 구간(또는 낮은 속도 %)의 SetPositions 이동에서 로봇이 아직 정상 이동 중인데 UI 가 "이동 완료 확인 타임아웃"으로 실패 처리(사용자 실기 보고 2026-09-01). 2026-08-17 항목(제자리 179.5° 회전 30초 타임아웃)과 같은 한도.
+- **원인**: `main_window.TaskManagerNode._send_set_positions` 가 서비스 수락 후 완료 폴링 한도를 이동량과 무관하게 `timeout = 30.0` 고정으로 잡음. 모든 PTP_J/PTP_T/LINE_T 이동이 이 함수를 경유하므로 예상 소요시간이 30s 를 넘는 이동은 구조적으로 실패.
+- **해결**(사용자 승인 2026-09-01 — "거리 기반 동적 타임아웃"): 순수 함수 `estimate_motion_timeout_s(kind, target_service, velocity_percent, current_tcp_mm_deg, current_joint_deg)` 를 `services/coordinate_transformer.py` 에 신설 — 목표까지 거리(LINE/TCP: 병진 m 와 회전 rad 중 큰 쪽, JOINT: 최대 관절 변화 rad)를 속도 %×상한(MAX_TCP_SPEED 1 m/s·MAX_JOINT_VELOCITY π rad/s)으로 나눠 예상시간을 구하고 `BASE 10s + MARGIN 3.0×예상` 을 `[MIN 30s, MAX 300s]` 로 클램프. 현재 위치를 모르면 종전과 같은 30s. `_send_set_positions` 는 이 값을 쓰고 한도를 로그(`[모션] 완료 대기 한도 Ns`)·실패 메시지에 명시. 상수 4종 명명(단위 주석).
+- **파일**: `src/TM_Robot_Task_Manager/tm_task_manager/services/coordinate_transformer.py`(상수 5종 :15-19, 함수 :22), `src/TM_Robot_Task_Manager/tm_task_manager/main_window.py`(`_send_set_positions` 한도 계산·로그·메시지), `src/TM_Robot_Task_Manager/test/test_motion_timeout.py`(신설 7건), `src/TM_Robot_Task_Manager/docs/function_table.md`(등재)
+- **검증**: `pytest test/test_motion_timeout.py` 7 passed; 전체 회귀 `pytest test -q` → **1 failed, 937 passed, 42 skipped** (실패 1건은 2026-08-15 기록 선재 결함 `scan_ar_tag`, 본 건 무관). 실기 검증 잔여 — 저속 장거리 이동 1회로 로그의 한도값·완료 확인 필요.
+- **상태**: 코드·단위 검증 완료, 실기 확인 대기(2026-09-01 기준)
+
+---
+
 ## 2026-08-29
 
 ### [Fix] move_linear(Move_Line "TPP") 좌표계 오단정으로 실기 충돌 — sdc_marker_move(마커 frame 이동)로 대체

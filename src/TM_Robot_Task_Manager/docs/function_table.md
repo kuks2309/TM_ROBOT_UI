@@ -850,23 +850,27 @@
 
 | # | 함수 | 입력 | 출력 | 기능 | 위치(file:line) |
 |---|---|---|---|---|---|
-| 1 | .velocity_percent_to_service | motion_type: int, percent | float | %→m/s 또는 rad/s | services/coordinate_transformer.py:17 |
-| 2 | .euler_to_rotation_matrix | rx,ry,rz (rad) | 3x3 list | ZYX 회전행렬 | services/coordinate_transformer.py:25 |
-| 3 | .quaternion_to_euler | qx,qy,qz,qw | (rx,ry,rz) deg | 쿼터니언→오일러 | services/coordinate_transformer.py:39 |
-| 4 | .transform_tool_to_base | tool_delta, tcp_orientation(deg) | List[float] | 공구 변위→베이스 변위 | services/coordinate_transformer.py:58 |
-| 5 | .angle_difference_deg | target, current | float | 최단 각도차 절댓값 | services/coordinate_transformer.py:76 |
-| 6 | .deg_to_rad / 7 .rad_to_deg | angle | float | 단위 변환 | services/coordinate_transformer.py:82,86 |
-| 8 | .mm_to_m / 9 .m_to_mm | value | float | 단위 변환 | services/coordinate_transformer.py:90,94 |
-| 10 | .convert_tcp_to_service_format | tcp_pose(mm/deg) | List[float](m/rad) | 서비스 포맷 | services/coordinate_transformer.py:98 |
-| 11 | .convert_joint_to_service_format | joint_pose(deg) | List[float](rad) | 서비스 포맷 | services/coordinate_transformer.py:110 |
+| 0 | estimate_motion_timeout_s (모듈 함수) | kind('joint'/'tcp'/'line'), target_service(m·rad), velocity_percent, current_tcp_mm_deg, current_joint_deg | float (s) | 목표까지 거리·속도(%)로 예상 소요시간을 구해 완료 대기 한도 = BASE+MARGIN×예상 을 [MIN 30, MAX 300] 클램프. 현재 위치 미상이면 MIN | services/coordinate_transformer.py:22 |
+| 1 | .velocity_percent_to_service | motion_type: int, percent | float | %→m/s 또는 rad/s | services/coordinate_transformer.py:68 |
+| 2 | .euler_to_rotation_matrix | rx,ry,rz (rad) | 3x3 list | ZYX 회전행렬 | services/coordinate_transformer.py:76 |
+| 3 | .quaternion_to_euler | qx,qy,qz,qw | (rx,ry,rz) deg | 쿼터니언→오일러 | services/coordinate_transformer.py:90 |
+| 4 | .transform_tool_to_base | tool_delta, tcp_orientation(deg) | List[float] | 공구 변위→베이스 변위 | services/coordinate_transformer.py:109 |
+| 5 | .angle_difference_deg | target, current | float | 최단 각도차 절댓값 | services/coordinate_transformer.py:127 |
+| 6 | .deg_to_rad / 7 .rad_to_deg | angle | float | 단위 변환 | services/coordinate_transformer.py:133,137 |
+| 8 | .mm_to_m / 9 .m_to_mm | value | float | 단위 변환 | services/coordinate_transformer.py:141,145 |
+| 10 | .convert_tcp_to_service_format | tcp_pose(mm/deg) | List[float](m/rad) | 서비스 포맷 | services/coordinate_transformer.py:149 |
+| 11 | .convert_joint_to_service_format | joint_pose(deg) | List[float](rad) | 서비스 포맷 | services/coordinate_transformer.py:161 |
 
 ### 전역 변수 / 모듈 상수
 
 | # | 변수 | 사용처(함수) | 기능 | 위치(file:line) |
 |---|---|---|---|---|
-| 1 | MAX_JOINT_VELOCITY (상수) | velocity_percent_to_service | π rad/s 상한 | services/coordinate_transformer.py:5 |
-| 2 | MAX_TCP_SPEED (상수) | 〃 | 1.0 m/s 상한 | services/coordinate_transformer.py:6 |
-| 3 | _MOTION_LINE_T (상수) | 〃 | LINE_T=4 매직값 | services/coordinate_transformer.py:11 |
+| 1 | MAX_JOINT_VELOCITY (상수) | velocity_percent_to_service, estimate_motion_timeout_s | π rad/s 상한 | services/coordinate_transformer.py:6 |
+| 2 | MAX_TCP_SPEED (상수) | 〃 | 1.0 m/s 상한 | services/coordinate_transformer.py:7 |
+| 3 | _MOTION_LINE_T (상수) | velocity_percent_to_service | LINE_T=4 매직값 | services/coordinate_transformer.py:11 |
+| 4 | MOTION_TIMEOUT_MIN_S / MAX_S (상수) | estimate_motion_timeout_s | 완료 대기 한도 하한 30s(종전 고정값)·상한 300s | services/coordinate_transformer.py:15-16 |
+| 5 | MOTION_TIMEOUT_BASE_S / MARGIN (상수) | estimate_motion_timeout_s | 거리 무관 고정 여유 10s · 예상시간 배수 3.0 | services/coordinate_transformer.py:17-18 |
+| 6 | _MIN_VELOCITY_RATIO (상수) | estimate_motion_timeout_s | 속도 0% 의 0 나눗셈 방지(1% 간주) | services/coordinate_transformer.py:19 |
 
 ## src/TM_Robot_Task_Manager/tm_task_manager/services/decomposed_move_planner.py
 
@@ -2139,3 +2143,15 @@
 | 2 | dispatch elif 2분기 | job_type | bool | `_exec_sdc_gripper(opening=True/False)` 위임 | src/TM_Robot_Task_Manager/tm_task_manager/job_executor.py:532-535 |
 | 3 | `_exec_sdc_gripper` | job, opening | bool | params 추출→`zefg_serial.move_to` 호출→성공/실패 로그 | src/TM_Robot_Task_Manager/tm_task_manager/job_executor.py:1170 |
 | 4 | `zefg_serial.move_to` | pos·speed·current·timeout | (bool, 사유) | 범위검증(밖=무송신)→속도·전류·위치 기록→폴링. Dropping/Clamping 은 Moving 관측 또는 STATUS_GRACE_S(0.3s) 후에만 판정(래치 오탐 방지 — 실기 검증 2026-08-30) | src/TM_Robot_Task_Manager/tm_task_manager/hardware/zefg_serial.py:114-163 |
+
+## src/TM_Robot_Task_Manager/test/test_motion_timeout.py
+
+| # | 함수 | 입력 | 출력 | 기능 | 위치(file:line) |
+|---|---|---|---|---|---|
+| 1 | test_unknown_current_pose_falls_back_to_min | — | assert | 현재 위치 미상이면 하한 30s | test/test_motion_timeout.py:16 |
+| 2 | test_short_move_keeps_min_floor | — | assert | 50mm 100% 이동도 하한 유지 | test/test_motion_timeout.py:21 |
+| 3 | test_long_slow_line_move_exceeds_old_fixed_limit | — | assert | 1.5m 5% LINE_T → 100s(종전 30s 초과) | test/test_motion_timeout.py:27 |
+| 4 | test_upper_bound_clamps_absurd_estimates | — | assert | 10m 1% → 상한 300s | test/test_motion_timeout.py:36 |
+| 5 | test_zero_velocity_does_not_divide_by_zero | — | assert | 속도 0% 안전 | test/test_motion_timeout.py:41 |
+| 6 | test_rotation_only_tcp_move_uses_joint_speed_bound | — | assert | 회전 180° 만 있는 tcp 이동은 관절 속도 기준 | test/test_motion_timeout.py:47 |
+| 7 | test_joint_move_uses_largest_joint_delta | — | assert | joint 이동은 최대 관절 변화량 기준 | test/test_motion_timeout.py:55 |

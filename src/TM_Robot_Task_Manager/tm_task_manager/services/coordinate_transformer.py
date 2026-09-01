@@ -10,6 +10,56 @@ MAX_TCP_SPEED = 1.0            # m/s (LINE_T)
 # 벤더 상수가 바뀌면 함께 어긋나므로 주의
 _MOTION_LINE_T = 4
 
+# 이동 완료 대기 한도(s) — 거리·속도로 예상 소요시간을 구해 동적으로 정한다.
+# 저속·장거리 이동이 고정 한도에 걸려 실패하던 문제를 막되, 상한으로 무한 대기는 차단.
+MOTION_TIMEOUT_MIN_S = 30.0    # 짧은 이동도 최소 이만큼은 기다린다 (종전 고정값과 동일)
+MOTION_TIMEOUT_MAX_S = 300.0   # 예상치가 커도 이 이상은 기다리지 않는다
+MOTION_TIMEOUT_BASE_S = 10.0   # 통신 지연·가감속·정지 판정 3회 등 거리와 무관한 고정 여유
+MOTION_TIMEOUT_MARGIN = 3.0    # 예상 소요시간 배수 — 로봇 내부 속도 제한·블렌딩·PTP 경로 우회 여유
+_MIN_VELOCITY_RATIO = 0.01     # 속도 0% 입력 시 0 나눗셈 방지 (1% 로 간주)
+
+
+def estimate_motion_timeout_s(kind: str, target_service: List[float], velocity_percent: float,
+                              current_tcp_mm_deg=None, current_joint_deg=None) -> float:
+    """이동 명령의 완료 대기 한도(s)를 목표까지 거리와 속도(%)로 추정한다.
+
+    Args:
+        kind: 'joint'(PTP_J) / 'tcp'(PTP_T) / 'line'(LINE_T).
+        target_service: SetPositions 서비스 단위 목표 — joint 는 rad 6개, tcp/line 은 m·rad 6개.
+        velocity_percent: 속도 % (0~100, 100% = MAX_JOINT_VELOCITY 또는 MAX_TCP_SPEED).
+        current_tcp_mm_deg: 현재 TCP [x,y,z(mm), rx,ry,rz(deg)] — 없으면 거리 추정 불가.
+        current_joint_deg: 현재 관절각 deg 6개 — joint 이동의 거리 추정에 사용.
+
+    Returns:
+        BASE + MARGIN×예상시간 을 [MIN, MAX] 로 클램프한 값. 현재 위치를 몰라 거리를 못 구하면 MIN.
+    """
+    ratio = max(_MIN_VELOCITY_RATIO, min(float(velocity_percent), 100.0) / 100.0)
+    est_s = None
+
+    if kind == 'joint':
+        if current_joint_deg and len(current_joint_deg) >= 6 and len(target_service) >= 6:
+            max_delta_rad = max(
+                abs(math.radians(float(current_joint_deg[i])) - float(target_service[i]))
+                for i in range(6))
+            est_s = max_delta_rad / (ratio * MAX_JOINT_VELOCITY)
+    else:
+        if current_tcp_mm_deg and len(current_tcp_mm_deg) >= 6 and len(target_service) >= 6:
+            dist_m = math.sqrt(sum(
+                (float(current_tcp_mm_deg[i]) / 1000.0 - float(target_service[i])) ** 2
+                for i in range(3)))
+            # 자세 변화는 관절 속도에 묶이므로 회전량(rad)/관절 상한으로 별도 추정해 큰 쪽을 쓴다
+            max_rot_rad = max(
+                abs(math.radians(float(current_tcp_mm_deg[i])) - float(target_service[i]))
+                for i in range(3, 6))
+            trans_s = dist_m / (ratio * MAX_TCP_SPEED)
+            rot_s = max_rot_rad / (ratio * MAX_JOINT_VELOCITY)
+            est_s = max(trans_s, rot_s)
+
+    if est_s is None:
+        return MOTION_TIMEOUT_MIN_S
+    timeout = MOTION_TIMEOUT_BASE_S + MOTION_TIMEOUT_MARGIN * est_s
+    return max(MOTION_TIMEOUT_MIN_S, min(timeout, MOTION_TIMEOUT_MAX_S))
+
 
 class CoordinateTransformer:
     """전부 staticmethod 인 순수 변환 함수 모음."""
