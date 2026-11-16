@@ -16,16 +16,16 @@
 
 ## 2. 보관 경로
 
-- OpenCV 공식 docs (버전 명시 의무): `references/opencv/<version>/` (예: `references/opencv/4.8.0/`)
-- 알고리즘 논문: `references/papers/<topic>/<author-year>.pdf`
-- 카메라 매뉴얼: `references/<vendor>/<camera>/`
+- OpenCV 공식 docs (버전 명시 의무): `References/opencv/<version>/` (예: `References/opencv/4.8.0/`)
+- 알고리즘 논문: `References/papers/<topic>/<author-year>.pdf`
+- 카메라 매뉴얼: `References/<vendor>/<camera>/`
 
 ## 3. 인용 형식
 
 ```
-[OpenCV 4.8.0 docs, cv::calibrateCamera, "Detailed Description"](references/opencv/4.8.0/calib3d_calibrateCamera.html)
-[Zhang 1999 "A Flexible New Technique for Camera Calibration", IEEE PAMI 22(11), p.1330](references/papers/calibration/zhang-1999.pdf)
-[Intel RealSense D435i DataSheet v1.3, §4.2, page 18](references/intel/realsense-d435i/datasheet.pdf)
+[OpenCV 4.8.0 docs, cv::calibrateCamera, "Detailed Description"](References/opencv/4.8.0/calib3d_calibrateCamera.html)
+[Zhang 1999 "A Flexible New Technique for Camera Calibration", IEEE PAMI 22(11), p.1330](References/papers/calibration/zhang-1999.pdf)
+[Intel RealSense D435i DataSheet v1.3, §4.2, page 18](References/intel/realsense-d435i/datasheet.pdf)
 ```
 
 ## 4. 흔한 추정 단정 사례

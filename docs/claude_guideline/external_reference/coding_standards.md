@@ -8,8 +8,8 @@
 
 | 표준 | 범위 | 라이선스 | 재배포 | 배치 |
 | --- | --- | --- | --- | --- |
-| ISO 26262-6 | 자동차 기능안전 SW | 유료 (ISO) | ❌ | `references/local/`(gitignore) + 공식 URL |
-| MISRA C / C++ | 안전 C/C++ | 유료 (MISRA) | ❌ | `references/local/` + URL |
+| ISO 26262-6 | 자동차 기능안전 SW | 유료 (ISO) | ❌ | `References/local/`(gitignore) + 공식 URL |
+| MISRA C / C++ | 안전 C/C++ | 유료 (MISRA) | ❌ | `References/local/` + URL |
 | AUTOSAR C++14 Guidelines | 안전 C++14 | 무료 열람, **복제 금지** ✅ | ❌ | URL 링크만 (autosar.org) |
 | SEI CERT C | 보안 C | 조건 불명확 ⓦ | ⓦ | URL 링크 (wiki.sei.cmu.edu) |
 | BARR-C:2018 | 임베디드 C | 무료 PDF, **규칙은 출처표기 시 채택** ✅ | △ 규칙 | 무료 PDF URL + 규칙 digest(출처표기) |
@@ -19,7 +19,7 @@
 | Linux kernel coding style | C | GPL(General Public License) v2 ⓦ | ✅ 출처표기 | URL (docs.kernel.org) |
 | NASA/JPL Power of Ten | 안전 C 10 규칙 | 규칙 이념 공개(원문 IEEE 유료) ⓦ | △ 규칙 | digest(출처표기) |
 
-→ **유료(ISO·MISRA)는 조직 라이선스 사본을 `references/local/` 에만**, 절대 공개 배포 repo 에 넣지 않는다. **복제 금지(AUTOSAR)·불명확(CERT)은 URL 링크만**. **CC-BY/permissive(Google·PEP8·LLVM·Linux)는 링크 우선, 필요 시 출처표기 사본**.
+→ **유료(ISO·MISRA)는 조직 라이선스 사본을 `References/local/` 에만**, 절대 공개 배포 repo 에 넣지 않는다. **복제 금지(AUTOSAR)·불명확(CERT)은 URL 링크만**. **CC-BY/permissive(Google·PEP8·LLVM·Linux)는 링크 우선, 필요 시 출처표기 사본**.
 
 ## 2. 보편 코딩 규칙 다이제스트 (모든 언어 — code_review `[품질]`/`[SOLID]`)
 
@@ -43,7 +43,7 @@
 
 ## 4. 받는 법 (요약)
 
-1. **무료·재배포 가능** (Google C++ Style Guide 등) — 위 URL 에서 받아 `references/<vendor>/<product>/` 또는 링크 유지.
-2. **유료** (ISO 26262·MISRA) — 조직 라이선스로 받아 `references/local/`(gitignore). repo 미배포.
+1. **무료·재배포 가능** (Google C++ Style Guide 등) — 위 URL 에서 받아 `References/<vendor>/<product>/` 또는 링크 유지.
+2. **유료** (ISO 26262·MISRA) — 조직 라이선스로 받아 `References/local/`(gitignore). repo 미배포.
 3. **복제 금지·불명확** (AUTOSAR·CERT) — URL 링크만, 사본 미보관.
 4. 인용은 [domains/standards.md](domains/standards.md) 형식 (개정판·절·page·accessed 일자).

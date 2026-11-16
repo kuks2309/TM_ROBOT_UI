@@ -16,13 +16,13 @@
 
 ## 2. 보관 경로
 
-`references/<vendor>/<mcu>/` (예: `references/st/stm32f407/`, `references/infineon/tc375/`).
+`References/<vendor>/<mcu>/` (예: `References/st/stm32f407/`, `References/infineon/tc375/`).
 
 ## 3. 인용 형식 (코어 §2 강제 형식 적용)
 
 ```
-[STM32F4 Reference Manual RM0090 Rev 19, Table 134, page 543](references/st/stm32f407/RM0090.pdf)
-[AURIX TC3xx Family Manual v2.0.0, §10.3.2, page 214](references/infineon/tc375/family_manual.pdf)
+[STM32F4 Reference Manual RM0090 Rev 19, Table 134, page 543](References/st/stm32f407/RM0090.pdf)
+[AURIX TC3xx Family Manual v2.0.0, §10.3.2, page 214](References/infineon/tc375/family_manual.pdf)
 ```
 
 ## 4. 흔한 추정 단정 사례
