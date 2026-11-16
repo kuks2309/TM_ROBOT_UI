@@ -48,5 +48,5 @@
 <!-- /kuks_agent_setup:reverse_engineering -->
 
 <!-- kuks_agent_setup:drawio -->
-- `.drawio` 파일을 만들거나 고칠 때 **응답 전 의무 선행 점검**(등록만 알고 건너뛰지 말 것): 먼저 docs/claude_guideline/drawio/drawio.md 를 Read 한 뒤 2단 검증 루프를 통과시킨다 — ① 린트 `python3 docs/claude_guideline/drawio/checks/drawio_lint.py <file>.drawio` (L1~L11: 사선 화살표·글자 벗어남·박스 겹침·엣지 겹침·축 어긋남·html 태그로 먹힌 글자) 결함 0 ② GUI 캡처 `docs/claude_guideline/drawio/checks/drawio_capture.sh <file>.drawio` 후 PNG 를 Read 로 열어 references/visual-checklist.md 검토. 루프 통과 전 "완료" 선언 금지. 훅 2개(작성 전 규칙 주입·작성 직후 린트)와 ⟦CI:drawio-lint⟧ pre-commit 이빨이 ①을 강제하지만, ②는 기계가 못 지키니 직접 수행한다. 디스플레이가 없어 ②를 못 하면 통과로 적지 말고 미수행 사실을 산출물에 명시.
+- `.drawio` 파일을 만들거나 고칠 때 **응답 전 의무 선행 점검**(등록만 알고 건너뛰지 말 것): 먼저 docs/claude_guideline/drawio/drawio.md 를 Read 한 뒤 2단 검증 루프를 통과시킨다 — ① 린트 `python3 docs/claude_guideline/drawio/checks/drawio_lint.py <file>.drawio` (L1~L11: 사선 화살표·글자 벗어남·박스 겹침·엣지 겹침·축 어긋남·html 태그로 먹힌 글자) 결함 0 ② GUI 캡처 `docs/claude_guideline/drawio/checks/drawio_capture.sh <file>.drawio` 후 PNG 를 Read 로 열어 References/visual-checklist.md 검토. 루프 통과 전 "완료" 선언 금지. 훅 2개(작성 전 규칙 주입·작성 직후 린트)와 ⟦CI:drawio-lint⟧ pre-commit 이빨이 ①을 강제하지만, ②는 기계가 못 지키니 직접 수행한다. 디스플레이가 없어 ②를 못 하면 통과로 적지 말고 미수행 사실을 산출물에 명시.
 <!-- /kuks_agent_setup:drawio -->

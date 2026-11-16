@@ -70,7 +70,7 @@ def main():
               "\"완료\" 선언이 가능합니다:\n"
               f"  {CAPTURE_REL} {existing[0]} [--export]\n"
               "  → 생성된 PNG 를 Read 로 열어 "
-              "docs/claude_guideline/drawio/references/visual-checklist.md 검토")
+              "docs/claude_guideline/drawio/References/visual-checklist.md 검토")
         return
 
     print("[DRAWIO — 결함] 방금 쓴 .drawio 에 결함이 있습니다. 다음 작업 전에 고치세요.\n"

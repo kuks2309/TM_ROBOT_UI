@@ -10,7 +10,7 @@ cd drawio && ./install.sh <타깃> --status   # 설치본 낡음 점검
 ```
 
 설치되는 것: 본 규칙 → `docs/claude_guideline/drawio/drawio.md`, 검증기 →
-`.../checks/`, 체크리스트 → `.../references/`, 환경 부트스트랩 → `.../scripts/`,
+`.../checks/`, 체크리스트 → `.../References/`, 환경 부트스트랩 → `.../scripts/`,
 타깃 `CLAUDE.md` 에 등록 줄 append.
 
 **Layer A(린트)는 python3 외 의존성이 0 이다.** Layer B(렌더 검증)만 아래가
@@ -48,7 +48,7 @@ cd drawio && ./install.sh <타깃> --status   # 설치본 낡음 점검
    ↓ 통과                  │
 [B. 캡처]  ./checks/drawio_capture.sh <file>.drawio
    ↓                       │
-[PNG 을 Read 로 열어 references/visual-checklist.md 검토]
+[PNG 을 Read 로 열어 References/visual-checklist.md 검토]
    ↓ 결함 있으면 ──────────┘
    ↓ 통과
 "완료" 선언 가능
@@ -269,7 +269,7 @@ windowactivate --sync` 로 창을 올린다) → 창을 닫는다.
 > 패널 접기 단축키는 제공하지 않는다. `Ctrl+Shift+P` 는 데스크톱 창 관리자가
 > 가로채 창 개요를 띄운다(GNOME 기준). 크롬 없는 이미지는 `--export` 로 얻는다.
 
-그다음 **PNG 를 Read 도구로 열어** [references/visual-checklist.md](references/visual-checklist.md)
+그다음 **PNG 를 Read 도구로 열어** [References/visual-checklist.md](References/visual-checklist.md)
 를 항목별로 검토한다. 결함이 있으면 `.drawio` 를 고치고 **린트부터** 다시 돌린다.
 
 **눈으로 찾은 결함은 규칙화를 시도한다.** 린트가 놓친 결함을 사람이 두 번 찾게
@@ -310,7 +310,9 @@ python3 checks/drawio_lint.py $(git ls-files '*.drawio') --quiet
 그 SOP 가 정한다 — 코드 리뷰 플로우차트는 code_review, 파일그래프·클래스·시퀀스는
 sw_structure. 본 문서는 **만든 `.drawio` 가 갖춰야 할 품질**만 정한다.
 
-**VERSION**: 1.4.1 (창 개요 상태에서 캡처가 안 된다는 서술 삭제 — 실측 결과
+**VERSION**: 1.5.0 (체크리스트 폴더 `references/` → `References/` 대문자 통일 — `install.sh` 가 구판 설치본의 소문자 폴더를 지우고 대문자로 다시 깐다)
+
+**1.4.1** (창 개요 상태에서 캡처가 안 된다는 서술 삭제 — 실측 결과
 창 활성화가 개요를 닫아 정상 동작한다. 1.4.0 강제 3겹 신설 — reminder·write-gate 훅 + ⟦CI:drawio-lint⟧
 pre-commit 이빨. 창 선택 로직을 모듈로 분리해 SIL 로 고정. 설치 단계가 의존성을 구성 — scripts/setup_env.sh,
 --no-deps/--check 플래그. GUI 캡처 경로 실측 수선 — 문서 창 대기·맨앞 올리기·region
