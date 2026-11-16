@@ -240,7 +240,7 @@ Verdict: REQUEST CHANGES
 ### 코드 버전
 - 리뷰 커밋: `abc1234` (branch `feat/x`, PR #42)   <!-- 비-git: 파일 내용 해시 -->
 - 직전 리뷰: YYYY-MM-DD @ `def5678` — delta `def5678..abc1234`
-- (user_instruction 설치 시) 같은 시각 `user_instructions.md` entry 참조
+- (user_instruction 설치 시) 같은 시각의 사용자 지시 entry 참조(세션 파일 `docs/user_instructions/sessions/*.md`)
 
 ### 분석 분기 명시
 - 분기: 단위 코드 리뷰 / 전체 구조 분석
@@ -315,9 +315,10 @@ grep -E "^Verdict: (APPROVE|REQUEST CHANGES|COMMENT)" $TARGET
 # 6. 감지된 도메인 표기 의무
 grep -E "감지된 도메인: " $TARGET
 
-# 7. user_instructions.md 시각 매핑 (user_instruction 번들 설치 시에만 — 없으면 생략, 무해)
+# 7. 사용자 지시 시각 매핑 (user_instruction 번들 설치 시에만 — 없으면 생략, 무해)
+#    원문 기록은 세션 파일(docs/user_instructions/sessions/*.md)이다 — 가장 최근 세션 파일의 첫 지시 시각
 grep "^## " $TARGET | head -1
-[ -f docs/user_instructions/user_instructions.md ] && grep "^## " docs/user_instructions/user_instructions.md | head -1 || echo "(user_instructions.md 없음 — 매핑 생략)"
+S=$(ls -t docs/user_instructions/sessions/*.md 2>/dev/null | head -1); [ -n "$S" ] && grep -m1 "^## " "$S" || echo "(세션 지시 기록 없음 — 매핑 생략)"
 
 # 8. 플로우차트 drawio 정확성 (생성 시) — 박스·화살표 source/target 검증
 for d in "$(dirname "$TARGET")"/*flow*.drawio; do

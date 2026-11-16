@@ -4,7 +4,6 @@
 
 | 번들 | 설치 커밋 | 날짜 | 인자 |
 | --- | --- | --- | --- |
-| code_review | c47313d | 2026-08-28 | --all |
 | sw_structure | c47313d | 2026-08-28 | - |
 | coding | c47313d | 2026-08-28 | --all |
 | debt | c47313d | 2026-08-28 | - |
@@ -16,3 +15,4 @@
 | git_workflow | 32f0bd0 | 2026-08-29 | - |
 | user_instruction | e9a5669 | 2026-11-17 | - |
 | external_reference | e9a5669 | 2026-11-17 | --all |
+| code_review | e9a5669 | 2026-11-17 | --all |
