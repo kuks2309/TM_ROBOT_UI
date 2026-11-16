@@ -3,7 +3,7 @@
 
 세션 격리: docs/user_instructions/sessions/{session_id}.md 에만 쓰고, 참조 주입도
 자기 세션 기록으로 한정한다. 다른 세션 기록은 절대 노출하지 않는다(교차 누수 차단).
-병합은 SessionEnd(user_instruction-merge.py)가 담당.
+세션 파일이 원문 기록이다 — 병합하지 않는다(이 기계에만 남고 커밋하지 않는다).
 
 self-contained: 표준 라이브러리만. 계약: stdin JSON → stdout 주입, 항상 exit 0.
 """
@@ -73,7 +73,7 @@ def main():
     print(
         "[USER-INSTRUCTION — 이 세션 기록(격리)]\n"
         "지시 원문은 이 세션 전용 파일에 자동 기록되었습니다. 아래는 **이 세션**의 최근 지시뿐입니다"
-        "(다른 세션 기록은 보이지 않으며, docs/user_instructions/user_instructions.md 를 현재 작업 소스로 읽지 마세요):\n\n"
+        "(다른 세션 파일과 동결된 옛 누적 로그 docs/user_instructions/user_instructions.md 를 현재 작업 소스로 읽지 마세요):\n\n"
         + body + more + recall
     )
 
