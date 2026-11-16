@@ -14,15 +14,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/debt/hooks/debt-reminder.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/debt/hooks/debt-reminder.py\"",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
             "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/issue_fix/hooks/issue_fix-reminder.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/issue_fix/hooks/issue_fix-reminder.py\"",
             "timeout": 5
           }
@@ -78,6 +69,15 @@
           {
             "type": "command",
             "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-reminder.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-reminder.py\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/debt/hooks/debt-reminder.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/debt/hooks/debt-reminder.py\"",
             "timeout": 5
           }
         ]
