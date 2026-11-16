@@ -40,7 +40,7 @@
 <!-- /kuks_agent_setup:git_workflow -->
 
 <!-- kuks_agent_setup:session_workflow -->
-- 세션 생애주기(시작→진행→종료)는 session_workflow 훅이 관리한다: 세션 목적 선언 게이트(`목적: …` 입력 시 훅이 자동 등록), 활성 세션 레지스트리·파일 충돌 경보, 종료 시 미커밋 잔여 handoff 박제(규칙: docs/claude_guideline/session_workflow/session_workflow.md). 모델은 목적 미등록 상태에서 실질 작업 전에 사용자에게 목적을 확인하고, 종료·커밋 보고는 이 세션 작업만 담는다. **타 세션의 수정 내용에는 관여하지 않는다** — 수정·정리는 물론 진단·평가·처리 제안·결정 요청도 하지 않으며, 그 노출은 handoff 채널 소관이다. 예외는 그 상태가 이 세션 작업을 실제로 막을 때뿐이고 그때도 막힌 사실 1줄로 끝낸다.
+- 세션 생애주기(시작→진행→종료)는 session_workflow 훅이 관리한다: 세션 목적 선언 게이트(`목적: …` 입력 시 훅이 자동 등록), 활성 세션 레지스트리·파일 충돌 경보, 종료 시 미커밋 잔여 handoff 박제(규칙: docs/claude_guideline/session_workflow/session_workflow.md). 모델은 목적 미등록 상태에서 실질 작업 전에 사용자에게 목적을 확인하고, 종료·커밋 보고는 이 세션 작업만 담는다. (타 세션 관여 금지 규칙은 git_workflow 블록으로 옮겼다.)
 <!-- /kuks_agent_setup:session_workflow -->
 
 <!-- kuks_agent_setup:reverse_engineering -->
