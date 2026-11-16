@@ -4,7 +4,6 @@
 
 | 번들 | 설치 커밋 | 날짜 | 인자 |
 | --- | --- | --- | --- |
-| reverse_engineering | c47313d | 2026-08-28 | - |
 | drawio | c47313d | 2026-08-28 | - |
 | git_workflow | 32f0bd0 | 2026-08-29 | - |
 | user_instruction | e9a5669 | 2026-11-17 | - |
@@ -16,3 +15,4 @@
 | issue_fix | e9a5669 | 2026-11-17 | - |
 | mistake | e9a5669 | 2026-11-17 | - |
 | session_workflow | e9a5669 | 2026-11-17 | - |
+| reverse_engineering | e9a5669 | 2026-11-17 | - |
