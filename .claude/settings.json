@@ -92,29 +92,18 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-session-end.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-session-end.py\"",
+            "timeout": 60
+          }
+        ]
       }
     ],
     "PreToolUse": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-edit-guard.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-edit-guard.py\"",
-            "timeout": 5
-          }
-        ],
-        "matcher": "Write|Edit|MultiEdit|NotebookEdit"
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-scope-gate.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-scope-gate.py\"",
-            "timeout": 5
-          }
-        ],
-        "matcher": "Bash"
-      },
       {
         "hooks": [
           {
@@ -167,26 +156,6 @@
       }
     ],
     "PostToolUse": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-track.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-track.py\"",
-            "timeout": 5
-          }
-        ],
-        "matcher": "Read|Write|Edit|MultiEdit|NotebookEdit"
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-hash-sweep.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-hash-sweep.py\"",
-            "timeout": 10
-          }
-        ],
-        "matcher": "Bash"
-      },
       {
         "hooks": [
           {
@@ -263,15 +232,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-version-report.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-version-report.py\"",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
             "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/mistake/hooks/mistake-inject.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/mistake/hooks/mistake-inject.py\"",
             "timeout": 5
           }
@@ -283,6 +243,24 @@
             "type": "command",
             "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-start.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-start.py\"",
             "timeout": 10
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-session-start.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-session-start.py\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-version-report.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-version-report.py\"",
+            "timeout": 5
           }
         ]
       }

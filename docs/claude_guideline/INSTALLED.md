@@ -4,7 +4,6 @@
 
 | 번들 | 설치 커밋 | 날짜 | 인자 |
 | --- | --- | --- | --- |
-| git_workflow | 32f0bd0 | 2026-08-29 | - |
 | user_instruction | e9a5669 | 2026-11-17 | - |
 | external_reference | e9a5669 | 2026-11-17 | --all |
 | code_review | e9a5669 | 2026-11-17 | --all |
@@ -16,3 +15,4 @@
 | session_workflow | e9a5669 | 2026-11-17 | - |
 | reverse_engineering | e9a5669 | 2026-11-17 | - |
 | drawio | e9a5669 | 2026-11-17 | - |
+| git_workflow | e9a5669 | 2026-11-17 | - |

@@ -36,7 +36,7 @@
 <!-- /kuks_agent_setup:mistake -->
 
 <!-- kuks_agent_setup:git_workflow -->
-- git 작업(commit/push/merge/PR/branch) 트리거 감지 시 **응답 전 의무 선행 점검**(등록만 알고 건너뛰지 말 것): 먼저 docs/claude_guideline/git_workflow/git_workflow.md 를 Read 한 뒤 따른다 — 협업 모드 확인(README `git 협업 모드: solo|team` 선언 우선, 미선언 시 사용자 문의·README 기록), 명시 staging(내 점유 파일만, `-A`/`.` 금지), 커밋 규약(`type(scope): subject` + `Session:` trailer + Co-Authored-By), **커밋 직후 즉시 safepush**(`hooks/git_workflow-safepush.sh` — push 미루기 금지), 다중 원격 전부 push. 타 세션 점유 파일은 편집하지 않는다(차단 시 충돌 프로토콜: 해제 대기 → 재독 → 편집, 또는 사용자 허락 후 override). 파일 수정은 Write/Edit 도구로만(Bash 파일쓰기 금지). 임의 커밋/푸시 직행 금지.
+- git 작업(commit/push/merge/PR/branch) 트리거 감지 시 **응답 전 의무 선행 점검**(등록만 알고 건너뛰지 말 것): 먼저 docs/claude_guideline/git_workflow/git_workflow.md 를 Read 한 뒤 따른다 — 한 세션 = 한 트리(시작 훅이 만든 `<저장소>-ses-<세션 id 앞 8자>` 에서만 고친다), 수정 전 `git fetch origin && git rebase origin/main`, 명시 경로 staging(`-A`/`.` 금지), 커밋 규약(`type(scope): subject` + `Session:` trailer + Co-Authored-By), **커밋 직후 즉시 safepush**(`hooks/git_workflow-safepush.sh main` — origin 만, push 미루기 금지). safepush 의 rebase 충돌(exit 3)은 자동 수습하지 않고 사용자에게 알린다. 파일 수정은 Write/Edit 도구로만(Bash 파일쓰기 금지). 임의 커밋/푸시 직행 금지. **타 세션의 수정 내용에는 관여하지 않는다** — 수정·정리는 물론 진단·평가·처리 제안·결정 요청도 하지 않는다. 예외는 그 상태가 이 세션 작업을 실제로 막을 때뿐이고 그때도 막힌 사실 1줄로 끝낸다.
 <!-- /kuks_agent_setup:git_workflow -->
 
 <!-- kuks_agent_setup:session_workflow -->
