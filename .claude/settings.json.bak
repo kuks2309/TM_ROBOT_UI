@@ -14,15 +14,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/sw_structure/hooks/sw_structure-reminder.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/sw_structure/hooks/sw_structure-reminder.py\"",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
             "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-reminder.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-reminder.py\"",
             "timeout": 5
           }
@@ -78,6 +69,15 @@
           {
             "type": "command",
             "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/code_review/hooks/code-review-reminder.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/code_review/hooks/code-review-reminder.py\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/sw_structure/hooks/sw_structure-reminder.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/sw_structure/hooks/sw_structure-reminder.py\"",
             "timeout": 5
           }
         ]

@@ -55,6 +55,18 @@ with open(tr,"a",encoding="utf-8") as f:
 PYEOF
 }
 
+# tr_bash <명령문자열> — Bash 도구 호출을 transcript 에 넣는다(쓰기 우회 회수 검사용)
+tr_bash() {
+  "$PY" - "$TR" "$1" <<'PYEOF'
+import json,sys
+tr,cmd=sys.argv[1],sys.argv[2]
+with open(tr,"a",encoding="utf-8") as f:
+    f.write(json.dumps({"type":"assistant","message":{"content":[
+        {"type":"tool_use","id":"b%d" % (abs(hash(cmd)) % 9999),"name":"Bash",
+         "input":{"command":cmd}}]}},ensure_ascii=False)+"\n")
+PYEOF
+}
+
 stop() {  # stop [stop_hook_active]
   printf '{"transcript_path":"%s","cwd":"%s","session_id":"sess-A","stop_hook_active":%s}' \
     "$TR" "$FIX" "${1:-false}" | "$PY" "$HOOK" >/dev/null 2>"$ERRF"
@@ -211,6 +223,33 @@ stop
 check "exit 2 (설계본 표가 커버)" 2 "$RC"
 has "갱신 경보 (표 부재 아님)" "함수표를 갱신하지"
 hasnt "표 부재 안내는 없음" "커버하는 함수표가 없는"
+teardown
+
+echo "B1  Bash 쓰기 회수 — 확장 못 하는 셸 변수는 경로가 아니므로 세지 않는다"
+setup; tr_reset
+tr_bash 'cat > "$D/probe.sh"'
+stop; check "확장 못 하는 변수 경로는 무시" 0 "$RC"
+hasnt "가짜 경로 미노출" 'probe.sh'
+teardown
+
+echo "B2  같은 명령에서 대입된 변수는 확장해 잡는다"
+setup; tr_reset
+tr_bash 'D=src/can_relay/can_relay; cat > "$D/newmod.py"'
+stop; check "확장된 경로를 코드 수정으로 인식" 2 "$RC"
+has  "확장된 상대경로로 회수" "can_relay/newmod.py"
+teardown
+
+echo "B3  따옴표 있는 평범한 경로도 잡는다 (회귀)"
+setup; tr_reset
+tr_bash 'cat > "src/can_relay/can_relay/plain.py"'
+stop; check "따옴표 경로 인식" 2 "$RC"
+has  "회수된 파일 표시" "plain.py"
+teardown
+
+echo "B4  확장 결과가 /tmp 면 저장소 밖이므로 제외"
+setup; tr_reset
+tr_bash 'D=/tmp/scratch; cat > "$D/x.py"'
+stop; check "저장소 밖 경로 제외" 0 "$RC"
 teardown
 
 echo

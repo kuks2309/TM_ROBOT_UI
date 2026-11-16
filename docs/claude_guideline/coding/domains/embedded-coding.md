@@ -30,7 +30,15 @@
 
 ## 5. 강제
 
-대부분 `⟦권고⟧`. 연계:
+**턴 종료 시 지점으로 되돌아온다** `⟦훅:rule-review⟧` — 이번 턴에 고친 파일에서 아래를 뽑아 `파일:줄` 로 지목한다. **판정이 아니라 후보 제시**이므로 오탐은 무해하다.
+
+| 조항 | 지목 대상 | 지목하지 않는 것 |
+|---|---|---|
+| §1 ISR | ISR 본문의 `printf`·`malloc`·`delay`·`std::` 등 무거운 호출 | ISR 밖 |
+| §2 메모리 | `malloc`/`calloc`/`realloc`/`new` | 정적·풀 할당 |
+| §3 타이밍 | `HAL_Delay`·`delay()`·`while(...);` 바쁜 대기 | 타이머·이벤트 |
+
+그 외는 `⟦권고⟧`. 연계:
 
 - 메모리 → `memory` 이빨(clang-tidy/asan) · 동시성/원자성 → concurrency aspect
 - MISRA·안전 규칙 점검 → `code_review` 의 `embedded-review`(별도 패스)
@@ -44,4 +52,4 @@ grep -rEl 'ISR\(|NVIC_|__attribute__\(\(interrupt|FreeRTOS|\bvolatile\b' --inclu
 
 ---
 
-**VERSION**: 1.0.0 (ISR 짧게·volatile/원자 + 정적 메모리 + WCET/결정성 + safe-state·레지스터; memory·concurrency·numeric cross-ref; embedded-review 와 write↔review 상보)
+**VERSION**: 1.1.0 (§5 에 ⟦훅:rule-review⟧ 지목표 — §1~§3 를 턴 종료 시 `파일:줄` 로 지목(판정 아님). 이하 1.0.0: ISR 짧게·volatile/원자 + 정적 메모리 + WCET/결정성 + safe-state·레지스터; memory·concurrency·numeric cross-ref; embedded-review 와 write↔review 상보)

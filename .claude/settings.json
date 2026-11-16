@@ -14,15 +14,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-reminder.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-reminder.py\"",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
             "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/debt/hooks/debt-reminder.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/debt/hooks/debt-reminder.py\"",
             "timeout": 5
           }
@@ -81,6 +72,15 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-reminder.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-reminder.py\"",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "SessionEnd": [
@@ -95,16 +95,6 @@
       }
     ],
     "PreToolUse": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-inventory-gate.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-inventory-gate.py\"",
-            "timeout": 10
-          }
-        ],
-        "matcher": "Write|Edit|MultiEdit|NotebookEdit"
-      },
       {
         "hooks": [
           {
@@ -164,39 +154,19 @@
           }
         ],
         "matcher": "Bash"
-      }
-    ],
-    "PostToolUse": [
+      },
       {
         "hooks": [
           {
             "type": "command",
             "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-inventory-gate.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-inventory-gate.py\"",
-            "timeout": 5
+            "timeout": 10
           }
         ],
-        "matcher": "Read"
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-comment-gate.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-comment-gate.py\"",
-            "timeout": 5
-          }
-        ],
-        "matcher": "Write|Edit|MultiEdit"
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-ros2-qos.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-ros2-qos.py\"",
-            "timeout": 5
-          }
-        ],
-        "matcher": "Write|Edit|MultiEdit"
-      },
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit"
+      }
+    ],
+    "PostToolUse": [
       {
         "hooks": [
           {
@@ -236,6 +206,36 @@
           }
         ],
         "matcher": "Bash"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-inventory-gate.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-inventory-gate.py\"",
+            "timeout": 5
+          }
+        ],
+        "matcher": "Read"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-comment-gate.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-comment-gate.py\"",
+            "timeout": 5
+          }
+        ],
+        "matcher": "Write|Edit|MultiEdit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-ros2-qos.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-ros2-qos.py\"",
+            "timeout": 5
+          }
+        ],
+        "matcher": "Write|Edit|MultiEdit"
       }
     ],
     "Stop": [
