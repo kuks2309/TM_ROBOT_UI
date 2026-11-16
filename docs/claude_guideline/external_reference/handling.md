@@ -16,7 +16,7 @@ cd external_reference && ./install.sh <타깃-프로젝트-루트> [도메인...
 
 스크립트가 코어(`handling.md`)를 `docs/claude_guideline/external_reference/` 로, 선택한 도메인(`domains/<도메인>.md`)을 `docs/claude_guideline/external_reference/domains/` 로 복사하고, 등록 스니펫을 타깃 `CLAUDE.md` 에 append 한다 (덮어쓰기 아님). 도메인 인자를 생략하면 코어만 설치한다.
 
-- **참조 문서 보관 산출물**: 프로젝트 루트 `references/<vendor>/<product>/`
+- **참조 문서 보관 산출물**: 프로젝트 루트 `References/<vendor>/<product>/`
 - **활성화 게이트**: 본 파일이 `docs/claude_guideline/external_reference/handling.md` 경로에 없으면 본 룰은 비활성.
 
 ## 트리거
@@ -29,22 +29,23 @@ cd external_reference && ./install.sh <타깃-프로젝트-루트> [도메인...
 
 ## 1. 보관 위치
 
-- **저장 폴더가 없으면 만든다 (승인 불요)** — 첫 보관·다운로드 시 `references/<vendor>/<product>/` 경로를 자동 생성한다.
-- **저장 폴더가 표준과 다르면 표준 경로로 정규화한다** — 기존 참조 문서가 비표준 위치(예: `docs/references/`, `docs/manual/`, `manuals/`, `datasheets/`, 단수 `reference/`, 루트 산재)에 있으면 `references/<vendor>/<product>/` 로 이동하고, 그 문서를 가리키던 인용·링크를 **모두 갱신**한 뒤 이동 내역을 작업 보고에 남긴다. 모든 프로젝트가 동일 경로 규약을 따르게 하기 위함이다.
-- 외부 벤더 매뉴얼은 `references/<vendor>/<product>/` 하위에 보관한다.
-- **다품목 벤더는 제품분야(category) 계층을 선택적으로 끼운다 (3단계)** — 한 제조사가 여러 제품군(예: 모터·센서·컨트롤러·감속기)을 다룰 때는 `references/<제조사>/<제품분야>/<제품명>/` 3단계 경로를 쓸 수 있다 (예: `references/huayan/motor/spec25/`). 기본은 2단계 `<vendor>/<product>` 이고, 3단계는 제품군 구분이 필요할 때의 확장이다. **한 프로젝트 안에서는 2단계·3단계 중 하나로 일관**되게 쓴다(혼용 금지). 3단계를 쓰면 파생물도 `docs/<제조사>/<제품분야>/<제품명>/` 로 references 와 **동일 taxonomy** 를 맞춰 1차 source↔파생물 대응을 경로로 추적한다.
-- 모듈에 강하게 결합된 매뉴얼은 모듈 내부(예: `<모듈경로>/references/`)에 둘 수도 있으며, 위치는 모듈 CLAUDE.md 가 결정한다.
+- **저장 폴더가 없으면 만든다 (승인 불요)** — 첫 보관·다운로드 시 `References/<vendor>/<product>/` 경로를 자동 생성한다.
+- **저장 폴더가 표준과 다르면 표준 경로로 정규화한다** — 기존 참조 문서가 비표준 위치(예: 소문자 `references/`, `docs/references/`, `docs/manual/`, `manuals/`, `datasheets/`, 단수 `reference/`, 루트 산재)에 있으면 `References/<vendor>/<product>/` 로 이동하고, 그 문서를 가리키던 인용·링크를 **모두 갱신**한 뒤 이동 내역을 작업 보고에 남긴다. 모든 프로젝트가 동일 경로 규약을 따르게 하기 위함이다.
+- **폴더명은 대문자 `References/` 로 통일한다** — 소문자 `references/` 와 함께 두 폴더가 생기지 않게 한다. 번들 `install.sh` 가 배포 시 타깃 루트의 소문자 `references/` 를 `References/` 로 이름 변경(둘 다 있으면 병합, 내용이 다른 동명 파일은 남겨 보고)하고 `.md` 링크 `](references/` 를 `](References/` 로 고친다.
+- 외부 벤더 매뉴얼은 `References/<vendor>/<product>/` 하위에 보관한다.
+- **다품목 벤더는 제품분야(category) 계층을 선택적으로 끼운다 (3단계)** — 한 제조사가 여러 제품군(예: 모터·센서·컨트롤러·감속기)을 다룰 때는 `References/<제조사>/<제품분야>/<제품명>/` 3단계 경로를 쓸 수 있다 (예: `References/huayan/motor/spec25/`). 기본은 2단계 `<vendor>/<product>` 이고, 3단계는 제품군 구분이 필요할 때의 확장이다. **한 프로젝트 안에서는 2단계·3단계 중 하나로 일관**되게 쓴다(혼용 금지). 3단계를 쓰면 파생물도 `docs/<제조사>/<제품분야>/<제품명>/` 로 References 와 **동일 taxonomy** 를 맞춰 1차 source↔파생물 대응을 경로로 추적한다.
+- 모듈에 강하게 결합된 매뉴얼은 모듈 내부(예: `<모듈경로>/References/`)에 둘 수도 있으며, 위치는 모듈 CLAUDE.md 가 결정한다.
 - 원본 파일명을 가급적 유지하되, 경로·검색이 불편하면 `<vendor>_<product>_<version>.pdf` 형식으로 정규화한다.
 - PDF 가 우선이며, 변환본(텍스트 추출 등)은 원본과 함께 보관한다 (예: `pdftotext -layout` 결과를 `.txt` 로 같이 저장).
-- 표준 단체 발행 문서는 `references/standards/<body>/<doc-id>/` 에 보관한다.
+- 표준 단체 발행 문서는 `References/standards/<body>/<doc-id>/` 에 보관한다.
 
 ## 2. 인용 규칙
 
 - 코드 주석·문서에서 인용 시 **문서명·섹션·페이지**(또는 표준의 경우 `RFC-N`·`REP-N`·`IEEE-N`)를 명시한다.
 - 인용한 문서의 상대 경로를 함께 적어 추적 가능하게 한다.
 - **강제 인용 형식**: `[문서명 v버전, Table N, page P](경로/파일명.pdf)`
-  - 벤더 datasheet 예: `[<Vendor> <Product> DataSheet vX.Y, Table N, page P](references/<vendor>/<product>/datasheet.pdf)`
-  - 표준 예: `[IEEE 802.11-2020, §10.3, page 421](references/standards/ieee/802.11/ieee802.11-2020.pdf)`
+  - 벤더 datasheet 예: `[<Vendor> <Product> DataSheet vX.Y, Table N, page P](References/<vendor>/<product>/datasheet.pdf)`
+  - 표준 예: `[IEEE 802.11-2020, §10.3, page 421](References/standards/ieee/802.11/ieee802.11-2020.pdf)`
 - 외부 매뉴얼에 의존하는 상수·환산식·시퀀스 코드는 인용을 해당 상수/함수 바로 위에 둔다.
 - 매뉴얼 버전 차이로 동작이 달라질 수 있는 부분은 **참조한 문서 버전**을 함께 명시한다.
 - URL 만 가능한 표준 문서(예: ROS REP, RFC)는 URL + 접근 일자(`accessed YYYY-MM-DD`)를 함께 기록한다.
@@ -88,7 +89,7 @@ cd external_reference && ./install.sh <타깃-프로젝트-루트> [도메인...
 ## 5. 라이선스 / 외부 공개
 
 - 1차 source PDF 를 공개 저장소에 commit 하기 전 라이선스·저작권을 확인한다.
-- 벤더 NDA(Non-Disclosure Agreement)·재배포 금지 문서는 별도 비공개 저장소, `references/local/`(gitignore 대상), 또는 공식 URL 링크 대체 중 하나로 처리한다.
+- 벤더 NDA(Non-Disclosure Agreement)·재배포 금지 문서는 별도 비공개 저장소, `References/local/`(gitignore 대상), 또는 공식 URL 링크 대체 중 하나로 처리한다.
 - 공개 가능한 datasheet 는 가능하면 **공식 URL 링크**를 우선하고 로컬 사본은 보조로 둔다(벤더 갱신 시 stale 위험 감소).
 - 표준 단체 문서(IEEE·ISO 등)는 유료가 많아 공식 URL + 사내 라이선스 사본 경로를 명시한다.
 
@@ -136,16 +137,16 @@ cd external_reference && ./install.sh <타깃-프로젝트-루트> [도메인...
 
 ## 11. 1차 source 다운로드 표준 절차
 
-1. **`references/` 먼저 확인** (이미 있으면 재다운로드 X)
+1. **`References/` 먼저 확인** (이미 있으면 재다운로드 X)
 2. WebSearch 로 공식 PDF URL 확인
-3. 폴더 생성 후 다운로드: `mkdir -p references/<vendor>/<product>/ && curl -sSL -A "Mozilla/5.0" -o references/<vendor>/<product>/<file>.pdf <URL>` (벤더 차단 시 mouser·farnell·alldatasheet·digikey 미러)
+3. 폴더 생성 후 다운로드: `mkdir -p References/<vendor>/<product>/ && curl -sSL -A "Mozilla/5.0" -o References/<vendor>/<product>/<file>.pdf <URL>` (벤더 차단 시 mouser·farnell·alldatasheet·digikey 미러)
 4. **차단 시 사용자에게 수동 다운로드 요청** → 정해진 경로에 배치
 5. **검증**: `file <file>.pdf` 로 PDF 매직 바이트 확인(HTML 차단 페이지 아닌지)
 6. 텍스트 추출: `pdftotext -layout <file>.pdf <file>.txt`
 7. spec 검색: `grep -in "<parameter_name>\|Operation Conditions\|Electrical Characteristics" <file>.txt`
 8. spec 표 컨텍스트(전후 50~100줄) 발췌 후 분석
 9. 인용 시 §2 형식 강제
-10. 유료 표준은 사내 라이선스·단체 회원 계정으로 다운로드, 라이선스 메타데이터를 `references/standards/<body>/LICENSE.md` 에 기록
+10. 유료 표준은 사내 라이선스·단체 회원 계정으로 다운로드, 라이선스 메타데이터를 `References/standards/<body>/LICENSE.md` 에 기록
 
 ## 12. 본 룰 위반 시 일반 패턴 (공통 시퀀스)
 
@@ -195,8 +196,8 @@ grep -nE "위반|초과|무보증|non-compliance|violation|fail" $TARGET | grep 
 # 4. SDK / 드라이버 default 인용 시 1차 spec 분리 명시 — §3
 grep -nE "_MAX|_MIN|#define|default|기본값" $TARGET | grep -vE "silicon|device|SDK 권장|datasheet 아님|소스 코드"
 
-# 5. 비표준 저장 경로 인용 탐지 (루트 references/ 외) — §1 정규화 대상
-grep -nE "\]\((docs/references|docs/manual|manual|manuals|datasheets|reference)/" $TARGET
+# 5. 비표준 저장 경로 인용 탐지 (루트 References/ 외) — §1 정규화 대상
+grep -nE "\]\((\.\./|\./)*(references|docs/references|docs/manual|manual|manuals|datasheets|reference)/" $TARGET
 ```
 
 도메인 sub-file 설치 시 각 sub-file 의 grep 도 함께 통과해야 한다.
@@ -219,4 +220,6 @@ grep -nE "\]\((docs/references|docs/manual|manual|manuals|datasheets|reference)/
 
 ---
 
-**VERSION**: 2.1.0 (2.0.0 + §1 선택적 제품분야(category) 계층 — 다품목 벤더용 3단계 `<vendor>/<category>/<product>` 경로 규약 + `docs/` 파생물 동일 taxonomy 명문화)
+**VERSION**: 2.2.0 (2.1.0 + 참조 폴더명 대문자 `References/` 로 통일 — 소문자 `references/` 와 두 폴더가 함께 생기던 문제. `install.sh` 가 배포 시 타깃 루트 소문자 폴더를 이름 변경·병합하고 `.md` 링크를 갱신)
+
+**2.1.0** (2.0.0 + §1 선택적 제품분야(category) 계층 — 다품목 벤더용 3단계 `<vendor>/<category>/<product>` 경로 규약 + `docs/` 파생물 동일 taxonomy 명문화)

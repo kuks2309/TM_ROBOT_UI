@@ -18,15 +18,15 @@
 
 ## 2. 보관 경로
 
-`references/standards/<body>/<doc-id>/` (예: `references/standards/ieee/802.11/`, `references/standards/iso/26262/`). 유료 표준은 사내 라이선스 사본 + `LICENSE.md` 에 출처·라이선스 메타데이터 기록.
+`References/standards/<body>/<doc-id>/` (예: `References/standards/ieee/802.11/`, `References/standards/iso/26262/`). 유료 표준은 사내 라이선스 사본 + `LICENSE.md` 에 출처·라이선스 메타데이터 기록.
 
 ## 3. 인용 형식
 
 ```
-[IEEE 802.11-2020, §10.3, page 421](references/standards/ieee/802.11/ieee802.11-2020.pdf)
-[ISO 26262-3:2018, §7.4.2, "Hazard analysis and risk assessment"](references/standards/iso/26262/iso26262-3-2018.pdf)
+[IEEE 802.11-2020, §10.3, page 421](References/standards/ieee/802.11/ieee802.11-2020.pdf)
+[ISO 26262-3:2018, §7.4.2, "Hazard analysis and risk assessment"](References/standards/iso/26262/iso26262-3-2018.pdf)
 [RFC 7519, §4.1.1 "iss" Claim, accessed 2026-05-21](https://datatracker.ietf.org/doc/html/rfc7519)
-[AEC-Q100-Rev-H, Table 2 "Temperature Grade"](references/standards/aec-q/aec-q100-rev-h.pdf)
+[AEC-Q100-Rev-H, Table 2 "Temperature Grade"](References/standards/aec-q/aec-q100-rev-h.pdf)
 ```
 
 ## 4. 흔한 추정 단정 사례

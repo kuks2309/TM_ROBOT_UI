@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/user_instruction/hooks/user_instruction-reminder.py\"",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/user_instruction/hooks/user_instruction-reminder.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/user_instruction/hooks/user_instruction-reminder.py\"",
             "timeout": 5
           }
         ]
@@ -14,7 +14,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/external_reference/hooks/external_reference-reminder.py\"",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/external_reference/hooks/external_reference-reminder.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/external_reference/hooks/external_reference-reminder.py\"",
             "timeout": 5
           }
         ]
@@ -23,7 +23,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/code_review/hooks/code-review-reminder.py\"",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/code_review/hooks/code-review-reminder.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/code_review/hooks/code-review-reminder.py\"",
             "timeout": 5
           }
         ]
@@ -32,7 +32,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/sw_structure/hooks/sw_structure-reminder.py\"",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/sw_structure/hooks/sw_structure-reminder.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/sw_structure/hooks/sw_structure-reminder.py\"",
             "timeout": 5
           }
         ]
@@ -41,7 +41,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-reminder.py\"",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-reminder.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-reminder.py\"",
             "timeout": 5
           }
         ]
@@ -50,7 +50,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/debt/hooks/debt-reminder.py\"",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/debt/hooks/debt-reminder.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/debt/hooks/debt-reminder.py\"",
             "timeout": 5
           }
         ]
@@ -59,7 +59,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/issue_fix/hooks/issue_fix-reminder.py\"",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/issue_fix/hooks/issue_fix-reminder.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/issue_fix/hooks/issue_fix-reminder.py\"",
             "timeout": 5
           }
         ]
@@ -68,7 +68,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-gate.py\"",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-gate.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-gate.py\"",
             "timeout": 5
           }
         ]
@@ -77,7 +77,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/drawio/hooks/drawio-reminder.py\"",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/drawio/hooks/drawio-reminder.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/drawio/hooks/drawio-reminder.py\"",
             "timeout": 5
           }
         ]
@@ -88,7 +88,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/user_instruction/hooks/user_instruction-merge.py\"",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-end.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-end.py\"",
             "timeout": 10
           }
         ]
@@ -97,8 +97,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-end.py\"",
-            "timeout": 10
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-session-end.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-session-end.py\"",
+            "timeout": 60
           }
         ]
       }
@@ -108,7 +108,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-inventory-gate.py\"",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/.claude/hooks/bash-file-write-guard.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/bash-file-write-guard.py\"",
+            "timeout": 5
+          }
+        ],
+        "matcher": "Bash"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-inventory-gate.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-inventory-gate.py\"",
             "timeout": 10
           }
         ],
@@ -118,17 +128,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/mistake/hooks/pre_tool_use_require_records_read.py\"",
-            "timeout": 5
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/mistake/hooks/mistake-relevance.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/mistake/hooks/mistake-relevance.py\"",
+            "timeout": 8
           }
         ],
-        "matcher": "Edit|Write|MultiEdit"
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit"
       },
       {
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-write-guard.py\"",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-write-guard.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-write-guard.py\"",
             "timeout": 5
           }
         ],
@@ -138,37 +148,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-state-guard.py\"",
-            "timeout": 5
-          }
-        ],
-        "matcher": "Bash"
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-edit-guard.py\"",
-            "timeout": 5
-          }
-        ],
-        "matcher": "Write|Edit|MultiEdit|NotebookEdit"
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-scope-gate.py\"",
-            "timeout": 5
-          }
-        ],
-        "matcher": "Bash"
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/bash-file-write-guard.py\"",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-state-guard.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-state-guard.py\"",
             "timeout": 5
           }
         ],
@@ -180,7 +160,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-inventory-gate.py\"",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-inventory-gate.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-inventory-gate.py\"",
             "timeout": 5
           }
         ],
@@ -190,7 +170,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-comment-gate.py\"",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-comment-gate.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-comment-gate.py\"",
             "timeout": 5
           }
         ],
@@ -200,7 +180,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-ros2-qos.py\"",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-ros2-qos.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-ros2-qos.py\"",
             "timeout": 5
           }
         ],
@@ -210,7 +190,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-track.py\"",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-track.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-track.py\"",
             "timeout": 5
           }
         ],
@@ -220,31 +200,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/drawio/hooks/drawio-write-gate.py\"",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/drawio/hooks/drawio-write-gate.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/drawio/hooks/drawio-write-gate.py\"",
             "timeout": 30
           }
         ],
         "matcher": "Write|Edit|MultiEdit"
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-track.py\"",
-            "timeout": 5
-          }
-        ],
-        "matcher": "Read|Write|Edit|MultiEdit|NotebookEdit"
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-hash-sweep.py\"",
-            "timeout": 10
-          }
-        ],
-        "matcher": "Bash"
       }
     ],
     "Stop": [
@@ -252,7 +212,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-record-gate.py\"",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-record-gate.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-record-gate.py\"",
             "timeout": 10
           }
         ]
@@ -261,7 +221,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-rule-review.py\"",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-rule-review.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/coding/hooks/coding-rule-review.py\"",
             "timeout": 15
           }
         ]
@@ -272,7 +232,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/mistake/hooks/mistake-inject.py\"",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/mistake/hooks/mistake-inject.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/mistake/hooks/mistake-inject.py\"",
             "timeout": 5
           }
         ]
@@ -281,7 +241,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-start.py\"",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-start.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/session_workflow/hooks/session_workflow-start.py\"",
             "timeout": 10
           }
         ]
@@ -290,7 +250,16 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-version-report.py\"",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-session-start.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-session-start.py\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "test -f \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-version-report.py\" || exit 0; python3 \"$CLAUDE_PROJECT_DIR/docs/claude_guideline/git_workflow/hooks/git_workflow-version-report.py\"",
             "timeout": 5
           }
         ]

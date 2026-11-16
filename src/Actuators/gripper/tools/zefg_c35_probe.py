@@ -5,7 +5,7 @@
 --selftest 의 프레임 조립 검증에만 쓰이고 절대 송신하지 않는다(그리퍼 HIL 규율 H0).
 
 레지스터 맵·기본 통신 파라미터·예제 프레임 근거:
-[Z-EFG-C35 Product Manual V20240120, page 4-8](references/hitbot/z-efg-c35/Z-EFG-C35 Brochure_V20240120.pdf)
+[Z-EFG-C35 Product Manual V20240120, page 4-8](References/hitbot/z-efg-c35/Z-EFG-C35 Brochure_V20240120.pdf)
 - RTU 0x03/0x06/0x10, 기본 115200 8N1, slave ID 1 (page 4)
 - 상태 0x0040(초기화: 0 미초기화/5 완료/기타 진행중), 0x0041(파지: 0 In place/1 Moving/
   2 Clamping/3 Dropping), 피드백 0x0042 위치·0x0044 속도·0x0046 전류(float, 상위워드 우선),

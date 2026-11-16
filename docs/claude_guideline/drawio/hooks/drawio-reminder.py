@@ -31,7 +31,7 @@ DIRECTIVE = """[DRAWIO SOP — 강제 게이트]
 3. 2단 검증 루프를 통과하기 전에는 "완료"라고 말하지 않는다:
    ① `python3 docs/claude_guideline/drawio/checks/drawio_lint.py <file>.drawio` 결함 0
    ② `docs/claude_guideline/drawio/checks/drawio_capture.sh <file>.drawio [--export]` 후
-      PNG 를 Read 로 열어 references/visual-checklist.md 검토
+      PNG 를 Read 로 열어 References/visual-checklist.md 검토
    디스플레이가 없어 ②를 못 하면 통과로 적지 말고 미수행 사실을 산출물에 명시.""".format(rule=RULE_MD)
 
 

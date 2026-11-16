@@ -156,7 +156,7 @@ if [ "$EXPORT_MODE" = 1 ]; then
   fi
   echo "✓ $PNG"
   echo
-  echo "다음: 이 PNG 를 Read 도구로 열어 references/visual-checklist.md 를 검토하세요."
+  echo "다음: 이 PNG 를 Read 도구로 열어 References/visual-checklist.md 를 검토하세요."
   echo "CAPTURED $PNG"
   exit 0
 fi
@@ -265,5 +265,5 @@ if [ -z "$PNG" ] || [ ! -f "$PNG" ]; then
   exit 1
 fi
 echo
-echo "다음: 이 PNG 를 Read 도구로 열어 references/visual-checklist.md 를 검토하세요."
+echo "다음: 이 PNG 를 Read 도구로 열어 References/visual-checklist.md 를 검토하세요."
 echo "CAPTURED $PNG"

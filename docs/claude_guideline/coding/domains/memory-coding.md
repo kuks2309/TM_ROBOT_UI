@@ -32,7 +32,15 @@
 
 ## 5. 강제 (도구)
 
-메모리 버그는 대부분 grep 으로 못 잡는다 → 기본 `⟦권고⟧`. 단 **도구는 잡는다**:
+**턴 종료 시 지점으로 되돌아온다** `⟦훅:rule-review⟧` — 이번 턴에 고친 파일에서 아래를 뽑아 `파일:줄` 로 지목한다. **판정이 아니라 후보 제시**이므로 오탐은 무해하다.
+
+| 조항 | 지목 대상 | 지목하지 않는 것 |
+|---|---|---|
+| §1 소유권 | 맨손 `new` | 스마트 포인터·`make_*` |
+| §2 짝 | 할당은 있고 대응 해제가 안 보이는 파일 | 짝이 맞거나 RAII |
+| §3 금지 | `strcpy`·`strcat`·`sprintf`·`gets`·`scanf` | 길이 제한형 |
+
+메모리 버그 대부분은 grep 으로 못 잡는다 → 그 외는 `⟦권고⟧`. 단 **도구는 잡는다**:
 
 - 테스트를 **AddressSanitizer**(`-fsanitize=address`) 빌드로 실행 → 누수·use-after-free·오버런 탐지
 - **valgrind** leak 검사 · **clang-tidy** 정적분석(소유권·초기화)
@@ -50,4 +58,4 @@ grep -rEl '\bnew\b|\bmalloc\b|\bfree\b|\bdelete\b' --include=*.c --include=*.cc 
 
 ---
 
-**VERSION**: 1.0.0 (소유권·생명주기 + 할당/해제 짝 + RAII + 메모리버그 금지; 동시성·언어경계·전역변수표 cross-ref; asan/valgrind 도구 강제 후보)
+**VERSION**: 1.1.0 (§5 에 ⟦훅:rule-review⟧ 지목표 — §1~§3 를 턴 종료 시 `파일:줄` 로 지목(판정 아님). 이하 1.0.0: 소유권·생명주기 + 할당/해제 짝 + RAII + 메모리버그 금지; 동시성·언어경계·전역변수표 cross-ref; asan/valgrind 도구 강제 후보)

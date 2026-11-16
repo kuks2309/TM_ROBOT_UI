@@ -91,6 +91,6 @@ ROS 결선은 조립층(M4)이 이 인터페이스를 구현해 주입한다.
 
 ## 1차 소스 (계약 근거)
 
-- LECP6 CN5 단자 정의: [SMC LECP6 Operation Manual (LEC-OM00608) page 26-28](../../../../../../references/smc/controllers/SMC_LECP6_OperationManual_E.pdf)
-- 스텝 데이터 12항목·64개: 동 page 32 · 배선: [3,4호기 도면 p.55·p.63·p.66·p.72](../../../../../../references/lgit/electrical/LGIT_COBOT_AMR_3,4호기.pdf)
+- LECP6 CN5 단자 정의: [SMC LECP6 Operation Manual (LEC-OM00608) page 26-28](../../../../../../References/smc/controllers/SMC_LECP6_OperationManual_E.pdf)
+- 스텝 데이터 12항목·64개: 동 page 32 · 배선: [3,4호기 도면 p.55·p.63·p.66·p.72](../../../../../../References/lgit/electrical/LGIT_COBOT_AMR_3,4호기.pdf)
 - legacy 파리티 근거: [docs/analysis/gripper_tx_wiring_and_drive_2026-08-12.md](../../../../../../docs/analysis/gripper_tx_wiring_and_drive_2026-08-12.md)

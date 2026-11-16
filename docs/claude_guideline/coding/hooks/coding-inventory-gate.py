@@ -53,6 +53,17 @@ CODE_EXT = {
     ".ino", ".pde",
 }
 
+# 음성 대조 표본은 코드가 아니라 **검사 대상 데이터**다 — 고의로 결함을 심으므로
+# 함수표·이력 요구에서 제외한다. 자매 훅 comment-gate 와 mistake/detectors/run.sh 가
+# 이미 같은 제외를 계약으로 두고 있는데 여기만 없어 오탐이 났다(실측 2회).
+FIXTURE_PARTS = (".fixture/",)
+
+
+def is_fixture(rel):
+    """경로가 음성 대조 표본 트리 안인가."""
+    return any(s in "/" + rel.replace("\\", "/") for s in FIXTURE_PARTS)
+
+
 SKIP_DIRS = {
     ".git", "node_modules", "build", "install", "log", "__pycache__",
     ".venv", "venv", "dist", ".mypy_cache", ".pytest_cache",
@@ -356,6 +367,8 @@ def gate_write(data, cwd, root):
     path = ti.get("file_path") or ti.get("notebook_path")
     if not path:
         return 0
+    if is_fixture(path):
+        return 0                       # 표본은 코드가 아니다 — 원 경로 문자열로 판정
     if os.path.splitext(path)[1].lower() not in CODE_EXT:
         return 0
 

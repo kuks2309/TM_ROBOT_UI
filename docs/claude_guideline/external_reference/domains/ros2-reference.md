@@ -17,17 +17,17 @@
 
 ## 2. 보관 경로
 
-- 벤더 sensor datasheet: `references/<vendor>/<sensor>/` (예: `references/livox/mid-360/`)
-- 벤더 driver 문서 사본: `references/<vendor>/<sensor>/driver-readme.md`
-- REP / design doc: URL 우선 + `references/standards/ros/rep-<N>/` 사본 (변경 추적용)
-- 알고리즘 논문: `references/papers/<topic>/`
+- 벤더 sensor datasheet: `References/<vendor>/<sensor>/` (예: `References/livox/mid-360/`)
+- 벤더 driver 문서 사본: `References/<vendor>/<sensor>/driver-readme.md`
+- REP / design doc: URL 우선 + `References/standards/ros/rep-<N>/` 사본 (변경 추적용)
+- 알고리즘 논문: `References/papers/<topic>/`
 
 ## 3. 인용 형식
 
 ```
-[Livox MID-360 DataSheet v1.2, Table 3, page 8](references/livox/mid-360/datasheet.pdf)
+[Livox MID-360 DataSheet v1.2, Table 3, page 8](References/livox/mid-360/datasheet.pdf)
 [REP-105, Section "Frame Authority", accessed 2026-05-21](https://www.ros.org/reps/rep-0105.html)
-[livox_ros2_driver README v1.0.1, "Parameters" section](references/livox/mid-360/driver-readme.md)
+[livox_ros2_driver README v1.0.1, "Parameters" section](References/livox/mid-360/driver-readme.md)
 ```
 
 ## 4. 흔한 추정 단정 사례

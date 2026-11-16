@@ -27,23 +27,59 @@ MAX_SHOWN = 5          # 경보에 나열할 파일 수 상한
 EDIT_TOOLS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
 
 
+VAR_ASSIGN = re.compile(r"(?:^|[;&|]|\s)([A-Za-z_]\w*)=([^\s;&|<>]+)")
+VAR_REF = re.compile(r"\$\{?([A-Za-z_]\w*)\}?")
+
+
+def expand_vars(path, assigns):
+    """같은 명령에서 대입된 셸 변수를 1단 확장한다. 못 풀면 `$` 를 남겨 둔다.
+
+    `$(...)`·백틱 대입은 값을 알 수 없으므로 확장하지 않는다 — 틀린 확장은 없는 파일을
+    가리키는 오탐이 되고, 오탐은 이 훅에서 사용자 작업을 막는다."""
+    def sub(m):
+        v = assigns.get(m.group(1)) or os.environ.get(m.group(1))
+        return v if v and "$" not in v else m.group(0)
+    return VAR_REF.sub(sub, path)
+
+
 def bash_write_paths(cmd):
     """Bash 명령 문자열에서 파일 쓰기 대상 후보 — 리다이렉션·tee·sed -i (best effort).
 
     선독 게이트(PreToolUse)는 Write/Edit 도구만 보므로 Bash 로 쓴 코드는 §2·§6 강제를
     통째로 우회했다(2026-08-23 amap-server 실측: Edit 흔적 없이 변경된 sil 러너).
     Stop 시점의 본 훅이 transcript 의 Bash 명령에서 쓰기 대상을 회수해 같은 검사에 태운다.
-    휴리스틱 한계(변수·eval 미해석)는 인정 — 미탐은 남되 오탐은 없게 보수적으로 뽑는다."""
-    out = []
+    휴리스틱 한계(eval·복합 확장 미해석)는 인정 — 미탐은 남되 오탐은 없게 보수적으로 뽑는다.
+
+    순서가 중요하다: **따옴표를 먼저 벗기고** 변수 확장 뒤에 걸러야 한다. 예전에는
+    거르는 조건이 원본 문자열(`"$D/x.sh"`)을, 내보내는 값이 따옴표를 벗긴 것(`$D/x.sh`)을
+    보아 `$` 필터가 통째로 빗나갔다 — 확장 안 된 변수가 경로로 보고돼 저장소 밖 임시
+    파일까지 표 작성을 요구했고, 반대로 `$VAR` 로 쓴 저장소 안 파일은 경로가 안 맞아
+    검사에서 빠졌다(막으려던 우회가 그대로 남음). 2026-08-30 실측."""
+    raw = []
     for m in re.finditer(r"\d*>{1,2}\s*([^\s;&|<>]+)", cmd):
-        out.append(m.group(1))
+        raw.append(m.group(1))
     for m in re.finditer(r"\btee\s+(?:-a\s+)?([^\s;&|]+)", cmd):
-        out.append(m.group(1))
+        raw.append(m.group(1))
     for m in re.finditer(r"\bsed\s+(-\S*i\S*)\s+"
                          r"(?:-e\s+)?(?:'[^']*'|\"[^\"]*\"|\S+)\s+([^\s;&|]+)", cmd):
-        out.append(m.group(2))
-    return [p.strip("'\"") for p in out
-            if p and not p.startswith(("-", "$", "/dev/", "/tmp/"))]
+        raw.append(m.group(2))
+
+    assigns = {m.group(1): m.group(2).strip("'\"")
+               for m in VAR_ASSIGN.finditer(cmd)
+               if "$(" not in m.group(2) and "`" not in m.group(2)}
+
+    out = []
+    for p in raw:
+        p = p.strip("'\"")
+        if not p:
+            continue
+        p = expand_vars(p, assigns)
+        if "$" in p:                       # 끝내 못 푼 변수 = 경로가 아니다
+            continue
+        if p.startswith(("-", "/dev/", "/tmp/")):
+            continue
+        out.append(p)
+    return out
 
 
 def load_gate():
@@ -149,6 +185,8 @@ def main():
     for rel in rels:
         if os.path.splitext(rel)[1].lower() not in g.CODE_EXT:
             continue                   # 코드 파일만 대상
+        if g.is_fixture(rel):
+            continue                   # 음성 대조 표본은 검사 대상 데이터
         edited_code.append(rel)
         tables = g.covering_tables(base, rel)
         if not tables:

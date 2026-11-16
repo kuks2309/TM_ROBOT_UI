@@ -37,7 +37,16 @@ thread/async 를 쓰면 본 aspect 활성, 아니면 면제(0 발화 정상):
 
 ## 6. 강제 (도구)
 
-race condition 은 대부분 grep 으로 못 잡는다 → 기본 `⟦권고⟧`. 단 **도구는 잡는다**:
+**턴 종료 시 지점으로 되돌아온다** `⟦훅:rule-review⟧` — 이번 턴에 고친 파일에서 아래를 뽑아 `파일:줄` 로 지목한다. **판정이 아니라 후보 제시**이므로 오탐은 무해하다.
+
+| 조항 | 지목 대상 | 지목하지 않는 것 |
+|---|---|---|
+| §1 공유 상태 | `global` 선언 | 지역·불변 |
+| §2 잠금 규율 | `with …lock:` 블록·`lock_guard` 근방의 blocking 호출 | lock 밖의 같은 호출 |
+| §3 원자성 | `while` 재확인 없는 조건 대기(`.wait()`) | `while(조건)` 로 감싼 대기 |
+| §4 async | `async def` 안의 blocking 호출 | `await` 형 |
+
+race condition 자체는 grep 으로 못 잡는다 → 그 외는 `⟦권고⟧`. 단 **도구는 잡는다**:
 
 - **ThreadSanitizer**(`-fsanitize=thread`) — 데이터 race 런타임 탐지 · valgrind `helgrind`
 - → ThreadSanitizer 검사는 **향후 이빨**(`checks/concurrency.sh`) 후보 — 현재 `⟦권고⟧`. 구현 시 `⟦CI⟧` 로 승격(tsan 빌드 테스트).
@@ -53,4 +62,4 @@ grep -rEl 'threading|asyncio|async def|std::thread|std::mutex|std::atomic|callba
 
 ---
 
-**VERSION**: 1.0.0 (공유상태 보호 + 잠금 규율(deadlock) + 원자성 + async/GIL; 메모리·언어경계 cross-ref; ThreadSanitizer 도구 강제 후보; code_review concurrency 와 write↔review 상보)
+**VERSION**: 1.1.0 (§6 에 ⟦훅:rule-review⟧ 지목표 — §1~§4 를 턴 종료 시 `파일:줄` 로 지목(판정 아님). 이하 1.0.0: 공유상태 보호 + 잠금 규율(deadlock) + 원자성 + async/GIL; 메모리·언어경계 cross-ref; ThreadSanitizer 도구 강제 후보; code_review concurrency 와 write↔review 상보)

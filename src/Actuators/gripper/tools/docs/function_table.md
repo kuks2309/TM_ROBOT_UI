@@ -7,7 +7,7 @@
 ## zefg_c35_probe.py — Z-EFG-C35 RS485 Modbus RTU H0 프로브 (읽기 전용)
 
 버스 송신 함수 코드는 0x03 뿐. 쓰기 프레임(0x06/0x10) 조립 함수는 --selftest 의
-매뉴얼 예제 대조([Z-EFG-C35 Product Manual V20240120, page 6-8](../../../../../references/hitbot/z-efg-c35/Z-EFG-C35%20Brochure_V20240120.pdf))에만 쓰이고 송신 경로 없음.
+매뉴얼 예제 대조([Z-EFG-C35 Product Manual V20240120, page 6-8](../../../../../References/hitbot/z-efg-c35/Z-EFG-C35%20Brochure_V20240120.pdf))에만 쓰이고 송신 경로 없음.
 
 | 함수 | 위치 | 입력 | 출력 | 용도 |
 |---|---|---|---|---|

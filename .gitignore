@@ -2,7 +2,6 @@ docs/user_instructions/sessions/
 
 # coding 번들: OMC 런타임 상태 비추적
 .omc/
-docs/claude_guideline/git_workflow/
 
 # ===== tm-robot-uni 프로젝트 (nx-orin-1 에서 이식) =====
 
