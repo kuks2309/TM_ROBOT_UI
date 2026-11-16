@@ -1,156 +1,116 @@
 #!/usr/bin/env bash
-# entry-lint.sh — claude-mistake entry 형식·closure 규칙 기계 검증
+# entry-lint.sh — 사건 entry 의 형식·closure 를 기계로 확인한다 (⟦CI:mistake-closure⟧).
 #
-# 사용법: ./entry-lint.sh [entry-폴더]     (기본: ./docs/claude-mistake)
-# 전 파일 PASS → exit 0, 위반 1+ → exit 1.
-# python3 부재 시 경고 후 exit 0 (정직 강등 — 규칙 텍스트만 생존).
+# v3 는 closure 를 **기계 조건**으로 본다. 산문으로 닫지 못한다:
+#   kind A → detector 파일이 실재해야 한다(살아 있는지는 detectors/run.sh 가 표본으로 확인)
+#   kind B → `detector: none (<사유>)` 에 사유가 있어야 하고, closed 이려면 본문에
+#            코드 토픽 백틱 인용이 2개 이상 있어야 한다 — 그것이 relevance 훅의 걸림
+#            조건이다. 걸리지 않는 B 사건은 전달 경로가 없으므로 닫힌 것이 아니다.
 #
-# 검출: 단일 frontmatter / id 형식·파일명 일치 / type·category 정합 / status 값 /
-#       closed+owner 금지·open+owner 필수 / closed 인데 reflected_assets 공백 /
-#       TBD(To Be Determined) 류 문구 / 고정 5 절 존재·순서 / open 7 일 초과 /
-#       retracted 형식 (기각 각주·오염 목록 존재, 청소 미완 7 일 초과,
-#       청소 완료 주장인데 미처리 문구 잔존) /
-#       교차 파일 id 중복 / closed 의 reflected_assets 경로 실재 (유령 자산 —
-#       retracted 는 청소로 자산이 정당 삭제될 수 있어 제외)
-
-set -euo pipefail
-
+# v2 에서 뺀 것: type↔category enum 정합(분류의 정확성이 재발을 막지 않는다),
+#               reflected_assets 유령 자산 검사(필드 자체가 폐기됐다),
+#               open 7일 시한(open 사건은 이제 관련 파일 편집을 차단하므로 달력보다 강하다).
+#
+# 용법: entry-lint.sh [entry디렉터리]
+set -uo pipefail
 DIR="${1:-docs/claude-mistake}"
-if [ ! -d "$DIR" ]; then
-  echo "entry 폴더 없음: $DIR — 검사 대상 0 (PASS)"
-  exit 0
-fi
-
 PYBIN=""
-for c in python3 python; do
-  if command -v "$c" >/dev/null 2>&1; then PYBIN="$c"; break; fi
-done
-if [ -z "$PYBIN" ]; then
-  echo "⚠ python3/python 없음 — entry-lint 건너뜀 (강제력 0)"
-  exit 0
-fi
+for c in python3 python; do command -v "$c" >/dev/null 2>&1 && { PYBIN="$c"; break; }; done
+[ -n "$PYBIN" ] || { echo "python3 없음"; exit 2; }
+[ -d "$DIR" ] || { echo "· entry 디렉터리 없음 — 생략: $DIR"; exit 0; }
 
-exec "$PYBIN" - "$DIR" <<'PYEOF'
-import datetime
-import pathlib
-import re
-import sys
+"$PYBIN" - "$DIR" "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" <<'PYEOF'
+import os, pathlib, re, sys
 
 DIR = pathlib.Path(sys.argv[1])
-MISTAKE_CATS = {"manual-misread", "wrong-assumption", "context-missing", "intent-guess"}
-VIOLATION_CATS = {"user-intent-only", "per-file-approval", "iteration-loop",
-                  "tech-debt-shortcut", "verify-skip", "scope-creep", "record-skip"}
-SECTIONS = ["## 무엇을 했는가", "## 무엇이 잘못이었나", "## 사용자 지적",
-            "## 원인 분석", "## 재발 방지"]
+BUNDLE = pathlib.Path(sys.argv[2])
+SECTIONS = ["## 무엇을 했는가", "## 무엇이 잘못이었나", "## 원인 분석", "## 재발 방지"]
 NAME_RE = re.compile(r"^\d{4}-\d{2}-\d{2}-\d{3}(_[^/]+)?\.md$")
-TODAY = datetime.date.today()
-ROOT = DIR.resolve().parent.parent  # docs/claude-mistake → 프로젝트 루트
+BACKTICK = re.compile(r"`[^`\n]{2,60}`")
+FIELDS = ("id", "kind", "detector", "status")
+
+INSTALLED = DIR.parent / "claude_guideline" / "mistake"
 
 
-def asset_path(tok):
-    """reflected_assets 항목 첫 토큰 → 검사 가능 경로 (경로 아니면 None)."""
-    tok = tok.strip("`\"'").split("#")[0]
-    tok = re.sub(r":L?\d[\dL\-]*$", "", tok)
-    if not tok:
-        return None
-    if tok.startswith("~"):
-        return pathlib.Path(tok).expanduser()
-    if tok.startswith("/"):
-        return pathlib.Path(tok)
-    if "/" in tok:
-        return ROOT / tok
-    return None  # 파일명 단독 등 — 실재 검사 불가 항목은 통과
+def detector_exists(rel):
+    """검사 파일 탐색. 번들 detectors/ 뿐 아니라 **다른 번들의 이빨**도 인정한다.
+
+    같은 실수를 잡는 검사를 두 벌 두면 둘이 갈라지고, 갈라지면 어느 쪽이 진짜인지
+    아무도 모른다(mistake.md §1). 그래서 `coding/checks/update-entry.sh` 같은 경로도
+    유효한 detector 다 — 중요한 것은 기계가 잡고 있다는 사실이지 파일의 위치가 아니다."""
+    bases = [BUNDLE, INSTALLED, DIR, BUNDLE.parent, DIR.parent, DIR.parent.parent]
+    for base in bases:
+        try:
+            if (base / rel).is_file():
+                return True
+        except OSError:
+            continue
+    return False
 
 
-fails = 0
-checked = 0
-id_map = {}
-for f in sorted(DIR.glob("*.md")):
-    if f.name in ("INDEX.md", "README.md"):
-        continue
-    checked += 1
+files = sorted(p for p in DIR.glob("*.md") if p.name not in ("README.md", "INDEX.md"))
+seen_ids, bad = {}, 0
+for p in files:
     errs = []
-    if not NAME_RE.match(f.name):
+    if not NAME_RE.match(p.name):
         errs.append("파일명 규칙 위반 (YYYY-MM-DD-NNN[_제목].md)")
-    text = f.read_text(encoding="utf-8", errors="replace")
-    if not text.startswith("---"):
+    text = p.read_text(encoding="utf-8", errors="replace")
+    m = re.match(r"^---\n(.*?)\n---\n", text, re.S)
+    if not m:
         errs.append("frontmatter 가 파일 최상단에 없음")
-    if len(re.findall(r"(?m)^---\s*$", text)) != 2:
-        errs.append("frontmatter 구분선 수 이상 (다중 entry 또는 파손)")
-    fm = text.split("---")[1] if text.count("---") >= 2 else ""
-    fields = dict(re.findall(r"(?m)^(id|type|category|status):\s*(\S+)", fm))
-    ident = fields.get("id", "")
-    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}-\d{3}", ident):
-        errs.append("id 형식 위반: %r" % ident)
-    elif not f.name.startswith(ident):
-        errs.append("파일명이 id 로 시작하지 않음")
-    if ident:
-        id_map.setdefault(ident, []).append(f.name)
-    t, c = fields.get("type"), fields.get("category")
-    if t == "mistake":
-        if c not in MISTAKE_CATS:
-            errs.append("type=mistake 인데 category=%s" % c)
-    elif t == "rule-violation":
-        if c not in VIOLATION_CATS:
-            errs.append("type=rule-violation 인데 category=%s" % c)
+        fm, body = "", text
     else:
-        errs.append("type 값 위반: %s" % t)
-    status = fields.get("status")
-    if status not in ("open", "closed", "retracted"):
-        errs.append("status 값 위반: %s" % status)
-    has_owner = "**owner**:" in text
-    if status == "closed" and has_owner:
-        errs.append("closed 인데 owner 줄 부착")
-    if status == "open" and not has_owner:
-        errs.append("open 인데 owner 줄 없음")
-    if status == "retracted":
-        m_ret = re.search(r"(?m)^>\s*\*\*기각\*\*:\s*(\d{4}-\d{2}-\d{2})", text)
-        if not m_ret:
-            errs.append("retracted 인데 기각 각주 (> **기각**: YYYY-MM-DD — …) 없음")
-        if "| 오염 자산 |" not in text:
-            errs.append("retracted 인데 오염 목록 표 없음")
-        sweep_pending = re.search(r"(?m)^\|.*(TBD|추후|후보|미처리).*\|\s*$", text)
-        if has_owner:
-            if m_ret:
-                age = (TODAY - datetime.date.fromisoformat(m_ret.group(1))).days
-                if age > 7:
-                    errs.append("retracted 청소 미완 %d일 경과 (7일 시한 초과 — 오염 청소 의무)" % age)
-        elif sweep_pending:
-            errs.append("청소 완료 주장 (owner 없음) 인데 오염 목록에 TBD/추후/후보/미처리 잔존")
-    has_assets = bool(re.search(r"reflected_assets:\s*\n\s*-\s*\S", fm))
-    if status == "closed" and not has_assets:
-        errs.append("closed 인데 reflected_assets 비어 있음")
-    if re.search(r"(?m)^\s*-\s.*(TBD|추후|후보)\s*\)?\s*$", fm):
-        errs.append("reflected_assets 에 TBD/추후/후보")
-    if status == "closed":  # retracted 는 청소로 자산이 정당 삭제될 수 있어 제외
-        for tok in re.findall(r"(?m)^\s*-\s*(\S+)", fm):
-            p = asset_path(tok)
-            if p is not None and not p.exists():
-                errs.append("반영 자산 실재하지 않음 (유령 자산): %s" % tok)
-    pos = [text.find(s) for s in SECTIONS]
-    if -1 in pos:
-        errs.append("고정 5 절 누락: %s" % [s for s, p in zip(SECTIONS, pos) if p < 0])
-    elif pos != sorted(pos):
-        errs.append("5 절 순서 위반")
-    if status == "open" and re.fullmatch(r"\d{4}-\d{2}-\d{2}-\d{3}", ident):
-        age = (TODAY - datetime.date.fromisoformat(ident[:10])).days
-        if age > 7:
-            errs.append("open %d일 경과 (7일 시한 초과 — closure 의무)" % age)
+        fm, body = m.group(1), text[m.end():]
+    if text.count("\n---\n") > 1 and text.count("\n## ") > 8:
+        errs.append("한 파일에 다중 entry 의심 (1 사건 = 1 파일)")
+
+    g = lambda k: (re.search(r"^%s:\s*(.+)$" % k, fm, re.M) or [None, ""])[1].strip()
+    vals = {k: g(k) for k in FIELDS}
+    for k in FIELDS:
+        if not vals[k]:
+            errs.append("필수 필드 누락: %s" % k)
+    eid, kind, det, st = vals["id"], vals["kind"], vals["detector"], vals["status"]
+
+    if eid:
+        if eid in seen_ids:
+            errs.append("id 중복: %s (%s)" % (eid, seen_ids[eid]))
+        seen_ids[eid] = p.name
+        if not p.name.startswith(eid):
+            errs.append("id 와 파일명 불일치: %s" % eid)
+    if kind and kind not in ("A", "B"):
+        errs.append("kind 는 A 또는 B: %s" % kind)
+    if st and st not in ("open", "closed", "retracted"):
+        errs.append("status 값 이상: %s" % st)
+
+    if kind == "A":
+        if det.startswith("none") or not det.endswith((".sh", ".py")):
+            errs.append("kind A 인데 detector 가 실행 가능한 검사 경로가 아님: %s" % det)
+        elif not detector_exists(det):
+            errs.append("검출자 파일 없음: %s" % det)
+    elif kind == "B":
+        if not det.startswith("none"):
+            errs.append("kind B 인데 detector 가 none 이 아님: %s" % det)
+        elif not re.match(r"^none\s*\(.+\)\s*$", det):
+            errs.append("kind B 는 불가 사유가 필요: detector: none (<사유>)")
+        elif "사유 미기재" in det:
+            errs.append("불가 사유 미기재 — 검출 가능한지 재판정 필요")
+        if st == "closed" and len(BACKTICK.findall(body)) < 2:
+            errs.append("kind B closed 인데 본문 코드 토픽 인용 2개 미만 — "
+                        "relevance 훅이 이 사건을 어느 파일에도 걸 수 없다")
+
+    if st != "retracted":
+        miss = [s for s in SECTIONS if s not in body]
+        if miss:
+            errs.append("고정 4 절 누락: %s" % miss)
+
     if errs:
-        fails += 1
-        print("[FAIL] %s" % f.name)
+        bad += 1
+        print("[FAIL] %s" % p.name)
         for e in errs:
             print("   - %s" % e)
     else:
-        print("[PASS] %s" % f.name)
+        print("[PASS] %s" % p.name)
 
-for ident, names in sorted(id_map.items()):
-    if len(names) > 1:
-        fails += 1
-        print("[FAIL] id 중복: %s — %s" % (ident, ", ".join(names)))
-
-if checked == 0:
-    print("검사 대상 entry 0 건 (PASS)")
-print("결과: %s" % ("전체 통과 (%d 건)" % checked if fails == 0 else "%d/%d 파일 실패" % (fails, checked)))
-sys.exit(1 if fails else 0)
+print("결과: %d/%d 파일 실패" % (bad, len(files)))
+sys.exit(1 if bad else 0)
 PYEOF
